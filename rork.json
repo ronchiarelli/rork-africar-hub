@@ -10,6 +10,11 @@
       "name": "AutoRide Ghana",
       "path": "ios",
       "framework": "swift"
+    },
+    {
+      "name": "AutoRide Ghana",
+      "path": "android",
+      "framework": "kotlin"
     }
   ]
 }

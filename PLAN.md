@@ -101,4 +101,4 @@ A premium car rental and car sales marketplace app for the Ghanaian market with 
 ---
 
 ## App Icon
-- [ ] Deep purple gradient background with a sleek white car silhouette and an orange speed accent streak
+- [x] Deep purple gradient background with a sleek white car silhouette and an orange speed accent streak
