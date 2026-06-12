@@ -15,6 +15,7 @@ enum Route: Hashable {
     case settings
     case help
     case wallet
+    case search
     case fleetDashboard
     case dealerDashboard
     case adminDashboard

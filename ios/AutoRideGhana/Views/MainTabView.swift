@@ -9,8 +9,8 @@ struct MainTabView: View {
             TabView(selection: $selectedTab) {
                 HomeView(selectedTab: $selectedTab)
                     .tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
-                SearchView()
-                    .tabItem { Label("Search", systemImage: "magnifyingglass") }.tag(1)
+                DashboardView(selectedTab: $selectedTab)
+                    .tabItem { Label("Dashboard", systemImage: "rectangle.grid.1x2.fill") }.tag(1)
                 BookingsView()
                     .tabItem { Label("Bookings", systemImage: "calendar") }.tag(2)
                 ProfileView()
@@ -41,6 +41,7 @@ struct MainTabView: View {
         case .settings: SettingsView()
         case .help: HelpView()
         case .wallet: WalletView()
+        case .search: SearchView()
         case .fleetDashboard: FleetDashboardView()
         case .dealerDashboard: DealerDashboardView()
         case .adminDashboard: AdminDashboardView()

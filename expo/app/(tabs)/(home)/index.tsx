@@ -87,7 +87,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <View style={styles.headerTop}>
@@ -200,6 +200,14 @@ export default function HomeScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <Pressable
+        style={[styles.fab, { bottom: 28 }]}
+        onPress={() => router.push('/search')}
+        accessibilityLabel="Search cars"
+      >
+        <Search size={22} color={Colors.white} />
+      </Pressable>
     </View>
   );
 }
@@ -467,5 +475,20 @@ const styles = StyleSheet.create({
   promoImage: {
     width: 140,
     height: '100%',
+  },
+  fab: {
+    position: 'absolute' as const,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.orange.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    shadowColor: Colors.orange.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
   },
 });

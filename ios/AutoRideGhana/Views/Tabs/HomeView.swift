@@ -4,6 +4,7 @@ struct HomeView: View {
     @Environment(AppState.self) private var app
     @Environment(Router.self) private var router
     @Binding var selectedTab: Int
+    @State private var fabScale: CGFloat = 1
 
     private var availableCars: [Car] { MockData.cars.filter { $0.isAvailable } }
     private var featuredSaleCars: [SaleCar] { MockData.saleCars.filter { $0.isFeatured } }
@@ -22,6 +23,25 @@ struct HomeView: View {
         }
         .background(Theme.gray50)
         .ignoresSafeArea(edges: .top)
+        .overlay(alignment: .bottomTrailing) {
+            Button {
+                router.push(.search)
+            } label: {
+                Image(systemName: "magnifyingglass").font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Theme.orange, in: Circle())
+                    .shadow(color: Theme.orange.opacity(0.4), radius: 12, y: 6)
+                    .scaleEffect(fabScale)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 20)
+            .padding(.bottom, 28)
+            .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    fabScale = pressing ? 0.9 : 1.0
+                }
+            }, perform: {})
+        }
     }
 
     private var header: some View {

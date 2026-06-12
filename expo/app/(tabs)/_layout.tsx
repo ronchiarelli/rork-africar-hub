@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, Search, CalendarDays, User } from "lucide-react-native";
+import { Home, Search, CalendarDays, User, LayoutDashboard } from "lucide-react-native";
 import React from "react";
 import Colors from "@/constants/colors";
 
@@ -33,10 +33,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: "Dashboard",
+          tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="search"
         options={{
-          title: "Search",
-          tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
+          href: null,
         }}
       />
       <Tabs.Screen

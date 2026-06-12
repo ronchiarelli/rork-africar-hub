@@ -57,8 +57,8 @@ A premium car rental and car sales marketplace app for the Ghanaian market with 
 - [x] 4. **OTP Verify** — 4-digit code entry with auto-submit and countdown resend
 
 ### Main App (Tab Navigation)
-- [x] 5. **Home (Explore)** — Location search bar, trending cars carousel, top brands with real logos, featured cars for sale, promo banner, near-you listings
-- [x] 6. **Search & Filters** — Full filter screen with price range chips, brand, transmission, location
+- [x] 5. **Home (Explore)** — Location search bar, trending cars carousel, top brands, featured cars for sale, promo banner, near-you listings, floating search FAB
+- [x] 6. **Dashboard (Role-Aware)** — Customer: welcome card, stats, quick actions, tips. Fleet Owner: revenue, fleet cards. Dealer: views/leads/listings. Admin: stats grid, growth, users
 - [x] 7. **My Bookings** — Tabbed list (All, Active, Upcoming, Completed) with status badges — tapping opens Booking Detail
 - [x] 8. **Profile** — User info, role badge, stats, menu links to Favorites, Notifications, KYC, Settings, Wallet, Help, role dashboards, and logout
 
@@ -84,10 +84,11 @@ A premium car rental and car sales marketplace app for the Ghanaian market with 
 ---
 
 ## Navigation
-- [x] Bottom tab bar with 4 tabs: **Home**, **Search**, **Bookings**, **Profile**
+- [x] Bottom tab bar with 4 tabs: **Home**, **Dashboard**, **Bookings**, **Profile**
+- [x] Floating search button (FAB) on Home screen for quick access to Search
 - [x] Auth guard redirects unauthenticated users to Welcome screen
 - [x] Stack screens overlay tabs for deep navigation
-- [x] Role-specific dashboard links appear in Profile based on current role
+- [x] Dashboard tab is role-aware — shows Customer overview, Fleet Owner, Dealership, or Admin dashboard
 
 ---
 
