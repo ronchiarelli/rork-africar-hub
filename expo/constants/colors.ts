@@ -1,0 +1,46 @@
+const Colors = {
+  purple: {
+    deep: '#1A0A2E',
+    dark: '#2D1452',
+    medium: '#4A2080',
+    light: '#6B3FA0',
+    soft: '#8B5FBF',
+    muted: '#B08AD4',
+    faint: '#E8DFF0',
+  },
+  orange: {
+    primary: '#FF6B2C',
+    bright: '#FF8548',
+    soft: '#FFA06E',
+    light: '#FFD4BC',
+    faint: '#FFF0E8',
+  },
+  gray: {
+    50: '#FAFAFA',
+    100: '#F5F5F5',
+    200: '#EEEEEE',
+    300: '#E0E0E0',
+    400: '#BDBDBD',
+    500: '#9E9E9E',
+    600: '#757575',
+    700: '#616161',
+    800: '#424242',
+    900: '#212121',
+  },
+  white: '#FFFFFF',
+  black: '#000000',
+  star: '#FFB800',
+  success: '#22C55E',
+  error: '#EF4444',
+  warning: '#F59E0B',
+  info: '#3B82F6',
+  light: {
+    text: '#212121',
+    background: '#FAFAFA',
+    tint: '#FF6B2C',
+    tabIconDefault: '#9E9E9E',
+    tabIconSelected: '#FF6B2C',
+  },
+};
+
+export default Colors;

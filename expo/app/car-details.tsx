@@ -1,0 +1,568 @@
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Linking,
+  Dimensions,
+} from 'react-native';
+import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import {
+  ArrowLeft,
+  Heart,
+  Star,
+  MapPin,
+  Users,
+  Gauge,
+  Fuel,
+  Snowflake,
+  Share2,
+  MessageCircle,
+  Phone,
+} from 'lucide-react-native';
+import Colors from '@/constants/colors';
+import { cars } from '@/mocks/cars';
+import { useFavorites } from '@/providers/FavoritesProvider';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+export default function CarDetailsScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const car = cars.find((c) => c.id === id);
+
+  const handleWhatsApp = useCallback(() => {
+    if (!car) return;
+    const message = `Hi, I'm interested in renting the ${car.brand} ${car.model} listed on AutoRide.`;
+    const url = `https://wa.me/${car.ownerPhone.replace('+', '')}?text=${encodeURIComponent(message)}`;
+    void Linking.openURL(url);
+  }, [car]);
+
+  const handleCall = useCallback(() => {
+    if (!car) return;
+    void Linking.openURL(`tel:${car.ownerPhone}`);
+  }, [car]);
+
+  if (!car) {
+    return (
+      <View style={styles.errorContainer}>
+        <Stack.Screen options={{ headerShown: true, title: 'Not Found' }} />
+        <Text style={styles.errorText}>Car not found</Text>
+        <Pressable style={styles.errorBtn} onPress={() => router.back()}>
+          <Text style={styles.errorBtnText}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const favorited = isFavorite(car.id);
+
+  return (
+    <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+        <View style={styles.heroSection}>
+          <View style={styles.imageContainer}>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                setCurrentImageIndex(idx);
+              }}
+            >
+              {car.images.map((img, idx) => (
+                <Image key={idx} source={{ uri: img }} style={styles.heroImage} contentFit="cover" />
+              ))}
+            </ScrollView>
+
+            <View style={[styles.headerOverlay, { paddingTop: insets.top + 8 }]}>
+              <Pressable style={styles.backBtn} onPress={() => router.back()} testID="back-btn">
+                <ArrowLeft size={20} color={Colors.white} />
+              </Pressable>
+              <View style={styles.headerRight}>
+                <Pressable style={styles.backBtn} onPress={() => toggleFavorite(car.id)} testID="fav-detail-btn">
+                  <Heart size={20} color={favorited ? Colors.orange.primary : Colors.white} fill={favorited ? Colors.orange.primary : 'transparent'} />
+                </Pressable>
+                <Pressable style={styles.backBtn}>
+                  <Share2 size={20} color={Colors.white} />
+                </Pressable>
+              </View>
+            </View>
+
+            {car.images.length > 1 && (
+              <View style={styles.dotsRow}>
+                {car.images.map((_, idx) => (
+                  <View key={idx} style={[styles.dot, idx === currentImageIndex && styles.dotActive]} />
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.infoSection}>
+          <View style={styles.topRow}>
+            <View style={styles.nameWrap}>
+              <Text style={styles.brand}>{car.brand}</Text>
+              <Text style={styles.model}>{car.model}</Text>
+            </View>
+            <View style={styles.yearBadge}>
+              <Text style={styles.yearText}>{car.year}</Text>
+            </View>
+          </View>
+
+          <View style={styles.ratingLocationRow}>
+            <View style={styles.ratingWrap}>
+              <Star size={16} color={Colors.star} fill={Colors.star} />
+              <Text style={styles.ratingValue}>{car.rating}</Text>
+              <Text style={styles.reviewCount}>({car.reviewCount} reviews)</Text>
+            </View>
+            <View style={styles.locationWrap}>
+              <MapPin size={14} color={Colors.gray[500]} />
+              <Text style={styles.locationText}>{car.location}</Text>
+            </View>
+          </View>
+
+          <View style={styles.specsGrid}>
+            <View style={styles.specItem}>
+              <View style={styles.specIconWrap}>
+                <Users size={18} color={Colors.orange.primary} />
+              </View>
+              <Text style={styles.specValue}>{car.seats}</Text>
+              <Text style={styles.specLabel}>Seats</Text>
+            </View>
+            <View style={styles.specItem}>
+              <View style={styles.specIconWrap}>
+                <Gauge size={18} color={Colors.orange.primary} />
+              </View>
+              <Text style={styles.specValue}>{car.horsepower}</Text>
+              <Text style={styles.specLabel}>HP</Text>
+            </View>
+            <View style={styles.specItem}>
+              <View style={styles.specIconWrap}>
+                <Fuel size={18} color={Colors.orange.primary} />
+              </View>
+              <Text style={styles.specValue}>{car.fuelType}</Text>
+              <Text style={styles.specLabel}>Fuel</Text>
+            </View>
+            <View style={styles.specItem}>
+              <View style={styles.specIconWrap}>
+                <Snowflake size={18} color={Colors.orange.primary} />
+              </View>
+              <Text style={styles.specValue}>{car.hasAC ? 'Yes' : 'No'}</Text>
+              <Text style={styles.specLabel}>A/C</Text>
+            </View>
+          </View>
+
+          <View style={styles.descriptionSection}>
+            <Text style={styles.sectionTitle}>About This Car</Text>
+            <Text style={styles.description}>{car.description}</Text>
+          </View>
+
+          <View style={styles.featuresSection}>
+            <Text style={styles.sectionTitle}>Features</Text>
+            <View style={styles.featuresGrid}>
+              {car.features.map((feature, idx) => (
+                <View key={idx} style={styles.featureChip}>
+                  <Text style={styles.featureText}>{feature}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.ownerSection}>
+            <Text style={styles.sectionTitle}>Listed By</Text>
+            <View style={styles.ownerCard}>
+              <View style={styles.ownerInfo}>
+                <View style={styles.ownerAvatarWrap}>
+                  <Text style={styles.ownerInitial}>{car.ownerName.charAt(0)}</Text>
+                </View>
+                <View>
+                  <Text style={styles.ownerName}>{car.ownerName}</Text>
+                  <Text style={styles.ownerPhone}>{car.ownerPhone}</Text>
+                </View>
+              </View>
+              <View style={styles.ownerActions}>
+                <Pressable style={styles.whatsappBtn} onPress={handleWhatsApp}>
+                  <MessageCircle size={16} color={Colors.white} />
+                </Pressable>
+                <Pressable style={styles.callBtn} onPress={handleCall}>
+                  <Phone size={16} color={Colors.white} />
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
+          <View style={{ height: 120 }} />
+        </View>
+      </ScrollView>
+
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
+        <View style={styles.priceSection}>
+          <Text style={styles.priceLabel}>Price</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.currency}>GH₵</Text>
+            <Text style={styles.priceValue}>{car.pricePerDay}</Text>
+            <Text style={styles.perDay}>/day</Text>
+          </View>
+        </View>
+        <Pressable
+          style={({ pressed }) => [styles.rentBtn, pressed && styles.rentBtnPressed]}
+          onPress={() => router.push({ pathname: '/booking', params: { id: car.id } })}
+          testID="rent-now-btn"
+        >
+          <Text style={styles.rentBtnText}>Rent Now</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.gray[50],
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: Colors.gray[700],
+    marginBottom: 16,
+  },
+  errorBtn: {
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  errorBtnText: {
+    color: Colors.white,
+    fontWeight: '700' as const,
+  },
+  heroSection: {
+    backgroundColor: Colors.purple.deep,
+  },
+  imageContainer: {
+    width: SCREEN_WIDTH,
+    height: 300,
+    position: 'relative' as const,
+  },
+  heroImage: {
+    width: SCREEN_WIDTH,
+    height: 300,
+  },
+  headerOverlay: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    paddingHorizontal: 16,
+    zIndex: 10,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  headerRight: {
+    flexDirection: 'row' as const,
+    gap: 8,
+  },
+  dotsRow: {
+    position: 'absolute' as const,
+    bottom: 14,
+    alignSelf: 'center' as const,
+    flexDirection: 'row' as const,
+    gap: 6,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  dotActive: {
+    backgroundColor: Colors.orange.primary,
+    width: 20,
+  },
+  infoSection: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    backgroundColor: Colors.gray[50],
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -24,
+  },
+  topRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
+  },
+  nameWrap: {
+    flex: 1,
+  },
+  brand: {
+    fontSize: 14,
+    color: Colors.gray[500],
+    fontWeight: '500' as const,
+  },
+  model: {
+    fontSize: 24,
+    fontWeight: '800' as const,
+    color: Colors.gray[900],
+    marginTop: 2,
+  },
+  yearBadge: {
+    backgroundColor: Colors.purple.deep,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  yearText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '700' as const,
+  },
+  ratingLocationRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    marginTop: 12,
+  },
+  ratingWrap: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  ratingValue: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+  },
+  reviewCount: {
+    fontSize: 13,
+    color: Colors.gray[500],
+  },
+  locationWrap: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  locationText: {
+    fontSize: 13,
+    color: Colors.gray[600],
+    fontWeight: '500' as const,
+  },
+  specsGrid: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    marginTop: 24,
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  specItem: {
+    alignItems: 'center' as const,
+    flex: 1,
+  },
+  specIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.orange.faint,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: 6,
+  },
+  specValue: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+  },
+  specLabel: {
+    fontSize: 11,
+    color: Colors.gray[500],
+    marginTop: 1,
+  },
+  descriptionSection: {
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+    marginBottom: 10,
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: Colors.gray[600],
+  },
+  featuresSection: {
+    marginTop: 24,
+  },
+  featuresGrid: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 8,
+  },
+  featureChip: {
+    backgroundColor: Colors.purple.faint,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  featureText: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: Colors.purple.medium,
+  },
+  ownerSection: {
+    marginTop: 24,
+  },
+  ownerCard: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  ownerInfo: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+  },
+  ownerAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.purple.deep,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  ownerInitial: {
+    color: Colors.white,
+    fontSize: 18,
+    fontWeight: '700' as const,
+  },
+  ownerName: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+  },
+  ownerPhone: {
+    fontSize: 12,
+    color: Colors.gray[500],
+    marginTop: 2,
+  },
+  ownerActions: {
+    flexDirection: 'row' as const,
+    gap: 8,
+  },
+  whatsappBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#25D366',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  callBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.info,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  bottomBar: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 20,
+  },
+  priceSection: {},
+  priceLabel: {
+    fontSize: 12,
+    color: Colors.gray[500],
+  },
+  priceRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'baseline' as const,
+  },
+  currency: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.orange.primary,
+  },
+  priceValue: {
+    fontSize: 26,
+    fontWeight: '800' as const,
+    color: Colors.gray[900],
+    marginLeft: 2,
+  },
+  perDay: {
+    fontSize: 13,
+    color: Colors.gray[500],
+    marginLeft: 2,
+  },
+  rentBtn: {
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+  },
+  rentBtnPressed: {
+    backgroundColor: Colors.orange.bright,
+    transform: [{ scale: 0.97 }],
+  },
+  rentBtnText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '700' as const,
+  },
+});
