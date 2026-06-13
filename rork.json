@@ -9,7 +9,10 @@
     {
       "name": "AutoRide Ghana",
       "path": "ios",
-      "framework": "swift"
+      "framework": "swift",
+      "settings": {
+        "displayName": "GoCar Hub"
+      }
     },
     {
       "name": "AutoRide Ghana",

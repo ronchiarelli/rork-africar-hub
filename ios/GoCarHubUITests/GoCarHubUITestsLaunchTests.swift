@@ -1,13 +1,13 @@
 //
-//  AutoRideGhanaUITestsLaunchTests.swift
-//  AutoRideGhanaUITests
+//  GoCarHubUITestsLaunchTests.swift
+//  GoCarHubUITests
 //
 //  Created by Rork on June 12, 2026.
 //
 
 import XCTest
 
-final class AutoRideGhanaUITestsLaunchTests: XCTestCase {
+final class GoCarHubUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

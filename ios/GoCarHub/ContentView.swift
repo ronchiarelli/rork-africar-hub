@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  AutoRideGhana
+//  GoCarHub
 //
 //  Created by Rork on June 12, 2026.
 //

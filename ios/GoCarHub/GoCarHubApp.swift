@@ -1,6 +1,6 @@
 //
-//  AutoRideGhanaApp.swift
-//  AutoRideGhana
+//  GoCarHubApp.swift
+//  GoCarHub
 //
 //  Created by Rork on June 12, 2026.
 //
@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct AutoRideGhanaApp: App {
+struct GoCarHubApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
