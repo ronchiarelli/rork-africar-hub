@@ -12,7 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Search, SlidersHorizontal, X, MapPin } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { cars, LOCATIONS } from '@/mocks/cars';
+import { LOCATIONS } from '@/constants/locations';
+import { useCars } from '@/lib/queries/cars';
 import CarCard from '@/components/CarCard';
 
 const CATEGORIES = ['All', 'SUV', 'Sedan', 'Hatchback', 'Van'];
@@ -33,6 +34,7 @@ export default function SearchScreen() {
   const [selectedTransmission, setSelectedTransmission] = useState('All');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedPriceRange, setSelectedPriceRange] = useState(0);
+  const { data: cars = [] } = useCars();
 
   const filteredCars = useMemo(() => {
     return cars.filter((car) => {
@@ -47,7 +49,7 @@ export default function SearchScreen() {
       const matchesPrice = car.pricePerDay >= priceRange.min && car.pricePerDay <= priceRange.max;
       return matchesQuery && matchesCategory && matchesTransmission && matchesLocation && matchesPrice;
     });
-  }, [query, selectedCategory, selectedTransmission, selectedLocation, selectedPriceRange]);
+  }, [cars, query, selectedCategory, selectedTransmission, selectedLocation, selectedPriceRange]);
 
   const clearFilters = useCallback(() => {
     setSelectedCategory('All');

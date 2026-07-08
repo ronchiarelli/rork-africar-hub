@@ -39,7 +39,7 @@ export default function WelcomeScreen() {
       <Animated.View style={[styles.content, { paddingTop: insets.top + 40, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         <View style={styles.logoWrap}>
           <Car size={32} color={Colors.orange.primary} />
-          <Text style={styles.logoText}>AutoRide</Text>
+          <Text style={styles.logoText}>GoCar Hub</Text>
         </View>
 
         <View style={styles.heroText}>

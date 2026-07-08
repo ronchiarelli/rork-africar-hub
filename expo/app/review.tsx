@@ -7,36 +7,62 @@ import {
   Pressable,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Star, Send, CheckCircle2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { mockBookings } from '@/mocks/cars';
+import { useBookingDetail } from '@/lib/queries/bookings';
+import { useSubmitReview } from '@/lib/queries/reviews';
+import { getErrorMessage } from '@/lib/errors';
+
+const QUICK_TAGS = ['Clean car', 'Great owner', 'Smooth ride', 'On time', 'Accurate listing'];
 
 export default function ReviewScreen() {
   const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const booking = mockBookings.find((b) => b.id === bookingId);
+  const { data: booking, isLoading } = useBookingDetail(bookingId);
+  const submitReview = useSubmitReview();
 
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
+
+  const toggleTag = useCallback((tag: string) => {
+    setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  }, []);
 
   const handleSubmit = useCallback(() => {
     if (rating === 0) {
       Alert.alert('Rating Required', 'Please select a star rating before submitting.');
       return;
     }
-    setSubmitted(true);
-  }, [rating]);
+    if (!booking) return;
+    submitReview.mutate(
+      { bookingId: booking.id, carId: booking.carId, rating, comment: review, tags: selectedTags },
+      {
+        onSuccess: () => setSubmitted(true),
+        onError: (err) => Alert.alert('Could Not Submit', getErrorMessage(err, 'Please try again.')),
+      }
+    );
+  }, [rating, review, selectedTags, booking, submitReview]);
 
   const handleDone = useCallback(() => {
     router.dismissAll();
     router.replace('/(tabs)/bookings');
   }, [router]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.errorContainer}>
+        <ActivityIndicator size="large" color={Colors.orange.primary} />
+      </View>
+    );
+  }
 
   if (!booking) {
     return (
@@ -122,9 +148,13 @@ export default function ReviewScreen() {
         <View style={styles.quickTags}>
           <Text style={styles.tagsLabel}>Quick tags</Text>
           <View style={styles.tagsRow}>
-            {['Clean car', 'Great owner', 'Smooth ride', 'On time', 'Accurate listing'].map((tag) => (
-              <Pressable key={tag} style={styles.tagChip}>
-                <Text style={styles.tagText}>{tag}</Text>
+            {QUICK_TAGS.map((tag) => (
+              <Pressable
+                key={tag}
+                style={[styles.tagChip, selectedTags.includes(tag) && styles.tagChipActive]}
+                onPress={() => toggleTag(tag)}
+              >
+                <Text style={[styles.tagText, selectedTags.includes(tag) && styles.tagTextActive]}>{tag}</Text>
               </Pressable>
             ))}
           </View>
@@ -133,12 +163,18 @@ export default function ReviewScreen() {
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
         <Pressable
-          style={[styles.submitBtn, rating === 0 && styles.submitBtnDisabled]}
+          style={[styles.submitBtn, (rating === 0 || submitReview.isPending) && styles.submitBtnDisabled]}
           onPress={handleSubmit}
-          disabled={rating === 0}
+          disabled={rating === 0 || submitReview.isPending}
         >
-          <Send size={18} color={Colors.white} />
-          <Text style={styles.submitBtnText}>Submit Review</Text>
+          {submitReview.isPending ? (
+            <ActivityIndicator color={Colors.white} />
+          ) : (
+            <>
+              <Send size={18} color={Colors.white} />
+              <Text style={styles.submitBtnText}>Submit Review</Text>
+            </>
+          )}
         </Pressable>
       </View>
     </View>
@@ -302,6 +338,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.purple.light + '30',
+  },
+  tagChipActive: {
+    backgroundColor: Colors.purple.medium,
+    borderColor: Colors.purple.medium,
+  },
+  tagTextActive: {
+    color: Colors.white,
   },
   tagText: {
     fontSize: 13,

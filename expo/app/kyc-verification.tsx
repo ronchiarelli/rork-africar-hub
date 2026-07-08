@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { mockKYCDocuments } from '@/mocks/cars';
-import { KYCDocument } from '@/types/car';
+import { useKycDocuments, useUploadKycDocument } from '@/lib/queries/kyc';
+import { getErrorMessage } from '@/lib/errors';
+import type { KycDocTypeDb } from '@/types/database';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
   not_uploaded: { icon: <Upload size={18} color={Colors.gray[400]} />, color: Colors.gray[400], label: 'Not Uploaded' },
@@ -20,23 +21,14 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
 };
 
 export default function KYCVerificationScreen() {
-  const [documents, setDocuments] = useState<KYCDocument[]>(mockKYCDocuments);
+  const { data: documents = [] } = useKycDocuments();
+  const uploadDoc = useUploadKycDocument();
 
-  const handleUpload = useCallback((docId: string) => {
-    Alert.alert('Upload Document', 'This would open camera or gallery to upload the document.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Simulate Upload',
-        onPress: () => {
-          setDocuments((prev) =>
-            prev.map((d) =>
-              d.id === docId ? { ...d, status: 'uploaded', uploadedAt: new Date().toISOString().split('T')[0] } : d
-            )
-          );
-        },
-      },
-    ]);
-  }, []);
+  const handleUpload = useCallback((docType: KycDocTypeDb) => {
+    uploadDoc.mutate(docType, {
+      onError: (err) => Alert.alert('Upload Failed', getErrorMessage(err, 'Please try again.')),
+    });
+  }, [uploadDoc]);
 
   const completedCount = documents.filter((d) => d.status === 'verified').length;
   const progress = (completedCount / documents.length) * 100;
@@ -74,7 +66,7 @@ export default function KYCVerificationScreen() {
               {(doc.status === 'not_uploaded' || doc.status === 'rejected') && (
                 <Pressable
                   style={styles.uploadBtn}
-                  onPress={() => handleUpload(doc.id)}
+                  onPress={() => handleUpload(doc.type)}
                   testID={`upload-${doc.id}`}
                 >
                   <Camera size={16} color={Colors.white} />

@@ -53,6 +53,7 @@ export interface UserProfile {
   avatar: string;
   isVerified: boolean;
   verificationStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  isSuspended: boolean;
   totalBookings: number;
   memberSince: string;
   role: UserRole;
@@ -79,7 +80,7 @@ export interface EarningsSummary {
 
 export interface DealerListing {
   id: string;
-  car: Car;
+  car: SaleCar;
   listingType: 'sale' | 'featured';
   askingPrice: number;
   views: number;

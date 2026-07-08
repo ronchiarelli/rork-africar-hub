@@ -1,0 +1,157 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/providers/AuthProvider';
+import type { SaleCarRow, DealerListingRow, LeadRow } from '@/types/database';
+import type { SaleCar, DealerListing, Lead } from '@/types/car';
+
+function mapSaleCar(row: SaleCarRow): SaleCar {
+  return {
+    id: row.id,
+    brand: row.brand,
+    model: row.model,
+    year: row.year,
+    category: row.category,
+    image: row.image,
+    images: row.images,
+    salePrice: row.sale_price,
+    mileage: row.mileage,
+    location: row.location,
+    fuelType: row.fuel_type,
+    transmission: row.transmission,
+    condition: row.condition,
+    dealerName: row.dealer_name ?? '',
+    dealerPhone: row.dealer_phone ?? '',
+    dealerAvatar: row.dealer_avatar ?? '',
+    isFeatured: row.is_featured,
+    views: row.views,
+    description: row.description ?? '',
+    features: row.features,
+  };
+}
+
+export function useMySaleCars() {
+  const { currentUser } = useAuth();
+  const dealerId = currentUser?.id;
+  return useQuery({
+    queryKey: ['my-sale-cars', dealerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sale_cars')
+        .select('*')
+        .eq('dealer_id', dealerId as string)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as SaleCarRow[]).map(mapSaleCar);
+    },
+    enabled: !!dealerId,
+  });
+}
+
+type DealerListingWithCar = DealerListingRow & { sale_car: SaleCarRow };
+
+export function useMyDealerListings() {
+  const { currentUser } = useAuth();
+  const dealerId = currentUser?.id;
+  return useQuery({
+    queryKey: ['my-dealer-listings', dealerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('dealer_listings')
+        .select('*, sale_car:sale_cars(*)')
+        .eq('dealer_id', dealerId as string)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as unknown as DealerListingWithCar[]).map((row): DealerListing => ({
+        id: row.id,
+        car: mapSaleCar(row.sale_car),
+        listingType: row.listing_type,
+        askingPrice: row.asking_price,
+        views: row.views,
+        leads: row.leads,
+        status: row.status,
+        createdAt: row.created_at,
+      }));
+    },
+    enabled: !!dealerId,
+  });
+}
+
+export function useMyLeads() {
+  const { currentUser } = useAuth();
+  const dealerId = currentUser?.id;
+  return useQuery({
+    queryKey: ['my-leads', dealerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*, dealer_listing:dealer_listings!inner(*)')
+        .eq('dealer_listing.dealer_id', dealerId as string)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as unknown as (LeadRow & { dealer_listing: DealerListingRow })[]).map((row): Lead => ({
+        id: row.id,
+        customerName: row.customer_name,
+        customerPhone: row.customer_phone,
+        carModel: row.car_model ?? '',
+        message: row.message ?? '',
+        status: row.status,
+        createdAt: row.created_at,
+      }));
+    },
+    enabled: !!dealerId,
+  });
+}
+
+export interface NewSaleCarInput {
+  brand: string;
+  model: string;
+  year: number;
+  category: string;
+  image: string;
+  salePrice: number;
+  mileage: number;
+  location: string;
+  fuelType: SaleCar['fuelType'];
+  transmission: SaleCar['transmission'];
+  condition: SaleCar['condition'];
+  description: string;
+  features: string[];
+  dealerName: string;
+  dealerPhone: string;
+}
+
+export function useCreateSaleCar() {
+  const { currentUser } = useAuth();
+  const dealerId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: NewSaleCarInput) => {
+      const { error } = await supabase.from('sale_cars').insert({
+        dealer_id: dealerId,
+        brand: input.brand,
+        model: input.model,
+        year: input.year,
+        category: input.category,
+        image: input.image,
+        images: [input.image],
+        sale_price: input.salePrice,
+        mileage: input.mileage,
+        location: input.location,
+        fuel_type: input.fuelType,
+        transmission: input.transmission,
+        condition: input.condition,
+        dealer_name: input.dealerName,
+        dealer_phone: input.dealerPhone,
+        is_featured: false,
+        description: input.description,
+        features: input.features,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['my-sale-cars', dealerId] });
+      void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings', dealerId] });
+      void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
+    },
+  });
+}

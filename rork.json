@@ -2,22 +2,9 @@
   "$schema": "https://rork.com/schema/rork.json",
   "apps": [
     {
-      "name": "AutoRide Ghana",
+      "name": "GoCar Hub",
       "path": "expo",
       "framework": "react-native"
-    },
-    {
-      "name": "AutoRide Ghana",
-      "path": "ios",
-      "framework": "swift",
-      "settings": {
-        "displayName": "GoCar Hub"
-      }
-    },
-    {
-      "name": "AutoRide Ghana",
-      "path": "android",
-      "framework": "kotlin"
     }
   ]
 }

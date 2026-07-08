@@ -27,6 +27,7 @@ import {
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
+import { useRequestRoleUpgrade } from '@/lib/queries/profile';
 import { UserRole } from '@/types/car';
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -48,7 +49,8 @@ interface MenuItem {
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { currentUser, currentRole, switchRole, logout } = useAuth();
+  const { currentUser, currentRole, logout } = useAuth();
+  const requestRoleUpgrade = useRequestRoleUpgrade(currentUser?.id);
 
   const handleLogout = useCallback(() => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -57,17 +59,29 @@ export default function ProfileScreen() {
     ]);
   }, [logout]);
 
-  const handleSwitchRole = useCallback(() => {
-    const roles: UserRole[] = ['customer', 'fleet_owner', 'dealership', 'admin'];
-    const options = roles.map((r) => ROLE_LABELS[r]);
-    Alert.alert('Switch Account', 'Select account type', [
-      ...options.map((label, idx) => ({
-        text: label + (roles[idx] === currentRole ? ' ✓' : ''),
-        onPress: () => void switchRole(roles[idx]),
-      })),
+  const handleRequestRoleUpgrade = useCallback(() => {
+    Alert.alert('Request Account Upgrade', 'What type of account would you like to apply for?', [
+      {
+        text: 'Fleet Owner',
+        onPress: () => {
+          requestRoleUpgrade.mutate('fleet_owner', {
+            onSuccess: () => Alert.alert('Request Sent', 'An admin will review your fleet owner application.'),
+            onError: () => Alert.alert('Error', 'Could not submit your request. Please try again.'),
+          });
+        },
+      },
+      {
+        text: 'Dealership',
+        onPress: () => {
+          requestRoleUpgrade.mutate('dealership', {
+            onSuccess: () => Alert.alert('Request Sent', 'An admin will review your dealership application.'),
+            onError: () => Alert.alert('Error', 'Could not submit your request. Please try again.'),
+          });
+        },
+      },
       { text: 'Cancel', style: 'cancel' as const },
     ]);
-  }, [currentRole, switchRole]);
+  }, [requestRoleUpgrade]);
 
   const menuItems: MenuItem[][] = [
     [
@@ -85,15 +99,23 @@ export default function ProfileScreen() {
       { icon: <LayoutDashboard size={20} color={Colors.purple.medium} />, label: 'Admin Dashboard', route: '/admin-dashboard' },
     ]] : []),
     [
-      { icon: <Users size={20} color={Colors.gray[600]} />, label: 'Switch Account', onPress: handleSwitchRole },
+      ...(currentRole === 'customer' ? [{
+        icon: <Users size={20} color={Colors.gray[600]} />, label: 'Request Account Upgrade', onPress: handleRequestRoleUpgrade,
+      }] : []),
       { icon: <Settings size={20} color={Colors.gray[600]} />, label: 'Settings', route: '/settings' },
       { icon: <HelpCircle size={20} color={Colors.gray[600]} />, label: 'Help & Support', route: '/help-support' },
-      { icon: <Wallet size={20} color={Colors.gray[600]} />, label: 'My Wallet', route: '/wallet' },
+      ...(currentRole === 'fleet_owner' || currentRole === 'dealership' ? [{
+        icon: <Wallet size={20} color={Colors.gray[600]} />, label: 'My Wallet', route: '/wallet',
+      }] : []),
     ],
     [
       { icon: <LogOut size={20} color={Colors.error} />, label: 'Logout', onPress: handleLogout, color: Colors.error },
     ],
   ];
+
+  if (!currentUser) {
+    return <View style={[styles.container, { paddingTop: insets.top }]} />;
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

@@ -14,23 +14,39 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Mail, Lock, User, Phone, Eye, EyeOff, Car } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { useAuth } from '@/providers/AuthProvider';
+import { getErrorMessage } from '@/lib/errors';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { register, login } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleRegister = useCallback(() => {
+  const handleRegister = useCallback(async () => {
     if (!name || !email || !phone || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    router.push({ pathname: '/otp-verify', params: { phone } });
-  }, [name, email, phone, password, router]);
+    try {
+      const { needsEmailConfirmation } = await register(name, email, phone, password);
+      if (needsEmailConfirmation) {
+        Alert.alert('Check Your Email', 'We sent a confirmation link to your email. Confirm it, then sign in.', [
+          { text: 'OK', onPress: () => router.replace('/login') },
+        ]);
+        return;
+      }
+      await login(email, password);
+      router.dismissAll();
+      router.replace('/(tabs)/(home)');
+    } catch (e) {
+      Alert.alert('Registration Failed', getErrorMessage(e, 'Please try again.'));
+    }
+  }, [name, email, phone, password, register, login, router]);
 
   return (
     <View style={styles.container}>
@@ -47,10 +63,10 @@ export default function RegisterScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.logoWrap}>
             <Car size={28} color={Colors.orange.primary} />
-            <Text style={styles.logoText}>AutoRide</Text>
+            <Text style={styles.logoText}>GoCar Hub</Text>
           </View>
           <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join AutoRide and start your journey</Text>
+          <Text style={styles.subtitle}>Join GoCar Hub and start your journey</Text>
 
           <View style={styles.form}>
             <View style={styles.inputWrap}>
@@ -110,7 +126,7 @@ export default function RegisterScreen() {
 
             <Pressable
               style={({ pressed }) => [styles.registerBtn, pressed && styles.registerBtnPressed]}
-              onPress={handleRegister}
+              onPress={() => void handleRegister()}
               testID="register-submit"
             >
               <Text style={styles.registerBtnText}>Create Account</Text>

@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import {
@@ -19,9 +20,12 @@ import {
   Clock,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { mockAdminStats, mockAdminUsers } from '@/mocks/cars';
+import { usePendingKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
+import { usePendingRoleApplications, useReviewRoleApplication } from '@/lib/queries/roleApplications';
+import { usePlatformStats, useAllUsers, useSetUserSuspended } from '@/lib/queries/admin';
+import { getErrorMessage } from '@/lib/errors';
 
-const TABS = ['Overview', 'Users', 'KYC'] as const;
+const TABS = ['Overview', 'Users', 'KYC', 'Roles'] as const;
 type Tab = typeof TABS[number];
 
 const ROLE_COLORS: Record<string, string> = {
@@ -39,6 +43,48 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
 
 export default function AdminDashboardScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
+  const { data: pendingKyc = [] } = usePendingKycDocuments();
+  const reviewKyc = useReviewKycDocument();
+  const { data: pendingRoleApps = [] } = usePendingRoleApplications();
+  const reviewRoleApp = useReviewRoleApplication();
+  const { data: stats } = usePlatformStats();
+  const { data: allUsers = [] } = useAllUsers();
+  const setSuspended = useSetUserSuspended();
+
+  const handleKycDecision = (docId: string, decision: 'verified' | 'rejected') => {
+    reviewKyc.mutate(
+      { docId, decision },
+      { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update this document.')) }
+    );
+  };
+
+  const handleRoleDecision = (userId: string, decision: 'approved' | 'rejected') => {
+    reviewRoleApp.mutate(
+      { userId, decision },
+      { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update this application.')) }
+    );
+  };
+
+  const handleToggleSuspend = (userId: string, currentlySuspended: boolean) => {
+    const action = currentlySuspended ? 'reactivate' : 'suspend';
+    Alert.alert(
+      currentlySuspended ? 'Reactivate Account' : 'Suspend Account',
+      `Are you sure you want to ${action} this account?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: currentlySuspended ? 'Reactivate' : 'Suspend',
+          style: currentlySuspended ? 'default' : 'destructive',
+          onPress: () => {
+            setSuspended.mutate(
+              { userId, suspended: !currentlySuspended },
+              { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update this account.')) }
+            );
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -60,22 +106,22 @@ export default function AdminDashboardScreen() {
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
                 <Users size={20} color={Colors.info} />
-                <Text style={styles.statValue}>{mockAdminStats.totalUsers.toLocaleString()}</Text>
+                <Text style={styles.statValue}>{(stats?.totalUsers ?? 0).toLocaleString()}</Text>
                 <Text style={styles.statLabel}>Users</Text>
               </View>
               <View style={styles.statCard}>
                 <CalendarDays size={20} color={Colors.success} />
-                <Text style={styles.statValue}>{mockAdminStats.totalBookings.toLocaleString()}</Text>
+                <Text style={styles.statValue}>{(stats?.totalBookings ?? 0).toLocaleString()}</Text>
                 <Text style={styles.statLabel}>Bookings</Text>
               </View>
               <View style={styles.statCard}>
                 <DollarSign size={20} color={Colors.orange.primary} />
-                <Text style={styles.statValue}>GH₵{(mockAdminStats.totalRevenue / 1000).toFixed(0)}k</Text>
-                <Text style={styles.statLabel}>Revenue</Text>
+                <Text style={styles.statValue}>GH₵{((stats?.totalSubscriptionRevenue ?? 0) / 1000).toFixed(1)}k</Text>
+                <Text style={styles.statLabel}>Sub. Revenue</Text>
               </View>
               <View style={styles.statCard}>
                 <Tag size={20} color={Colors.purple.medium} />
-                <Text style={styles.statValue}>{mockAdminStats.activeListings}</Text>
+                <Text style={styles.statValue}>{(stats?.totalCars ?? 0) + (stats?.totalSaleCars ?? 0)}</Text>
                 <Text style={styles.statLabel}>Listings</Text>
               </View>
             </View>
@@ -84,19 +130,19 @@ export default function AdminDashboardScreen() {
               <View style={styles.growthHeader}>
                 <Text style={styles.growthTitle}>Monthly Growth</Text>
                 <View style={styles.growthBadge}>
-                  <TrendingUp size={14} color={Colors.success} />
-                  <Text style={styles.growthValue}>+{mockAdminStats.monthlyGrowth}%</Text>
+                  <TrendingUp size={14} color={(stats?.monthlyGrowth ?? 0) >= 0 ? Colors.success : Colors.error} />
+                  <Text style={styles.growthValue}>{(stats?.monthlyGrowth ?? 0) >= 0 ? '+' : ''}{stats?.monthlyGrowth ?? 0}%</Text>
                 </View>
               </View>
               <View style={styles.growthBar}>
-                <View style={[styles.growthFill, { width: `${Math.min(mockAdminStats.monthlyGrowth * 5, 100)}%` }]} />
+                <View style={[styles.growthFill, { width: `${Math.min(Math.max(stats?.monthlyGrowth ?? 0, 0) * 5, 100)}%` }]} />
               </View>
             </View>
 
             <View style={styles.alertCard}>
               <ShieldCheck size={20} color={Colors.warning} />
               <View style={styles.alertContent}>
-                <Text style={styles.alertTitle}>{mockAdminStats.pendingKYC} Pending KYC Reviews</Text>
+                <Text style={styles.alertTitle}>{pendingKyc.length} Pending KYC Reviews</Text>
                 <Text style={styles.alertText}>Users waiting for identity verification</Text>
               </View>
             </View>
@@ -105,11 +151,20 @@ export default function AdminDashboardScreen() {
 
         {activeTab === 'Users' && (
           <>
-            <Text style={styles.sectionTitle}>All Users ({mockAdminUsers.length})</Text>
-            {mockAdminUsers.map((user) => {
-              const statusConfig = STATUS_CONFIG[user.status] ?? STATUS_CONFIG.active;
+            <Text style={styles.sectionTitle}>All Users ({allUsers.length})</Text>
+            {allUsers.map((user) => {
+              const statusConfig = user.isSuspended
+                ? STATUS_CONFIG.suspended
+                : user.verificationStatus === 'pending'
+                  ? STATUS_CONFIG.pending_kyc
+                  : STATUS_CONFIG.active;
               return (
-                <View key={user.id} style={styles.userCard}>
+                <Pressable
+                  key={user.id}
+                  style={styles.userCard}
+                  onPress={() => handleToggleSuspend(user.id, user.isSuspended)}
+                  testID={`user-row-${user.id}`}
+                >
                   <Image source={{ uri: user.avatar }} style={styles.userAvatar} contentFit="cover" />
                   <View style={styles.userInfo}>
                     <Text style={styles.userName}>{user.name}</Text>
@@ -123,7 +178,7 @@ export default function AdminDashboardScreen() {
                       </View>
                     </View>
                   </View>
-                </View>
+                </Pressable>
               );
             })}
           </>
@@ -132,32 +187,80 @@ export default function AdminDashboardScreen() {
         {activeTab === 'KYC' && (
           <>
             <Text style={styles.sectionTitle}>Pending KYC Approvals</Text>
-            {mockAdminUsers.filter(u => u.status === 'pending_kyc').map((user) => (
-              <View key={user.id} style={styles.kycCard}>
+            {pendingKyc.map((doc) => (
+              <View key={doc.docId} style={styles.kycCard}>
                 <View style={styles.kycHeader}>
-                  <Image source={{ uri: user.avatar }} style={styles.kycAvatar} contentFit="cover" />
                   <View style={styles.kycInfo}>
-                    <Text style={styles.kycName}>{user.name}</Text>
-                    <Text style={styles.kycEmail}>{user.email}</Text>
-                    <Text style={styles.kycDate}>Joined: {user.joinDate}</Text>
+                    <Text style={styles.kycName}>{doc.userName}</Text>
+                    <Text style={styles.kycEmail}>{doc.userEmail}</Text>
+                    <Text style={styles.kycDate}>{doc.label} · Uploaded {doc.uploadedAt?.split('T')[0]}</Text>
                   </View>
                 </View>
                 <View style={styles.kycActions}>
-                  <Pressable style={styles.approveBtn}>
+                  <Pressable
+                    style={styles.approveBtn}
+                    onPress={() => handleKycDecision(doc.docId, 'verified')}
+                    disabled={reviewKyc.isPending}
+                  >
                     <UserCheck size={16} color={Colors.white} />
                     <Text style={styles.approveBtnText}>Approve</Text>
                   </Pressable>
-                  <Pressable style={styles.rejectBtn}>
+                  <Pressable
+                    style={styles.rejectBtn}
+                    onPress={() => handleKycDecision(doc.docId, 'rejected')}
+                    disabled={reviewKyc.isPending}
+                  >
                     <UserX size={16} color={Colors.white} />
                     <Text style={styles.rejectBtnText}>Reject</Text>
                   </Pressable>
                 </View>
               </View>
             ))}
-            {mockAdminUsers.filter(u => u.status === 'pending_kyc').length === 0 && (
+            {pendingKyc.length === 0 && (
               <View style={styles.emptyWrap}>
                 <Clock size={40} color={Colors.gray[300]} />
                 <Text style={styles.emptyText}>No pending KYC approvals</Text>
+              </View>
+            )}
+          </>
+        )}
+
+        {activeTab === 'Roles' && (
+          <>
+            <Text style={styles.sectionTitle}>Pending Role Requests</Text>
+            {pendingRoleApps.map((app) => (
+              <View key={app.applicationId} style={styles.kycCard}>
+                <View style={styles.kycHeader}>
+                  <View style={styles.kycInfo}>
+                    <Text style={styles.kycName}>{app.userName}</Text>
+                    <Text style={styles.kycEmail}>{app.userEmail}</Text>
+                    <Text style={styles.kycDate}>Requesting: {app.requestedRole.replace('_', ' ')}</Text>
+                  </View>
+                </View>
+                <View style={styles.kycActions}>
+                  <Pressable
+                    style={styles.approveBtn}
+                    onPress={() => handleRoleDecision(app.userId, 'approved')}
+                    disabled={reviewRoleApp.isPending}
+                  >
+                    <UserCheck size={16} color={Colors.white} />
+                    <Text style={styles.approveBtnText}>Approve</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.rejectBtn}
+                    onPress={() => handleRoleDecision(app.userId, 'rejected')}
+                    disabled={reviewRoleApp.isPending}
+                  >
+                    <UserX size={16} color={Colors.white} />
+                    <Text style={styles.rejectBtnText}>Reject</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ))}
+            {pendingRoleApps.length === 0 && (
+              <View style={styles.emptyWrap}>
+                <Clock size={40} color={Colors.gray[300]} />
+                <Text style={styles.emptyText}>No pending role requests</Text>
               </View>
             )}
           </>

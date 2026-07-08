@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,17 +6,24 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  Modal,
+  TextInput,
+  Platform,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import {
   Wallet as WalletIcon,
   ArrowUpRight,
   ArrowDownLeft,
   Plus,
   AlertCircle,
-  CreditCard,
+  Repeat,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { mockWallet } from '@/mocks/cars';
+import { useWallet, useInitiateWalletTopUp } from '@/lib/queries/wallet';
+import { useSubscription } from '@/lib/queries/subscriptions';
+import { getErrorMessage } from '@/lib/errors';
 import { WalletTransaction } from '@/types/car';
 
 function TransactionRow({ tx }: { tx: WalletTransaction }) {
@@ -49,17 +56,42 @@ function TransactionRow({ tx }: { tx: WalletTransaction }) {
 }
 
 export default function WalletScreen() {
+  const router = useRouter();
+  const { data: wallet } = useWallet();
+  const { data: subscription } = useSubscription();
+  const initiateTopUp = useInitiateWalletTopUp();
+  const [topUpModalVisible, setTopUpModalVisible] = useState<boolean>(false);
+  const [topUpAmount, setTopUpAmount] = useState<string>('');
+
   const handleTopUp = () => {
-    Alert.alert('Top Up Wallet', 'Choose a top-up method:', [
-      { text: 'MTN MoMo', onPress: () => Alert.alert('Success', 'Wallet topped up via MTN MoMo!') },
-      { text: 'Vodafone Cash', onPress: () => Alert.alert('Success', 'Wallet topped up via Vodafone Cash!') },
-      { text: 'Bank Card', onPress: () => Alert.alert('Success', 'Wallet topped up via Bank Card!') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    setTopUpAmount('');
+    setTopUpModalVisible(true);
   };
 
-  const totalIn = mockWallet.transactions.filter((t) => t.type === 'credit').reduce((s, t) => s + t.amount, 0);
-  const totalOut = mockWallet.transactions.filter((t) => t.type === 'debit').reduce((s, t) => s + t.amount, 0);
+  const handleConfirmTopUp = () => {
+    const amount = Number(topUpAmount);
+    if (!Number.isFinite(amount) || amount < 10) {
+      Alert.alert('Invalid amount', 'Enter an amount of at least GH₵10.');
+      return;
+    }
+    initiateTopUp.mutate(amount, {
+      onSuccess: async (data) => {
+        setTopUpModalVisible(false);
+        if (Platform.OS === 'web') {
+          window.open(data.checkoutUrl, '_blank');
+        } else {
+          await WebBrowser.openBrowserAsync(data.checkoutUrl);
+        }
+      },
+      onError: (err) => {
+        Alert.alert('Could not start top-up', getErrorMessage(err, 'Something went wrong. Please try again.'));
+      },
+    });
+  };
+
+  const transactions = wallet?.transactions ?? [];
+  const totalIn = transactions.filter((t) => t.type === 'credit').reduce((s, t) => s + t.amount, 0);
+  const totalOut = transactions.filter((t) => t.type === 'debit').reduce((s, t) => s + t.amount, 0);
 
   return (
     <View style={styles.container}>
@@ -69,9 +101,16 @@ export default function WalletScreen() {
             <View style={styles.balanceIconWrap}>
               <WalletIcon size={24} color={Colors.white} />
             </View>
-            <Text style={styles.balanceLabel}>Available Balance</Text>
+            <Text style={styles.balanceLabel}>Subscription Balance</Text>
           </View>
-          <Text style={styles.balanceValue}>GH₵{mockWallet.balance.toLocaleString()}</Text>
+          <Text style={styles.balanceValue}>GH₵{(wallet?.balance ?? 0).toLocaleString()}</Text>
+          {subscription?.row && (
+            <Text style={styles.balanceSub}>
+              {subscription.isActive
+                ? `Covers ${Math.floor((wallet?.balance ?? 0) / subscription.row.amount)} more month${Math.floor((wallet?.balance ?? 0) / subscription.row.amount) === 1 ? '' : 's'} at GH₵${subscription.row.amount}/mo`
+                : 'Top up to reactivate your subscription'}
+            </Text>
+          )}
           <Pressable style={styles.topUpBtn} onPress={handleTopUp}>
             <Plus size={16} color={Colors.purple.deep} />
             <Text style={styles.topUpText}>Top Up</Text>
@@ -98,17 +137,11 @@ export default function WalletScreen() {
             </View>
             <Text style={styles.quickLabel}>Top Up</Text>
           </Pressable>
-          <Pressable style={styles.quickBtn} onPress={() => Alert.alert('Coming Soon', 'Withdrawal feature is coming soon!')}>
-            <View style={[styles.quickIcon, { backgroundColor: Colors.info + '15' }]}>
-              <CreditCard size={20} color={Colors.info} />
-            </View>
-            <Text style={styles.quickLabel}>Withdraw</Text>
-          </Pressable>
-          <Pressable style={styles.quickBtn} onPress={() => Alert.alert('Coming Soon', 'Transfer feature is coming soon!')}>
+          <Pressable style={styles.quickBtn} onPress={() => router.push('/subscription')}>
             <View style={[styles.quickIcon, { backgroundColor: Colors.purple.medium + '15' }]}>
-              <ArrowUpRight size={20} color={Colors.purple.medium} />
+              <Repeat size={20} color={Colors.purple.medium} />
             </View>
-            <Text style={styles.quickLabel}>Transfer</Text>
+            <Text style={styles.quickLabel}>Subscription</Text>
           </Pressable>
         </View>
 
@@ -120,10 +153,10 @@ export default function WalletScreen() {
         </View>
 
         <View style={styles.txCard}>
-          {mockWallet.transactions.map((tx, idx) => (
+          {transactions.map((tx, idx) => (
             <View key={tx.id}>
               <TransactionRow tx={tx} />
-              {idx < mockWallet.transactions.length - 1 && <View style={styles.txDivider} />}
+              {idx < transactions.length - 1 && <View style={styles.txDivider} />}
             </View>
           ))}
         </View>
@@ -131,10 +164,36 @@ export default function WalletScreen() {
         <View style={styles.infoCard}>
           <AlertCircle size={18} color={Colors.orange.primary} />
           <Text style={styles.infoText}>
-            Your wallet is secured with 256-bit encryption. All transactions are monitored for fraud protection.
+            This balance is used only to pay your GoCar Hub platform subscription. It has no connection to booking payments, which are arranged directly with your customers.
           </Text>
         </View>
       </ScrollView>
+
+      <Modal visible={topUpModalVisible} transparent animationType="fade" onRequestClose={() => setTopUpModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Top Up Wallet</Text>
+            <Text style={styles.modalSubtitle}>Enter an amount to fund via Mobile Money or card (min GH₵10).</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. 150"
+              placeholderTextColor={Colors.gray[400]}
+              keyboardType="numeric"
+              value={topUpAmount}
+              onChangeText={setTopUpAmount}
+              testID="topup-amount-input"
+            />
+            <View style={styles.modalActions}>
+              <Pressable style={styles.modalCancelBtn} onPress={() => setTopUpModalVisible(false)} disabled={initiateTopUp.isPending}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.modalConfirmBtn} onPress={handleConfirmTopUp} disabled={initiateTopUp.isPending} testID="topup-confirm-btn">
+                <Text style={styles.modalConfirmText}>{initiateTopUp.isPending ? 'Starting…' : 'Continue'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -183,6 +242,11 @@ const styles = StyleSheet.create({
     fontWeight: '800' as const,
     color: Colors.white,
     letterSpacing: -0.5,
+  },
+  balanceSub: {
+    fontSize: 12,
+    color: Colors.gray[400],
+    marginTop: 4,
   },
   topUpBtn: {
     flexDirection: 'row' as const,
@@ -337,5 +401,67 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.orange.primary,
     lineHeight: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    padding: 24,
+  },
+  modalCard: {
+    width: '100%' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 22,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800' as const,
+    color: Colors.gray[900],
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: Colors.gray[500],
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: Colors.gray[900],
+  },
+  modalActions: {
+    flexDirection: 'row' as const,
+    gap: 10,
+    marginTop: 18,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.gray[100],
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: Colors.gray[700],
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.orange.primary,
+  },
+  modalConfirmText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: Colors.white,
   },
 });

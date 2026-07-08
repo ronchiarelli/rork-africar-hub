@@ -18,7 +18,6 @@ import {
   ChevronRight,
   Wrench,
   AlertTriangle,
-  DollarSign,
   Eye,
   PhoneCall,
   Users,
@@ -27,18 +26,19 @@ import {
 } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/providers/AuthProvider";
-import {
-  mockFleetVehicles,
-  mockEarnings,
-  mockDealerListings,
-  mockLeads,
-  mockAdminStats,
-  mockAdminUsers,
-} from "@/mocks/cars";
+import { useMyFleetVehicles } from "@/lib/queries/fleet";
+import { useMyDealerListings, useMyLeads } from "@/lib/queries/dealer";
+import { usePlatformStats, useAllUsers } from "@/lib/queries/admin";
 
 // ─── Fleet Owner Dashboard ────────────────────────────────────────────────
 
 function FleetDashboard() {
+  const { data: fleetVehicles = [] } = useMyFleetVehicles();
+  const earnings = {
+    totalRevenue: fleetVehicles.reduce((s, v) => s + v.totalEarnings, 0),
+    completedTrips: fleetVehicles.reduce((s, v) => s + v.totalTrips, 0),
+    activeRentals: fleetVehicles.filter((v) => v.status === "rented").length,
+  };
   const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
     active: { bg: Colors.success + "20", text: Colors.success, label: "Available" },
     rented: { bg: Colors.info + "20", text: Colors.info, label: "Rented" },
@@ -50,49 +50,30 @@ function FleetDashboard() {
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={sd.content}>
       <View style={sd.earningsCard}>
         <Text style={sd.earningsTitle}>Total Revenue</Text>
-        <Text style={sd.earningsValue}>GH₵{mockEarnings.totalRevenue.toLocaleString()}</Text>
-        <View style={sd.earningsRow}>
-          <View style={sd.earningItem}>
-            <TrendingUp size={14} color={Colors.success} />
-            <Text style={sd.earningLabel}>This Month</Text>
-            <Text style={sd.earningAmount}>GH₵{mockEarnings.thisMonth.toLocaleString()}</Text>
-          </View>
-          <View style={sd.earningDivider} />
-          <View style={sd.earningItem}>
-            <DollarSign size={14} color={Colors.warning} />
-            <Text style={sd.earningLabel}>Pending</Text>
-            <Text style={sd.earningAmount}>GH₵{mockEarnings.pendingPayouts.toLocaleString()}</Text>
-          </View>
-          <View style={sd.earningDivider} />
-          <View style={sd.earningItem}>
-            <TrendingUp size={14} color={Colors.info} />
-            <Text style={sd.earningLabel}>Last Month</Text>
-            <Text style={sd.earningAmount}>GH₵{mockEarnings.lastMonth.toLocaleString()}</Text>
-          </View>
-        </View>
+        <Text style={sd.earningsValue}>GH₵{earnings.totalRevenue.toLocaleString()}</Text>
       </View>
 
       <View style={sd.statsRow}>
         <View style={sd.statCard}>
           <CalendarCheck size={20} color={Colors.info} />
-          <Text style={sd.statValue}>{mockEarnings.completedTrips}</Text>
+          <Text style={sd.statValue}>{earnings.completedTrips}</Text>
           <Text style={sd.statLabel}>Trips</Text>
         </View>
         <View style={sd.statCard}>
           <Car size={20} color={Colors.success} />
-          <Text style={sd.statValue}>{mockEarnings.activeRentals}</Text>
+          <Text style={sd.statValue}>{earnings.activeRentals}</Text>
           <Text style={sd.statLabel}>Active</Text>
         </View>
         <View style={sd.statCard}>
           <Wrench size={20} color={Colors.warning} />
-          <Text style={sd.statValue}>{mockFleetVehicles.filter(v => v.status === "maintenance").length}</Text>
+          <Text style={sd.statValue}>{fleetVehicles.filter(v => v.status === "maintenance").length}</Text>
           <Text style={sd.statLabel}>Service</Text>
         </View>
       </View>
 
       <Text style={sd.sectionTitle}>My Fleet</Text>
 
-      {mockFleetVehicles.map((vehicle) => {
+      {fleetVehicles.map((vehicle) => {
         const cfg = statusConfig[vehicle.status] ?? statusConfig.active;
         return (
           <View key={vehicle.id} style={sd.vehicleCard}>
@@ -129,29 +110,32 @@ function FleetDashboard() {
 // ─── Dealer Dashboard ──────────────────────────────────────────────────────
 
 function DealerDashboard() {
+  const { data: listings = [] } = useMyDealerListings();
+  const { data: leads = [] } = useMyLeads();
+
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={sd.content}>
       <View style={sd.statsRow}>
         <View style={sd.statCard}>
           <Eye size={20} color={Colors.info} />
-          <Text style={sd.statValue}>{mockDealerListings.reduce((s, l) => s + l.views, 0)}</Text>
+          <Text style={sd.statValue}>{listings.reduce((s, l) => s + l.views, 0)}</Text>
           <Text style={sd.statLabel}>Views</Text>
         </View>
         <View style={sd.statCard}>
           <PhoneCall size={20} color={Colors.success} />
-          <Text style={sd.statValue}>{mockLeads.length}</Text>
+          <Text style={sd.statValue}>{leads.length}</Text>
           <Text style={sd.statLabel}>Leads</Text>
         </View>
         <View style={sd.statCard}>
           <Car size={20} color={Colors.orange.primary} />
-          <Text style={sd.statValue}>{mockDealerListings.filter(l => l.status === "active").length}</Text>
+          <Text style={sd.statValue}>{listings.filter(l => l.status === "active").length}</Text>
           <Text style={sd.statLabel}>Active</Text>
         </View>
       </View>
 
       <Text style={sd.sectionTitle}>My Listings</Text>
 
-      {mockDealerListings.map((listing) => {
+      {listings.map((listing) => {
         const statusCfg: Record<string, { bg: string; text: string }> = {
           active: { bg: Colors.success + "20", text: Colors.success },
           sold: { bg: Colors.gray[200], text: Colors.gray[600] },
@@ -190,7 +174,7 @@ function DealerDashboard() {
 
       <Text style={[sd.sectionTitle, { marginTop: 20 }]}>Recent Leads</Text>
 
-      {mockLeads.slice(0, 5).map((lead) => (
+      {leads.slice(0, 5).map((lead) => (
         <View key={lead.id} style={sd.leadCard}>
           <View style={sd.leadInfo}>
             <Text style={sd.leadName}>{lead.customerName}</Text>
@@ -211,27 +195,30 @@ function DealerDashboard() {
 // ─── Admin Dashboard ───────────────────────────────────────────────────────
 
 function AdminDashboard() {
+  const { data: stats } = usePlatformStats();
+  const { data: allUsers = [] } = useAllUsers();
+
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={sd.content}>
       <View style={sd.statsGrid}>
         <View style={sd.statCardWide}>
           <Users size={18} color={Colors.info} />
-          <Text style={sd.statValue}>{mockAdminStats.totalUsers}</Text>
+          <Text style={sd.statValue}>{stats?.totalUsers ?? 0}</Text>
           <Text style={sd.statLabel}>Users</Text>
         </View>
         <View style={sd.statCardWide}>
           <BarChart3 size={18} color={Colors.success} />
-          <Text style={sd.statValue}>GH₵{mockAdminStats.totalRevenue.toLocaleString()}</Text>
-          <Text style={sd.statLabel}>Revenue</Text>
+          <Text style={sd.statValue}>GH₵{(stats?.totalSubscriptionRevenue ?? 0).toLocaleString()}</Text>
+          <Text style={sd.statLabel}>Sub. Revenue</Text>
         </View>
         <View style={sd.statCardWide}>
           <CalendarCheck size={18} color={Colors.orange.primary} />
-          <Text style={sd.statValue}>{mockAdminStats.totalBookings}</Text>
+          <Text style={sd.statValue}>{stats?.totalBookings ?? 0}</Text>
           <Text style={sd.statLabel}>Bookings</Text>
         </View>
         <View style={sd.statCardWide}>
           <ShieldCheck size={18} color={Colors.warning} />
-          <Text style={sd.statValue}>{mockAdminStats.pendingKYC}</Text>
+          <Text style={sd.statValue}>{stats?.pendingKYC ?? 0}</Text>
           <Text style={sd.statLabel}>Pending KYC</Text>
         </View>
       </View>
@@ -240,22 +227,23 @@ function AdminDashboard() {
         <TrendingUp size={18} color={Colors.success} />
         <View style={sd.growthInfo}>
           <Text style={sd.growthLabel}>Monthly Growth</Text>
-          <Text style={sd.growthValue}>+{mockAdminStats.monthlyGrowth}%</Text>
+          <Text style={sd.growthValue}>{(stats?.monthlyGrowth ?? 0) >= 0 ? '+' : ''}{stats?.monthlyGrowth ?? 0}%</Text>
         </View>
         <View style={sd.growthBar}>
-          <View style={[sd.growthFill, { width: `${Math.min(mockAdminStats.monthlyGrowth, 100)}%` }]} />
+          <View style={[sd.growthFill, { width: `${Math.min(Math.max(stats?.monthlyGrowth ?? 0, 0), 100)}%` }]} />
         </View>
       </View>
 
       <Text style={sd.sectionTitle}>Users</Text>
 
-      {mockAdminUsers.slice(0, 5).map((user) => {
+      {allUsers.slice(0, 5).map((user) => {
         const statusCfg: Record<string, { bg: string; text: string }> = {
           active: { bg: Colors.success + "20", text: Colors.success },
           suspended: { bg: Colors.error + "20", text: Colors.error },
-          pending_kyc: { bg: Colors.warning + "20", text: Colors.warning },
+          pending: { bg: Colors.warning + "20", text: Colors.warning },
         };
-        const cfg = statusCfg[user.status] ?? statusCfg.active;
+        const statusKey = user.isSuspended ? 'suspended' : user.verificationStatus === 'pending' ? 'pending' : 'active';
+        const cfg = statusCfg[statusKey];
         return (
           <View key={user.id} style={sd.userCard}>
             <Image source={{ uri: user.avatar }} style={sd.userAvatar} contentFit="cover" />
@@ -264,7 +252,7 @@ function AdminDashboard() {
               <Text style={sd.userEmail}>{user.email}</Text>
             </View>
             <View style={[sd.statusBadge, { backgroundColor: cfg.bg }]}>
-              <Text style={[sd.statusText, { color: cfg.text }]}>{user.status.replace("_", " ").toUpperCase()}</Text>
+              <Text style={[sd.statusText, { color: cfg.text }]}>{statusKey.replace("_", " ").toUpperCase()}</Text>
             </View>
           </View>
         );
@@ -348,7 +336,7 @@ function CustomerDashboard() {
 
       <Text style={sd.sectionTitle}>Getting Started</Text>
       <View style={csd.tipCard}>
-        <Text style={csd.tipTitle}>New to AutoRide?</Text>
+        <Text style={csd.tipTitle}>New to GoCar Hub?</Text>
         <Text style={csd.tipText}>Browse trending cars on the Home tab, tap the floating search button to find your perfect ride, or explore cars for sale in the Marketplace.</Text>
         <Pressable style={csd.tipBtn} onPress={() => router.push("/(tabs)/(home)")}>
           <Text style={csd.tipBtnText}>Explore Cars</Text>

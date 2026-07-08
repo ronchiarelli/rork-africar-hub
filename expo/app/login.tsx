@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Car } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
+import { getErrorMessage } from '@/lib/errors';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -28,9 +29,13 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-    await login();
-    router.dismissAll();
-    router.replace('/(tabs)/(home)');
+    try {
+      await login(email, password);
+      router.dismissAll();
+      router.replace('/(tabs)/(home)');
+    } catch (e) {
+      Alert.alert('Sign In Failed', getErrorMessage(e, 'Please check your credentials and try again.'));
+    }
   }, [email, password, login, router]);
 
   return (
@@ -48,7 +53,7 @@ export default function LoginScreen() {
         <View style={styles.content}>
           <View style={styles.logoWrap}>
             <Car size={28} color={Colors.orange.primary} />
-            <Text style={styles.logoText}>AutoRide</Text>
+            <Text style={styles.logoText}>GoCar Hub</Text>
           </View>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue your journey</Text>
@@ -97,7 +102,7 @@ export default function LoginScreen() {
             </Pressable>
 
             <View style={styles.signupRow}>
-              <Text style={styles.signupText}>Don't have an account? </Text>
+              <Text style={styles.signupText}>Don&apos;t have an account? </Text>
               <Pressable onPress={() => router.push('/register')}>
                 <Text style={styles.signupLink}>Sign Up</Text>
               </Pressable>

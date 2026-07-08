@@ -12,7 +12,7 @@ import {
 import { Image } from 'expo-image';
 import { Search, SlidersHorizontal, MapPin, Eye, MessageCircle, Phone, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { mockSaleCars } from '@/mocks/cars';
+import { useSaleCars } from '@/lib/queries/cars';
 import { SaleCar } from '@/types/car';
 
 const CONDITIONS = ['All', 'New', 'Foreign Used', 'Locally Used'];
@@ -20,7 +20,7 @@ const BRANDS = ['All', 'Toyota', 'Mercedes', 'BMW', 'Honda', 'Hyundai', 'Range R
 
 function SaleListingCard({ car }: { car: SaleCar }) {
   const handleWhatsApp = useCallback(() => {
-    const msg = `Hi, I'm interested in the ${car.brand} ${car.model} (${car.year}) listed for GH₵${car.salePrice.toLocaleString()} on AutoRide.`;
+    const msg = `Hi, I'm interested in the ${car.brand} ${car.model} (${car.year}) listed for GH₵${car.salePrice.toLocaleString()} on GoCar Hub.`;
     void Linking.openURL(`https://wa.me/${car.dealerPhone.replace('+', '')}?text=${encodeURIComponent(msg)}`);
   }, [car]);
 
@@ -100,9 +100,10 @@ export default function MarketplaceScreen() {
   const [selectedCondition, setSelectedCondition] = useState('All');
   const [selectedBrand, setSelectedBrand] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
+  const { data: saleCars = [] } = useSaleCars();
 
   const filteredCars = useMemo(() => {
-    return mockSaleCars.filter((car) => {
+    return saleCars.filter((car) => {
       const matchQuery = query === '' ||
         car.brand.toLowerCase().includes(query.toLowerCase()) ||
         car.model.toLowerCase().includes(query.toLowerCase());
@@ -110,7 +111,7 @@ export default function MarketplaceScreen() {
       const matchBrand = selectedBrand === 'All' || car.brand === selectedBrand;
       return matchQuery && matchCondition && matchBrand;
     });
-  }, [query, selectedCondition, selectedBrand]);
+  }, [saleCars, query, selectedCondition, selectedBrand]);
 
   return (
     <View style={styles.container}>

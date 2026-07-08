@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MapPin, Bell, Heart, Search, ChevronRight, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { cars, brands, mockSaleCars } from '@/mocks/cars';
+import { useCars, useBrands, useSaleCars } from '@/lib/queries/cars';
 import { useAuth } from '@/providers/AuthProvider';
 import CarCard from '@/components/CarCard';
 import BrandCard from '@/components/BrandCard';
@@ -75,13 +75,16 @@ export default function HomeScreen() {
   const router = useRouter();
   const { currentUser } = useAuth();
   const [searchText, setSearchText] = useState('');
+  const { data: brands = [] } = useBrands();
+  const { data: cars = [] } = useCars({ onlyAvailable: true });
+  const { data: saleCars = [] } = useSaleCars();
 
   const handleBrandPress = useCallback((brand: Brand) => {
     console.log('Brand pressed:', brand.name);
     router.push('/search');
   }, [router]);
 
-  const featuredSaleCars = mockSaleCars.filter(c => c.isFeatured);
+  const featuredSaleCars = saleCars.filter(c => c.isFeatured);
 
   return (
     <View style={styles.container}>

@@ -7,6 +7,7 @@ import {
   Pressable,
   Linking,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +26,7 @@ import {
   Phone,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { cars } from '@/mocks/cars';
+import { useCarDetails } from '@/lib/queries/cars';
 import { useFavorites } from '@/providers/FavoritesProvider';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -37,11 +38,11 @@ export default function CarDetailsScreen() {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const car = cars.find((c) => c.id === id);
+  const { data: car, isLoading } = useCarDetails(id);
 
   const handleWhatsApp = useCallback(() => {
     if (!car) return;
-    const message = `Hi, I'm interested in renting the ${car.brand} ${car.model} listed on AutoRide.`;
+    const message = `Hi, I'm interested in renting the ${car.brand} ${car.model} listed on GoCar Hub.`;
     const url = `https://wa.me/${car.ownerPhone.replace('+', '')}?text=${encodeURIComponent(message)}`;
     void Linking.openURL(url);
   }, [car]);
@@ -50,6 +51,15 @@ export default function CarDetailsScreen() {
     if (!car) return;
     void Linking.openURL(`tel:${car.ownerPhone}`);
   }, [car]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.errorContainer}>
+        <Stack.Screen options={{ headerShown: true, title: '' }} />
+        <ActivityIndicator size="large" color={Colors.orange.primary} />
+      </View>
+    );
+  }
 
   if (!car) {
     return (

@@ -31,7 +31,7 @@ const FAQS: FAQItem[] = [
   {
     id: '1',
     question: 'How do I book a car?',
-    answer: 'Browse the available cars on the Home or Search tab, tap on a car to view details, then tap "Rent Now" to select your pickup/return dates and location. Proceed to payment to confirm your booking.',
+    answer: 'Browse the available cars on the Home or Search tab, tap on a car to view details, then tap "Rent Now" to select your pickup/return dates and location and submit your request. The fleet owner will review and approve it.',
   },
   {
     id: '2',
@@ -41,12 +41,12 @@ const FAQS: FAQItem[] = [
   {
     id: '3',
     question: 'Can I cancel my booking?',
-    answer: 'Yes, you can cancel a booking before the pickup time. Cancellations made 24 hours before pickup receive a full refund. Shorter notice may incur a small fee.',
+    answer: 'Yes. Reach out to the fleet owner directly using the WhatsApp or Call button on your booking to arrange a cancellation.',
   },
   {
     id: '4',
-    question: 'What payment methods are accepted?',
-    answer: 'We accept MTN Mobile Money, Vodafone Cash, AirtelTigo Money, Visa/Mastercard, and AutoRide Wallet. All payments are secured with 256-bit encryption.',
+    question: 'How do I pay for my rental?',
+    answer: 'GoCar Hub connects you with the fleet owner. Once your booking is approved, you\'ll receive their contact details to arrange payment and pickup directly with them.',
   },
   {
     id: '5',
@@ -56,7 +56,7 @@ const FAQS: FAQItem[] = [
   {
     id: '6',
     question: 'Is insurance included?',
-    answer: 'Basic insurance is included in all rentals. You can opt for premium coverage during checkout for added peace of mind.',
+    answer: 'Insurance arrangements for a rental are between you and the fleet owner — ask them directly when you connect about your booking.',
   },
   {
     id: '7',
@@ -102,7 +102,7 @@ export default function HelpSupportScreen() {
   };
 
   const handleWhatsApp = () => {
-    void Linking.openURL('https://wa.me/233241234567?text=Hi%20AutoRide%20Support');
+    void Linking.openURL('https://wa.me/233241234567?text=Hi%20GoCar%20Hub%20Support');
   };
 
   const handleCall = () => {
@@ -110,7 +110,7 @@ export default function HelpSupportScreen() {
   };
 
   const handleEmail = () => {
-    void Linking.openURL('mailto:support@autoride.gh');
+    void Linking.openURL('mailto:support@gocarhub.gh');
   };
 
   return (

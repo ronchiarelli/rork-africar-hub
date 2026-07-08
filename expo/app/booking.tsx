@@ -7,13 +7,18 @@ import {
   Pressable,
   Modal,
   FlatList,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CalendarDays, MapPin, Clock, ChevronDown, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { cars, LOCATIONS } from '@/mocks/cars';
+import { LOCATIONS } from '@/constants/locations';
+import { useCarDetails } from '@/lib/queries/cars';
+import { useCreateBooking } from '@/lib/queries/bookings';
+import { getErrorMessage } from '@/lib/errors';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -35,7 +40,8 @@ export default function BookingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const car = cars.find((c) => c.id === id);
+  const { data: car, isLoading: isCarLoading } = useCarDetails(id);
+  const createBooking = useCreateBooking();
 
   const [pickupDate, setPickupDate] = useState(() => {
     const d = new Date();
@@ -70,23 +76,35 @@ export default function BookingScreen() {
 
   const handleConfirm = useCallback(() => {
     if (!car) return;
-    router.push({
-      pathname: '/payment',
-      params: {
-        carId: car.id,
-        total: pricing.total.toString(),
-        days: totalDays.toString(),
-        pickup: pickupDate,
-        returnD: returnDate,
-        location: pickupLocation,
-      },
-    });
-  }, [car, pricing.total, totalDays, pickupDate, returnDate, pickupLocation, router]);
+    createBooking.mutate(
+      { carId: car.id, pickupDate, returnDate, pickupLocation },
+      {
+        onSuccess: (booking) => {
+          Alert.alert(
+            'Booking Requested',
+            "Your request has been sent to the owner. They'll confirm availability and share payment details directly with you.",
+            [{ text: 'OK', onPress: () => router.replace({ pathname: '/booking-detail', params: { id: booking.id } }) }]
+          );
+        },
+        onError: (err) => {
+          Alert.alert('Booking Failed', getErrorMessage(err, 'Please try different dates.'));
+        },
+      }
+    );
+  }, [car, pickupDate, returnDate, pickupLocation, createBooking, router]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
   };
+
+  if (isCarLoading) {
+    return (
+      <View style={styles.errorContainer}>
+        <ActivityIndicator size="large" color={Colors.orange.primary} />
+      </View>
+    );
+  }
 
   if (!car) {
     return (
@@ -199,11 +217,12 @@ export default function BookingScreen() {
           <Text style={styles.bottomPrice}>GH₵{pricing.total.toLocaleString()}</Text>
         </View>
         <Pressable
-          style={({ pressed }) => [styles.confirmBtn, pressed && styles.confirmBtnPressed]}
+          style={({ pressed }) => [styles.confirmBtn, (pressed || createBooking.isPending) && styles.confirmBtnPressed]}
           onPress={handleConfirm}
+          disabled={createBooking.isPending}
           testID="confirm-booking-btn"
         >
-          <Text style={styles.confirmBtnText}>Proceed to Payment</Text>
+          <Text style={styles.confirmBtnText}>{createBooking.isPending ? 'Requesting...' : 'Request Booking'}</Text>
         </Pressable>
       </View>
 

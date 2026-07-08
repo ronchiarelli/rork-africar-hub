@@ -1,48 +1,27 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useMemo } from 'react';
+import { Alert } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
-
-const FAVORITES_KEY = 'autoride_favorites';
+import { useAuth } from '@/providers/AuthProvider';
+import { useFavoriteIds, useToggleFavorite } from '@/lib/queries/favorites';
 
 export const [FavoritesProvider, useFavorites] = createContextHook(() => {
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const stored = await AsyncStorage.getItem(FAVORITES_KEY);
-        if (stored) {
-          setFavoriteIds(JSON.parse(stored));
-        }
-      } catch (e) {
-        console.log('Failed to load favorites', e);
-      }
-    };
-    void load();
-  }, []);
-
-  const persist = useCallback(async (ids: string[]) => {
-    try {
-      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
-    } catch (e) {
-      console.log('Failed to persist favorites', e);
-    }
-  }, []);
-
-  const toggleFavorite = useCallback((carId: string) => {
-    setFavoriteIds((prev) => {
-      const next = prev.includes(carId)
-        ? prev.filter((id) => id !== carId)
-        : [...prev, carId];
-      void persist(next);
-      return next;
-    });
-  }, [persist]);
+  const { currentUser } = useAuth();
+  const userId = currentUser?.id;
+  const { data: favoriteIds = [] } = useFavoriteIds(userId);
+  const toggle = useToggleFavorite(userId);
 
   const isFavorite = useCallback(
     (carId: string) => favoriteIds.includes(carId),
     [favoriteIds]
   );
+
+  const toggleFavorite = useCallback((carId: string) => {
+    if (!userId) {
+      Alert.alert('Sign In Required', 'Please sign in to save favorites.');
+      return;
+    }
+    toggle.mutate({ carId, isFavorited: isFavorite(carId) });
+  }, [userId, isFavorite, toggle]);
 
   return useMemo(() => ({ favoriteIds, toggleFavorite, isFavorite }), [favoriteIds, toggleFavorite, isFavorite]);
 });

@@ -50,7 +50,7 @@ export default React.memo(function CarCard({ car, variant = 'vertical' }: CarCar
   if (variant === 'horizontal') {
     return (
       <Animated.View style={[styles.horizontalCard, { transform: [{ scale: scaleAnim }] }]}>
-        <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
+        <Pressable style={styles.horizontalCardRow} onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
           <View style={styles.horizontalImageWrap}>
             <Image source={{ uri: car.image }} style={styles.horizontalImage} contentFit="cover" />
             <Pressable onPress={handleFavorite} style={styles.heartBtn} testID={`fav-btn-${car.id}`}>
@@ -230,6 +230,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     overflow: 'hidden' as const,
+    flexDirection: 'row' as const,
+  },
+  horizontalCardRow: {
     flexDirection: 'row' as const,
   },
   horizontalImageWrap: {

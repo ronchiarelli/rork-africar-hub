@@ -1,4 +1,4 @@
-# AutoRide Ghana — Car Rental + Car Sales Marketplace App
+# GoCar Hub — Car Rental + Car Sales Marketplace App
 
 
 ## Overview

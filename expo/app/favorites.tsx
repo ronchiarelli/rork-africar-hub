@@ -11,7 +11,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Heart, MapPin } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { cars } from '@/mocks/cars';
+import { useCars } from '@/lib/queries/cars';
 import { useFavorites } from '@/providers/FavoritesProvider';
 import { Car } from '@/types/car';
 
@@ -68,6 +68,7 @@ function AnimatedCarCard({ car }: { car: Car }) {
 
 export default function FavoritesScreen() {
   const { favoriteIds } = useFavorites();
+  const { data: cars = [] } = useCars();
   const favoriteCars = cars.filter((c) => favoriteIds.includes(c.id));
 
   return (

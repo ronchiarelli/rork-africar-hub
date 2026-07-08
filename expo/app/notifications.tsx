@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,7 @@ import {
 } from 'react-native';
 import { Bell, CalendarDays, CreditCard, Tag, ShieldCheck, Settings } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { mockNotifications } from '@/mocks/cars';
-import { AppNotification } from '@/types/car';
+import { useNotifications, useMarkAllNotificationsRead } from '@/lib/queries/notifications';
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   booking: <CalendarDays size={18} color={Colors.info} />,
@@ -40,11 +39,12 @@ function formatTime(timestamp: string): string {
 }
 
 export default function NotificationsScreen() {
-  const [notifications, setNotifications] = useState<AppNotification[]>(mockNotifications);
+  const { data: notifications = [] } = useNotifications();
+  const markAllReadMutation = useMarkAllNotificationsRead();
 
   const markAllRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  }, []);
+    markAllReadMutation.mutate();
+  }, [markAllReadMutation]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -64,7 +64,7 @@ export default function NotificationsScreen() {
           <View style={styles.emptyWrap}>
             <Bell size={48} color={Colors.gray[300]} />
             <Text style={styles.emptyTitle}>No notifications</Text>
-            <Text style={styles.emptyText}>You're all caught up!</Text>
+            <Text style={styles.emptyText}>You&apos;re all caught up!</Text>
           </View>
         ) : (
           notifications.map((notif) => (

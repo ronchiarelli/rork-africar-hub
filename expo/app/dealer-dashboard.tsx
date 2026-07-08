@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  Pressable,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { mockDealerListings, mockLeads } from '@/mocks/cars';
+import { useMyDealerListings, useMyLeads } from '@/lib/queries/dealer';
+import type { Lead } from '@/types/car';
 
 const LISTING_STATUS: Record<string, { bg: string; text: string }> = {
   active: { bg: Colors.success + '20', text: Colors.success },
@@ -24,9 +28,22 @@ const LEAD_STATUS_ICON: Record<string, React.ReactNode> = {
 };
 
 export default function DealerDashboardScreen() {
-  const totalViews = mockDealerListings.reduce((acc, l) => acc + l.views, 0);
-  const totalLeads = mockDealerListings.reduce((acc, l) => acc + l.leads, 0);
-  const activeListings = mockDealerListings.filter(l => l.status === 'active').length;
+  const router = useRouter();
+  const { data: listings = [] } = useMyDealerListings();
+  const { data: leads = [] } = useMyLeads();
+
+  const totalViews = listings.reduce((acc, l) => acc + l.views, 0);
+  const totalLeads = listings.reduce((acc, l) => acc + l.leads, 0);
+  const activeListings = listings.filter(l => l.status === 'active').length;
+
+  const handleLeadWhatsApp = useCallback((lead: Lead) => {
+    const message = `Hi ${lead.customerName}, thanks for your interest in the ${lead.carModel}!`;
+    void Linking.openURL(`https://wa.me/${lead.customerPhone.replace('+', '')}?text=${encodeURIComponent(message)}`);
+  }, []);
+
+  const handleLeadCall = useCallback((lead: Lead) => {
+    void Linking.openURL(`tel:${lead.customerPhone}`);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -49,63 +66,93 @@ export default function DealerDashboardScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>My Listings</Text>
+        <View style={styles.listingsHeader}>
+          <Text style={styles.sectionTitle}>My Listings</Text>
+          <Pressable style={styles.addCarBtn} onPress={() => router.push('/add-sale-car')} testID="add-sale-car-btn">
+            <Plus size={16} color={Colors.white} />
+            <Text style={styles.addCarBtnText}>Add Car</Text>
+          </Pressable>
+        </View>
 
-        {mockDealerListings.map((listing) => {
-          const statusConfig = LISTING_STATUS[listing.status] ?? LISTING_STATUS.active;
-          return (
-            <View key={listing.id} style={styles.listingCard}>
-              <Image source={{ uri: listing.car.image }} style={styles.listingImage} contentFit="cover" />
-              <View style={styles.listingInfo}>
-                <View style={styles.listingHeader}>
-                  <View style={styles.listingNameWrap}>
-                    <Text style={styles.listingBrand}>{listing.car.brand}</Text>
-                    <Text style={styles.listingModel} numberOfLines={1}>{listing.car.model}</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-                    <Text style={[styles.statusText, { color: statusConfig.text }]}>{listing.status}</Text>
-                  </View>
-                </View>
-                <Text style={styles.askingPrice}>GH₵{listing.askingPrice.toLocaleString()}</Text>
-                <View style={styles.listingStats}>
-                  <View style={styles.listingStatItem}>
-                    <Eye size={12} color={Colors.gray[500]} />
-                    <Text style={styles.listingStatText}>{listing.views}</Text>
-                  </View>
-                  <View style={styles.listingStatItem}>
-                    <Users size={12} color={Colors.gray[500]} />
-                    <Text style={styles.listingStatText}>{listing.leads} leads</Text>
-                  </View>
-                  {listing.listingType === 'featured' && (
-                    <View style={styles.featuredTag}>
-                      <TrendingUp size={10} color={Colors.orange.primary} />
-                      <Text style={styles.featuredTagText}>Featured</Text>
+        {listings.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Car size={40} color={Colors.gray[300]} />
+            <Text style={styles.emptyText}>You haven&apos;t listed any cars for sale yet</Text>
+          </View>
+        ) : (
+          listings.map((listing) => {
+            const statusConfig = LISTING_STATUS[listing.status] ?? LISTING_STATUS.active;
+            return (
+              <View key={listing.id} style={styles.listingCard}>
+                <Image source={{ uri: listing.car.image }} style={styles.listingImage} contentFit="cover" />
+                <View style={styles.listingInfo}>
+                  <View style={styles.listingHeader}>
+                    <View style={styles.listingNameWrap}>
+                      <Text style={styles.listingBrand}>{listing.car.brand}</Text>
+                      <Text style={styles.listingModel} numberOfLines={1}>{listing.car.model}</Text>
                     </View>
-                  )}
+                    <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
+                      <Text style={[styles.statusText, { color: statusConfig.text }]}>{listing.status}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.askingPrice}>GH₵{listing.askingPrice.toLocaleString()}</Text>
+                  <View style={styles.listingStats}>
+                    <View style={styles.listingStatItem}>
+                      <Eye size={12} color={Colors.gray[500]} />
+                      <Text style={styles.listingStatText}>{listing.views}</Text>
+                    </View>
+                    <View style={styles.listingStatItem}>
+                      <Users size={12} color={Colors.gray[500]} />
+                      <Text style={styles.listingStatText}>{listing.leads} leads</Text>
+                    </View>
+                    {listing.listingType === 'featured' && (
+                      <View style={styles.featuredTag}>
+                        <TrendingUp size={10} color={Colors.orange.primary} />
+                        <Text style={styles.featuredTagText}>Featured</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
 
         <Text style={styles.sectionTitle}>Recent Leads</Text>
 
-        {mockLeads.map((lead) => (
-          <View key={lead.id} style={styles.leadCard}>
-            <View style={styles.leadHeader}>
-              <View style={styles.leadInfo}>
-                <Text style={styles.leadName}>{lead.customerName}</Text>
-                <Text style={styles.leadCar}>{lead.carModel}</Text>
+        {leads.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Users size={32} color={Colors.gray[300]} />
+            <Text style={styles.emptyText}>No leads yet</Text>
+          </View>
+        ) : (
+          leads.map((lead) => (
+            <View key={lead.id} style={styles.leadCard}>
+              <View style={styles.leadHeader}>
+                <View style={styles.leadInfo}>
+                  <Text style={styles.leadName}>{lead.customerName}</Text>
+                  <Text style={styles.leadCar}>{lead.carModel}</Text>
+                </View>
+                <View style={styles.leadStatusWrap}>
+                  {LEAD_STATUS_ICON[lead.status]}
+                  <Text style={styles.leadStatus}>{lead.status}</Text>
+                </View>
               </View>
-              <View style={styles.leadStatusWrap}>
-                {LEAD_STATUS_ICON[lead.status]}
-                <Text style={styles.leadStatus}>{lead.status}</Text>
+              <Text style={styles.leadMessage} numberOfLines={2}>{lead.message}</Text>
+              <View style={styles.leadFooter}>
+                <Text style={styles.leadDate}>{lead.createdAt}</Text>
+                <View style={styles.leadActions}>
+                  <Pressable style={styles.leadWhatsappBtn} onPress={() => handleLeadWhatsApp(lead)} testID={`lead-whatsapp-${lead.id}`}>
+                    <MessageCircle size={14} color={Colors.white} />
+                  </Pressable>
+                  <Pressable style={styles.leadCallBtn} onPress={() => handleLeadCall(lead)} testID={`lead-call-${lead.id}`}>
+                    <Phone size={14} color={Colors.white} />
+                  </Pressable>
+                </View>
               </View>
             </View>
-            <Text style={styles.leadMessage} numberOfLines={2}>{lead.message}</Text>
-            <Text style={styles.leadDate}>{lead.createdAt}</Text>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -153,6 +200,35 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: Colors.gray[900],
     marginBottom: 14,
+  },
+  listingsHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+  },
+  addCarBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginBottom: 14,
+  },
+  addCarBtnText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '700' as const,
+  },
+  emptyWrap: {
+    alignItems: 'center' as const,
+    paddingVertical: 30,
+    gap: 10,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.gray[500],
   },
   listingCard: {
     flexDirection: 'row' as const,
@@ -286,6 +362,31 @@ const styles = StyleSheet.create({
   leadDate: {
     fontSize: 11,
     color: Colors.gray[400],
+  },
+  leadFooter: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     marginTop: 6,
+  },
+  leadActions: {
+    flexDirection: 'row' as const,
+    gap: 8,
+  },
+  leadWhatsappBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: '#25D366',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  leadCallBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: Colors.info,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
 });

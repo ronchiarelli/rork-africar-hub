@@ -237,7 +237,7 @@ export default function SettingsScreen() {
           </View>
         ))}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>AutoRide Ghana v1.0.0</Text>
+          <Text style={styles.footerText}>GoCar Hub v1.0.0</Text>
           <Text style={styles.footerSub}>Built for the Ghanaian market</Text>
         </View>
       </ScrollView>

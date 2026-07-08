@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CalendarDays, MapPin, Clock, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
-import { mockBookings } from '@/mocks/cars';
+import { useBookings } from '@/lib/queries/bookings';
 import { Booking } from '@/types/car';
 
 const TABS = ['All', 'Active', 'Upcoming', 'Completed'] as const;
@@ -76,14 +76,14 @@ function BookingCard({ booking }: { booking: Booking }) {
 export default function BookingsScreen() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>('All');
+  const { data: bookings = [] } = useBookings();
 
   const filteredBookings = useMemo(() => {
-    if (activeTab === 'All') return mockBookings;
-    if (activeTab === 'Active') return mockBookings.filter(b => b.status === 'active' || b.status === 'approved');
-    if (activeTab === 'Upcoming') return mockBookings.filter(b => b.status === 'pending');
-    if (activeTab === 'Completed') return mockBookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
-    return mockBookings;
-  }, [activeTab]);
+    if (activeTab === 'Active') return bookings.filter(b => b.status === 'active' || b.status === 'approved');
+    if (activeTab === 'Upcoming') return bookings.filter(b => b.status === 'pending');
+    if (activeTab === 'Completed') return bookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
+    return bookings;
+  }, [bookings, activeTab]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -23,7 +24,7 @@ import {
   Car,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { mockBookings } from '@/mocks/cars';
+import { useBookingDetail } from '@/lib/queries/bookings';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string; bg: string }> = {
   pending: { icon: <Clock3 size={18} color={Colors.warning} />, color: Colors.warning, label: 'Pending Approval', bg: Colors.warning + '15' },
@@ -36,7 +37,7 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const booking = mockBookings.find((b) => b.id === id);
+  const { data: booking, isLoading } = useBookingDetail(id);
 
   const config = booking ? STATUS_CONFIG[booking.status] : null;
 
@@ -52,6 +53,14 @@ export default function BookingDetailScreen() {
   };
 
   const canReview = booking?.status === 'completed';
+
+  if (isLoading) {
+    return (
+      <View style={styles.errorContainer}>
+        <ActivityIndicator size="large" color={Colors.orange.primary} />
+      </View>
+    );
+  }
 
   if (!booking || !config) {
     return (
