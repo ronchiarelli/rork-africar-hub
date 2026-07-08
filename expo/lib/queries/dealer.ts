@@ -102,6 +102,41 @@ export function useMyLeads() {
   });
 }
 
+export interface NewLeadInput {
+  saleCarId: string;
+  customerName: string;
+  customerPhone: string;
+  carModel: string;
+  message: string;
+}
+
+export function useCreateLead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: NewLeadInput) => {
+      const { data: listing, error: listingError } = await supabase
+        .from('dealer_listings')
+        .select('id')
+        .eq('sale_car_id', input.saleCarId)
+        .single();
+      if (listingError || !listing) throw new Error('Could not find this listing');
+
+      const { error } = await supabase.from('leads').insert({
+        dealer_listing_id: listing.id,
+        customer_name: input.customerName,
+        customer_phone: input.customerPhone,
+        car_model: input.carModel,
+        message: input.message,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['my-leads'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings'] });
+    },
+  });
+}
+
 export interface NewSaleCarInput {
   brand: string;
   model: string;

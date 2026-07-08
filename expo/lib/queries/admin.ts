@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { ProfileRow } from '@/types/database';
+import type { ProfileRow, SubscriptionRow, SubscriptionStatusDb } from '@/types/database';
 
 export interface PlatformStats {
   totalUsers: number;
@@ -69,6 +69,39 @@ export function useAllUsers() {
   });
 }
 
+export interface AdminUserDetail extends AdminUserRow {
+  phone: string;
+  totalBookings: number;
+}
+
+export function useAdminUserDetail(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['admin-user-detail', userId],
+    queryFn: async (): Promise<AdminUserDetail> => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId as string)
+        .single();
+      if (error) throw error;
+      const row = data as ProfileRow;
+      return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        phone: row.phone ?? '',
+        avatar: row.avatar ?? '',
+        role: row.role,
+        isSuspended: row.is_suspended,
+        verificationStatus: row.verification_status,
+        memberSince: row.member_since,
+        totalBookings: row.total_bookings,
+      };
+    },
+    enabled: !!userId,
+  });
+}
+
 export function useSetUserSuspended() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -76,8 +109,135 @@ export function useSetUserSuspended() {
       const { error } = await supabase.rpc('admin_set_suspended', { p_user_id: userId, p_suspended: suspended });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, { userId }) => {
       void queryClient.invalidateQueries({ queryKey: ['admin-all-users'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-user-detail', userId] });
+    },
+  });
+}
+
+export function useRevokeRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.rpc('admin_revoke_role', { p_user_id: userId });
+      if (error) throw error;
+    },
+    onSuccess: (_data, userId) => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-users'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-user-detail', userId] });
+    },
+  });
+}
+
+export interface AdminSubscriptionRow {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  role: ProfileRow['role'];
+  status: SubscriptionStatusDb;
+  amount: number;
+  currency: string;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+}
+
+type SubscriptionWithProfile = SubscriptionRow & { profile: { name: string; email: string; role: ProfileRow['role'] } | null };
+
+export function useAllSubscriptions() {
+  return useQuery({
+    queryKey: ['admin-all-subscriptions'],
+    queryFn: async (): Promise<AdminSubscriptionRow[]> => {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*, profile:profiles!user_id(name, email, role)')
+        .order('current_period_end', { ascending: true });
+      if (error) throw error;
+      return (data as unknown as SubscriptionWithProfile[]).map((row) => ({
+        userId: row.user_id,
+        userName: row.profile?.name ?? 'Unknown',
+        userEmail: row.profile?.email ?? '',
+        role: row.profile?.role ?? 'customer',
+        status: row.status,
+        amount: row.amount,
+        currency: row.currency,
+        trialEndsAt: row.trial_ends_at,
+        currentPeriodEnd: row.current_period_end,
+      }));
+    },
+  });
+}
+
+export function useExtendSubscription() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, days }: { userId: string; days: number }) => {
+      const { error } = await supabase.rpc('admin_extend_subscription', { p_user_id: userId, p_days: days });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-subscriptions'] });
+    },
+  });
+}
+
+export function useSetSubscriptionStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, status }: { userId: string; status: SubscriptionStatusDb }) => {
+      const { error } = await supabase.rpc('admin_set_subscription_status', { p_user_id: userId, p_status: status });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-subscriptions'] });
+    },
+  });
+}
+
+export interface MonthlyTrend {
+  monthStart: string;
+  newUsers: number;
+  bookings: number;
+  revenue: number;
+}
+
+export function useMonthlyTrends() {
+  return useQuery({
+    queryKey: ['admin-monthly-trends'],
+    queryFn: async (): Promise<MonthlyTrend[]> => {
+      const { data, error } = await supabase.rpc('admin_monthly_trends');
+      if (error) throw error;
+      return data.map((row) => ({
+        monthStart: row.month_start,
+        newUsers: row.new_users,
+        bookings: row.bookings,
+        revenue: row.revenue,
+      }));
+    },
+  });
+}
+
+export interface TopCar {
+  carId: string;
+  brand: string;
+  model: string;
+  image: string;
+  bookingCount: number;
+}
+
+export function useTopCars() {
+  return useQuery({
+    queryKey: ['admin-top-cars'],
+    queryFn: async (): Promise<TopCar[]> => {
+      const { data, error } = await supabase.rpc('admin_top_cars');
+      if (error) throw error;
+      return data.map((row) => ({
+        carId: row.car_id,
+        brand: row.brand,
+        model: row.model,
+        image: row.image,
+        bookingCount: row.booking_count,
+      }));
     },
   });
 }

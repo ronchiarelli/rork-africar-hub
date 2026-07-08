@@ -33,7 +33,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       options: { data: { name, phone } },
     });
     if (error) throw error;
-    return { needsEmailConfirmation: !data.session };
+    return { needsEmailConfirmation: !data.session, userId: data.user?.id };
   }, []);
 
   const logout = useCallback(async () => {

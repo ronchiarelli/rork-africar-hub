@@ -83,6 +83,13 @@ export default function AddCarScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (!currentUser) return;
+    if (currentUser.verificationStatus !== 'pending' && currentUser.verificationStatus !== 'approved') {
+      Alert.alert('Verification Required', 'Please complete KYC verification before listing a car.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Verify Now', onPress: () => router.push('/kyc-verification') },
+      ]);
+      return;
+    }
     if (!brand || !model || !pricePerDay || !imageUri) {
       Alert.alert('Missing Info', 'Please fill in brand, model, daily price, and add a photo.');
       return;

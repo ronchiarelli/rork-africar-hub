@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import type { KycDocumentRow, KycDocTypeDb } from '@/types/database';
+import type { KycDocumentRow, KycDocTypeDb, KycStatusDb } from '@/types/database';
 import type { KYCDocument } from '@/types/car';
 
 const REQUIRED_DOCS: { type: KycDocTypeDb; label: string }[] = [
@@ -140,6 +140,55 @@ export function useReviewKycDocument() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin-pending-kyc'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-user-kyc-documents'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-users'] });
     },
+  });
+}
+
+export interface AdminKycDocument {
+  docId: string | null;
+  type: KycDocTypeDb;
+  label: string;
+  status: KycStatusDb;
+  uploadedAt: string | null;
+  rejectionReason: string | null;
+  imageUrl: string | null;
+}
+
+export function useUserKycDocuments(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['admin-user-kyc-documents', userId],
+    queryFn: async (): Promise<AdminKycDocument[]> => {
+      const { data, error } = await supabase
+        .from('kyc_documents')
+        .select('*')
+        .eq('user_id', userId as string);
+      if (error) throw error;
+      const rows = data as KycDocumentRow[];
+
+      return Promise.all(
+        REQUIRED_DOCS.map(async ({ type, label }) => {
+          const row = rows.find((r) => r.type === type);
+          let imageUrl: string | null = null;
+          if (row?.storage_path) {
+            const { data: signed } = await supabase.storage
+              .from('kyc-documents')
+              .createSignedUrl(row.storage_path, 60 * 10);
+            imageUrl = signed?.signedUrl ?? null;
+          }
+          return {
+            docId: row?.id ?? null,
+            type,
+            label,
+            status: row?.status ?? 'not_uploaded',
+            uploadedAt: row?.uploaded_at ?? null,
+            rejectionReason: row?.rejection_reason ?? null,
+            imageUrl,
+          };
+        })
+      );
+    },
+    enabled: !!userId,
   });
 }

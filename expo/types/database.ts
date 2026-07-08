@@ -244,6 +244,20 @@ export type RoleApplicationRow = {
   reviewed_at: string | null;
 }
 
+export type PromoBannerRow = {
+  id: string;
+  tag: string;
+  title: string;
+  subtitle: string;
+  image_url: string;
+  cta_label: string;
+  cta_route: string;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 type TableDef<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
   Row: Row;
   Insert: Insert;
@@ -271,6 +285,7 @@ export type Database = {
       role_applications: TableDef<RoleApplicationRow, Partial<RoleApplicationRow> & { user_id: string; requested_role: UserRoleDb }>;
       subscriptions: TableDef<SubscriptionRow>;
       subscription_payments: TableDef<SubscriptionPaymentRow>;
+      promo_banners: TableDef<PromoBannerRow, Partial<PromoBannerRow>>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -306,6 +321,37 @@ export type Database = {
       admin_set_suspended: {
         Args: { p_user_id: string; p_suspended: boolean };
         Returns: void;
+      };
+      admin_revoke_role: {
+        Args: { p_user_id: string };
+        Returns: void;
+      };
+      admin_extend_subscription: {
+        Args: { p_user_id: string; p_days: number };
+        Returns: void;
+      };
+      admin_set_subscription_status: {
+        Args: { p_user_id: string; p_status: SubscriptionStatusDb };
+        Returns: void;
+      };
+      admin_monthly_trends: {
+        Args: Record<string, never>;
+        Returns: {
+          month_start: string;
+          new_users: number;
+          bookings: number;
+          revenue: number;
+        }[];
+      };
+      admin_top_cars: {
+        Args: Record<string, never>;
+        Returns: {
+          car_id: string;
+          brand: string;
+          model: string;
+          image: string;
+          booking_count: number;
+        }[];
       };
     };
     Enums: Record<string, never>;

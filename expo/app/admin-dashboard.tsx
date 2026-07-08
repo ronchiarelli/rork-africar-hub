@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import {
   Users,
   CalendarDays,
@@ -18,15 +19,38 @@ import {
   UserCheck,
   UserX,
   Clock,
+  Plus,
+  Pencil,
+  Trash2,
+  Megaphone,
+  ChevronRight,
+  CreditCard,
+  BarChart3,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { usePendingKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
 import { usePendingRoleApplications, useReviewRoleApplication } from '@/lib/queries/roleApplications';
-import { usePlatformStats, useAllUsers, useSetUserSuspended } from '@/lib/queries/admin';
+import {
+  usePlatformStats,
+  useAllUsers,
+  useAllSubscriptions,
+  useExtendSubscription,
+  useSetSubscriptionStatus,
+  useMonthlyTrends,
+  useTopCars,
+} from '@/lib/queries/admin';
+import { useAllBanners, useSetBannerActive, useDeleteBanner } from '@/lib/queries/banners';
 import { getErrorMessage } from '@/lib/errors';
 
-const TABS = ['Overview', 'Users', 'KYC', 'Roles'] as const;
+const TABS = ['Overview', 'Users', 'KYC', 'Roles', 'Banners', 'Subscriptions', 'Analytics'] as const;
 type Tab = typeof TABS[number];
+
+const SUB_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+  trialing: { bg: Colors.info + '20', text: Colors.info, label: 'Trialing' },
+  active: { bg: Colors.success + '20', text: Colors.success, label: 'Active' },
+  past_due: { bg: Colors.warning + '20', text: Colors.warning, label: 'Past Due' },
+  cancelled: { bg: Colors.error + '20', text: Colors.error, label: 'Cancelled' },
+};
 
 const ROLE_COLORS: Record<string, string> = {
   customer: Colors.info,
@@ -42,6 +66,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
 };
 
 export default function AdminDashboardScreen() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
   const { data: pendingKyc = [] } = usePendingKycDocuments();
   const reviewKyc = useReviewKycDocument();
@@ -49,7 +74,14 @@ export default function AdminDashboardScreen() {
   const reviewRoleApp = useReviewRoleApplication();
   const { data: stats } = usePlatformStats();
   const { data: allUsers = [] } = useAllUsers();
-  const setSuspended = useSetUserSuspended();
+  const { data: banners = [] } = useAllBanners();
+  const setBannerActive = useSetBannerActive();
+  const deleteBanner = useDeleteBanner();
+  const { data: subscriptions = [] } = useAllSubscriptions();
+  const extendSubscription = useExtendSubscription();
+  const setSubscriptionStatus = useSetSubscriptionStatus();
+  const { data: monthlyTrends = [] } = useMonthlyTrends();
+  const { data: topCars = [] } = useTopCars();
 
   const handleKycDecision = (docId: string, decision: 'verified' | 'rejected') => {
     reviewKyc.mutate(
@@ -65,20 +97,34 @@ export default function AdminDashboardScreen() {
     );
   };
 
-  const handleToggleSuspend = (userId: string, currentlySuspended: boolean) => {
-    const action = currentlySuspended ? 'reactivate' : 'suspend';
+  const handleExtendSubscription = (userId: string) => {
+    Alert.alert('Extend Subscription', 'Extend this subscription by how many days?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: '+7 days',
+        onPress: () => extendSubscription.mutate({ userId, days: 7 }, { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not extend subscription.')) }),
+      },
+      {
+        text: '+30 days',
+        onPress: () => extendSubscription.mutate({ userId, days: 30 }, { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not extend subscription.')) }),
+      },
+    ]);
+  };
+
+  const handleSetSubscriptionStatus = (userId: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'cancelled' ? 'active' : 'cancelled';
     Alert.alert(
-      currentlySuspended ? 'Reactivate Account' : 'Suspend Account',
-      `Are you sure you want to ${action} this account?`,
+      nextStatus === 'cancelled' ? 'Cancel Subscription' : 'Reactivate Subscription',
+      `Set this subscription to ${nextStatus}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: currentlySuspended ? 'Reactivate' : 'Suspend',
-          style: currentlySuspended ? 'default' : 'destructive',
+          text: 'Confirm',
+          style: nextStatus === 'cancelled' ? 'destructive' : 'default',
           onPress: () => {
-            setSuspended.mutate(
-              { userId, suspended: !currentlySuspended },
-              { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update this account.')) }
+            setSubscriptionStatus.mutate(
+              { userId, status: nextStatus },
+              { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update subscription status.')) }
             );
           },
         },
@@ -86,9 +132,24 @@ export default function AdminDashboardScreen() {
     );
   };
 
+  const handleDeleteBanner = (bannerId: string) => {
+    Alert.alert('Delete Banner', 'Are you sure you want to delete this banner?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteBanner.mutate(bannerId, {
+            onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not delete this banner.')),
+          });
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.tabsRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow} contentContainerStyle={styles.tabsRowContent}>
         {TABS.map((tab) => (
           <Pressable
             key={tab}
@@ -98,7 +159,7 @@ export default function AdminDashboardScreen() {
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {activeTab === 'Overview' && (
@@ -162,7 +223,7 @@ export default function AdminDashboardScreen() {
                 <Pressable
                   key={user.id}
                   style={styles.userCard}
-                  onPress={() => handleToggleSuspend(user.id, user.isSuspended)}
+                  onPress={() => router.push({ pathname: '/admin-user-detail', params: { id: user.id } } as never)}
                   testID={`user-row-${user.id}`}
                 >
                   <Image source={{ uri: user.avatar }} style={styles.userAvatar} contentFit="cover" />
@@ -178,6 +239,7 @@ export default function AdminDashboardScreen() {
                       </View>
                     </View>
                   </View>
+                  <ChevronRight size={18} color={Colors.gray[300]} />
                 </Pressable>
               );
             })}
@@ -265,6 +327,148 @@ export default function AdminDashboardScreen() {
             )}
           </>
         )}
+
+        {activeTab === 'Banners' && (
+          <>
+            <View style={styles.bannersHeader}>
+              <Text style={styles.sectionTitle}>Home Screen Banners</Text>
+              <Pressable style={styles.addBannerBtn} onPress={() => router.push('/add-banner')} testID="add-banner-btn">
+                <Plus size={16} color={Colors.white} />
+                <Text style={styles.addBannerBtnText}>New Banner</Text>
+              </Pressable>
+            </View>
+            {banners.map((banner) => (
+              <View key={banner.id} style={styles.bannerCard}>
+                <Image source={{ uri: banner.imageUrl }} style={styles.bannerThumb} contentFit="cover" />
+                <View style={styles.bannerInfo}>
+                  <Text style={styles.bannerTag}>{banner.tag}</Text>
+                  <Text style={styles.bannerTitle} numberOfLines={1}>{banner.title}</Text>
+                  <Text style={styles.bannerCta}>CTA: {banner.ctaLabel} → {banner.ctaRoute}</Text>
+                  <View style={styles.bannerActionsRow}>
+                    <Pressable
+                      style={[styles.bannerStatusBadge, { backgroundColor: banner.isActive ? Colors.success + '20' : Colors.gray[200] }]}
+                      onPress={() => setBannerActive.mutate({ id: banner.id, isActive: !banner.isActive })}
+                      testID={`banner-toggle-${banner.id}`}
+                    >
+                      <Text style={[styles.bannerStatusText, { color: banner.isActive ? Colors.success : Colors.gray[600] }]}>
+                        {banner.isActive ? 'Active' : 'Inactive'}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.bannerIconBtn}
+                      onPress={() => router.push({ pathname: '/add-banner', params: { id: banner.id } } as never)}
+                      testID={`banner-edit-${banner.id}`}
+                    >
+                      <Pencil size={14} color={Colors.gray[600]} />
+                    </Pressable>
+                    <Pressable
+                      style={styles.bannerIconBtn}
+                      onPress={() => handleDeleteBanner(banner.id)}
+                      testID={`banner-delete-${banner.id}`}
+                    >
+                      <Trash2 size={14} color={Colors.error} />
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            ))}
+            {banners.length === 0 && (
+              <View style={styles.emptyWrap}>
+                <Megaphone size={40} color={Colors.gray[300]} />
+                <Text style={styles.emptyText}>No banners yet</Text>
+              </View>
+            )}
+          </>
+        )}
+
+        {activeTab === 'Subscriptions' && (
+          <>
+            <Text style={styles.sectionTitle}>All Subscriptions ({subscriptions.length})</Text>
+            {subscriptions.map((sub) => {
+              const config = SUB_STATUS_CONFIG[sub.status] ?? SUB_STATUS_CONFIG.trialing;
+              return (
+                <View key={sub.userId} style={styles.subCard}>
+                  <View style={styles.subHeader}>
+                    <View style={styles.subInfo}>
+                      <Text style={styles.subName}>{sub.userName}</Text>
+                      <Text style={styles.subEmail}>{sub.userEmail} · {sub.role.replace('_', ' ')}</Text>
+                      <Text style={styles.subMeta}>
+                        {sub.currency}{sub.amount}/mo · Renews {sub.currentPeriodEnd?.split('T')[0] ?? '—'}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
+                      <Text style={[styles.statusText, { color: config.text }]}>{config.label}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.subActionsRow}>
+                    <Pressable style={styles.subActionBtn} onPress={() => handleExtendSubscription(sub.userId)} testID={`sub-extend-${sub.userId}`}>
+                      <Text style={styles.subActionText}>Extend</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.subActionBtn, sub.status === 'cancelled' ? styles.subReactivateBtn : styles.subCancelBtn]}
+                      onPress={() => handleSetSubscriptionStatus(sub.userId, sub.status)}
+                      testID={`sub-toggle-${sub.userId}`}
+                    >
+                      <Text style={[styles.subActionText, { color: Colors.white }]}>
+                        {sub.status === 'cancelled' ? 'Reactivate' : 'Cancel'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+            {subscriptions.length === 0 && (
+              <View style={styles.emptyWrap}>
+                <CreditCard size={40} color={Colors.gray[300]} />
+                <Text style={styles.emptyText}>No subscriptions yet</Text>
+              </View>
+            )}
+          </>
+        )}
+
+        {activeTab === 'Analytics' && (
+          <>
+            <Text style={styles.sectionTitle}>Trends (Last 6 Months)</Text>
+            {(['bookings', 'newUsers', 'revenue'] as const).map((metric) => {
+              const labels: Record<typeof metric, string> = { bookings: 'Bookings', newUsers: 'New Signups', revenue: 'Sub. Revenue (GH₵)' };
+              const max = Math.max(1, ...monthlyTrends.map((t) => t[metric]));
+              return (
+                <View key={metric} style={styles.chartCard}>
+                  <Text style={styles.chartTitle}>{labels[metric]}</Text>
+                  <View style={styles.chartBars}>
+                    {monthlyTrends.map((t) => (
+                      <View key={t.monthStart} style={styles.chartBarCol}>
+                        <View style={styles.chartBarTrack}>
+                          <View style={[styles.chartBarFill, { height: `${Math.max(4, (t[metric] / max) * 100)}%` }]} />
+                        </View>
+                        <Text style={styles.chartBarLabel}>{new Date(t.monthStart).toLocaleDateString('en-US', { month: 'short' })}</Text>
+                        <Text style={styles.chartBarValue}>{Math.round(t[metric])}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              );
+            })}
+
+            <Text style={styles.sectionTitle}>Top Cars by Bookings</Text>
+            {topCars.map((car, idx) => (
+              <View key={car.carId} style={styles.topCarCard}>
+                <Text style={styles.topCarRank}>#{idx + 1}</Text>
+                <Image source={{ uri: car.image }} style={styles.topCarImage} contentFit="cover" />
+                <View style={styles.topCarInfo}>
+                  <Text style={styles.topCarName}>{car.brand} {car.model}</Text>
+                  <Text style={styles.topCarCount}>{car.bookingCount} booking{car.bookingCount === 1 ? '' : 's'}</Text>
+                </View>
+              </View>
+            ))}
+            {topCars.length === 0 && (
+              <View style={styles.emptyWrap}>
+                <BarChart3 size={40} color={Colors.gray[300]} />
+                <Text style={styles.emptyText}>No bookings yet</Text>
+              </View>
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -276,13 +480,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gray[50],
   },
   tabsRow: {
-    flexDirection: 'row' as const,
+    flexGrow: 0,
     backgroundColor: Colors.white,
-    paddingHorizontal: 20,
     paddingVertical: 10,
-    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: Colors.gray[100],
+  },
+  tabsRowContent: {
+    flexDirection: 'row' as const,
+    paddingHorizontal: 20,
+    gap: 8,
   },
   tab: {
     paddingHorizontal: 18,
@@ -547,4 +754,168 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.gray[500],
   },
+  bannersHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 14,
+  },
+  addBannerBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+  },
+  addBannerBtnText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '700' as const,
+  },
+  bannerCard: {
+    flexDirection: 'row' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    marginBottom: 12,
+    overflow: 'hidden' as const,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  bannerThumb: {
+    width: 90,
+    height: 110,
+  },
+  bannerInfo: {
+    flex: 1,
+    padding: 12,
+  },
+  bannerTag: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+    color: Colors.orange.primary,
+    textTransform: 'uppercase' as const,
+  },
+  bannerTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+    marginTop: 2,
+  },
+  bannerCta: {
+    fontSize: 11,
+    color: Colors.gray[500],
+    marginTop: 4,
+  },
+  bannerActionsRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginTop: 10,
+  },
+  bannerStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  bannerStatusText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+  },
+  bannerIconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: Colors.gray[100],
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  subCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  subHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
+  },
+  subInfo: { flex: 1 },
+  subName: { fontSize: 15, fontWeight: '700' as const, color: Colors.gray[900] },
+  subEmail: { fontSize: 12, color: Colors.gray[500], marginTop: 2, textTransform: 'capitalize' as const },
+  subMeta: { fontSize: 12, color: Colors.gray[600], marginTop: 4 },
+  subActionsRow: { flexDirection: 'row' as const, gap: 8, marginTop: 12 },
+  subActionBtn: {
+    flex: 1,
+    alignItems: 'center' as const,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: Colors.gray[100],
+  },
+  subCancelBtn: { backgroundColor: Colors.error },
+  subReactivateBtn: { backgroundColor: Colors.success },
+  subActionText: { fontSize: 12, fontWeight: '700' as const, color: Colors.gray[700] },
+  chartCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  chartTitle: { fontSize: 14, fontWeight: '700' as const, color: Colors.gray[900], marginBottom: 14 },
+  chartBars: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-end' as const,
+    height: 120,
+  },
+  chartBarCol: { flex: 1, alignItems: 'center' as const, gap: 4 },
+  chartBarTrack: {
+    width: 18,
+    height: 80,
+    backgroundColor: Colors.gray[100],
+    borderRadius: 6,
+    justifyContent: 'flex-end' as const,
+    overflow: 'hidden' as const,
+  },
+  chartBarFill: {
+    width: '100%',
+    backgroundColor: Colors.orange.primary,
+    borderRadius: 6,
+  },
+  chartBarLabel: { fontSize: 10, color: Colors.gray[500], marginTop: 2 },
+  chartBarValue: { fontSize: 11, fontWeight: '700' as const, color: Colors.gray[900] },
+  topCarCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  topCarRank: { fontSize: 16, fontWeight: '800' as const, color: Colors.gray[400], width: 28 },
+  topCarImage: { width: 50, height: 50, borderRadius: 10 },
+  topCarInfo: { flex: 1 },
+  topCarName: { fontSize: 14, fontWeight: '700' as const, color: Colors.gray[900] },
+  topCarCount: { fontSize: 12, color: Colors.gray[500], marginTop: 2 },
 });

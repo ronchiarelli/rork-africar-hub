@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { MapPin, Bell, Heart, Search, ChevronRight, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useCars, useBrands, useSaleCars } from '@/lib/queries/cars';
+import { useActiveBanner } from '@/lib/queries/banners';
 import { useAuth } from '@/providers/AuthProvider';
 import CarCard from '@/components/CarCard';
 import BrandCard from '@/components/BrandCard';
@@ -78,6 +79,7 @@ export default function HomeScreen() {
   const { data: brands = [] } = useBrands();
   const { data: cars = [] } = useCars({ onlyAvailable: true });
   const { data: saleCars = [] } = useSaleCars();
+  const { data: banner } = useActiveBanner();
 
   const handleBrandPress = useCallback((brand: Brand) => {
     console.log('Brand pressed:', brand.name);
@@ -158,21 +160,23 @@ export default function HomeScreen() {
           />
         </View>
 
-        <View style={styles.promoBanner}>
-          <View style={styles.promoContent}>
-            <Text style={styles.promoTag}>WEEKEND SPECIAL</Text>
-            <Text style={styles.promoTitle}>20% Off SUV Rentals</Text>
-            <Text style={styles.promoSub}>Book any SUV this weekend & save big</Text>
-            <Pressable style={styles.promoBtn} onPress={() => router.push('/search')}>
-              <Text style={styles.promoBtnText}>Book Now</Text>
-            </Pressable>
+        {banner && (
+          <View style={styles.promoBanner}>
+            <View style={styles.promoContent}>
+              <Text style={styles.promoTag}>{banner.tag}</Text>
+              <Text style={styles.promoTitle}>{banner.title}</Text>
+              <Text style={styles.promoSub}>{banner.subtitle}</Text>
+              <Pressable style={styles.promoBtn} onPress={() => router.push(banner.ctaRoute as never)}>
+                <Text style={styles.promoBtnText}>{banner.ctaLabel}</Text>
+              </Pressable>
+            </View>
+            <Image
+              source={{ uri: banner.imageUrl }}
+              style={styles.promoImage}
+              contentFit="cover"
+            />
           </View>
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=400&q=80' }}
-            style={styles.promoImage}
-            contentFit="cover"
-          />
-        </View>
+        )}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

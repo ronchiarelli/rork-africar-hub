@@ -12,10 +12,19 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Mail, Lock, User, Phone, Eye, EyeOff, Car } from 'lucide-react-native';
+import { ArrowLeft, Mail, Lock, User, Phone, Eye, EyeOff, Car, Building2, Store } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
+import { supabase } from '@/lib/supabase';
+
+type AccountType = 'customer' | 'fleet_owner' | 'dealership';
+
+const ACCOUNT_TYPES: { value: AccountType; label: string; icon: React.ReactNode }[] = [
+  { value: 'customer', label: 'Customer', icon: <User size={18} color={Colors.white} /> },
+  { value: 'fleet_owner', label: 'Fleet Manager', icon: <Building2 size={18} color={Colors.white} /> },
+  { value: 'dealership', label: 'Car Dealer / Garage', icon: <Store size={18} color={Colors.white} /> },
+];
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
@@ -26,6 +35,7 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [accountType, setAccountType] = useState<AccountType>('customer');
 
   const handleRegister = useCallback(async () => {
     if (!name || !email || !phone || !password) {
@@ -33,7 +43,7 @@ export default function RegisterScreen() {
       return;
     }
     try {
-      const { needsEmailConfirmation } = await register(name, email, phone, password);
+      const { needsEmailConfirmation, userId } = await register(name, email, phone, password);
       if (needsEmailConfirmation) {
         Alert.alert('Check Your Email', 'We sent a confirmation link to your email. Confirm it, then sign in.', [
           { text: 'OK', onPress: () => router.replace('/login') },
@@ -41,12 +51,24 @@ export default function RegisterScreen() {
         return;
       }
       await login(email, password);
+      if (accountType !== 'customer' && userId) {
+        const { error: roleAppError } = await supabase
+          .from('role_applications')
+          .insert({ user_id: userId, requested_role: accountType });
+        if (roleAppError) console.error('Failed to submit role application:', roleAppError);
+      }
       router.dismissAll();
+      if (accountType !== 'customer') {
+        Alert.alert(
+          'Account Created',
+          `Your account is ready. Your ${accountType === 'fleet_owner' ? 'Fleet Manager' : 'Car Dealer / Garage'} application has been submitted for admin review — you'll be upgraded once approved.`
+        );
+      }
       router.replace('/(tabs)/(home)');
     } catch (e) {
       Alert.alert('Registration Failed', getErrorMessage(e, 'Please try again.'));
     }
-  }, [name, email, phone, password, register, login, router]);
+  }, [name, email, phone, password, accountType, register, login, router]);
 
   return (
     <View style={styles.container}>
@@ -69,6 +91,26 @@ export default function RegisterScreen() {
           <Text style={styles.subtitle}>Join GoCar Hub and start your journey</Text>
 
           <View style={styles.form}>
+            <Text style={styles.sectionLabel}>I am a...</Text>
+            <View style={styles.accountTypeRow}>
+              {ACCOUNT_TYPES.map((t) => (
+                <Pressable
+                  key={t.value}
+                  style={[styles.accountTypeChip, accountType === t.value && styles.accountTypeChipActive]}
+                  onPress={() => setAccountType(t.value)}
+                  testID={`register-account-type-${t.value}`}
+                >
+                  {t.icon}
+                  <Text style={styles.accountTypeText}>{t.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            {accountType !== 'customer' && (
+              <Text style={styles.accountTypeHint}>
+                Your account starts as a customer while an admin reviews your {accountType === 'fleet_owner' ? 'Fleet Manager' : 'Car Dealer / Garage'} application.
+              </Text>
+            )}
+
             <View style={styles.inputWrap}>
               <User size={18} color={Colors.gray[400]} />
               <TextInput
@@ -193,6 +235,44 @@ const styles = StyleSheet.create({
   },
   form: {
     marginTop: 32,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: Colors.gray[400],
+    marginBottom: 10,
+  },
+  accountTypeRow: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 8,
+    marginBottom: 8,
+  },
+  accountTypeChip: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  accountTypeChipActive: {
+    backgroundColor: Colors.orange.primary,
+    borderColor: Colors.orange.primary,
+  },
+  accountTypeText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '600' as const,
+  },
+  accountTypeHint: {
+    color: Colors.gray[400],
+    fontSize: 12,
+    marginBottom: 16,
+    lineHeight: 17,
   },
   inputWrap: {
     flexDirection: 'row' as const,

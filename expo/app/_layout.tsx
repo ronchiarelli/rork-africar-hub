@@ -23,6 +23,8 @@ const ROLE_GUARDED: Record<string, UserRole> = {
   'dealer-dashboard': 'dealership',
   'add-sale-car': 'dealership',
   'admin-dashboard': 'admin',
+  'add-banner': 'admin',
+  'admin-user-detail': 'admin',
 };
 
 function isPublicRoute(segments: readonly string[]): boolean {
@@ -109,6 +111,8 @@ function RootLayoutNav() {
           <Stack.Screen name="add-sale-car" options={{ title: "List a Car for Sale", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="dealer-dashboard" options={{ title: "Dealer Dashboard", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="admin-dashboard" options={{ title: "Admin Dashboard", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="add-banner" options={{ title: "Home Banner", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="admin-user-detail" options={{ title: "User Details", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="subscription" options={{ title: "Subscription", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
         </Stack>
       </View>

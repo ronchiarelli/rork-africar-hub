@@ -83,6 +83,13 @@ export default function AddSaleCarScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (!currentUser) return;
+    if (currentUser.verificationStatus !== 'pending' && currentUser.verificationStatus !== 'approved') {
+      Alert.alert('Verification Required', 'Please complete KYC verification before listing a car.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Verify Now', onPress: () => router.push('/kyc-verification') },
+      ]);
+      return;
+    }
     if (!brand || !model || !salePrice || !imageUri) {
       Alert.alert('Missing Info', 'Please fill in brand, model, sale price, and add a photo.');
       return;

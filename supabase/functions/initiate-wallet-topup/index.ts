@@ -78,6 +78,14 @@ Deno.serve(async (req: Request) => {
 
     const appScheme = Deno.env.get('APP_SCHEME') ?? 'gocarhub';
 
+    // Browser-originated requests (web) carry an Origin header set by the
+    // browser itself; React Native's fetch never sends one for native app
+    // calls. Use that to pick a redirect Hubtel can actually follow — a
+    // plain https:// URL for web, an app-scheme deep link for native —
+    // without needing to hardcode or configure the web hosting domain.
+    const webOrigin = req.headers.get('origin');
+    const returnBase = webOrigin ? `${webOrigin}/wallet` : `${appScheme}://wallet`;
+
     const hubtelResponse = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
       method: 'POST',
       headers: {
@@ -90,8 +98,8 @@ Deno.serve(async (req: Request) => {
         totalAmount: amount,
         description: 'GoCar Hub wallet top-up',
         callbackUrl: `${supabaseUrl}/functions/v1/hubtel-callback`,
-        returnUrl: `${appScheme}://wallet?topup=success`,
-        cancellationUrl: `${appScheme}://wallet?topup=cancelled`,
+        returnUrl: `${returnBase}?topup=success`,
+        cancellationUrl: `${returnBase}?topup=cancelled`,
         clientReference,
         payeeName: profile.name || undefined,
         payeeEmail: profile.email || undefined,

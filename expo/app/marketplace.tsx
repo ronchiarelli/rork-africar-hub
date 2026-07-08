@@ -13,20 +13,38 @@ import { Image } from 'expo-image';
 import { Search, SlidersHorizontal, MapPin, Eye, MessageCircle, Phone, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useSaleCars } from '@/lib/queries/cars';
+import { useCreateLead } from '@/lib/queries/dealer';
+import { useAuth } from '@/providers/AuthProvider';
 import { SaleCar } from '@/types/car';
 
 const CONDITIONS = ['All', 'New', 'Foreign Used', 'Locally Used'];
 const BRANDS = ['All', 'Toyota', 'Mercedes', 'BMW', 'Honda', 'Hyundai', 'Range Rover'];
 
 function SaleListingCard({ car }: { car: SaleCar }) {
+  const { currentUser } = useAuth();
+  const createLead = useCreateLead();
+
+  const recordLead = useCallback((message: string) => {
+    if (!currentUser) return;
+    createLead.mutate({
+      saleCarId: car.id,
+      customerName: currentUser.name,
+      customerPhone: currentUser.phone,
+      carModel: `${car.brand} ${car.model}`,
+      message,
+    });
+  }, [car, currentUser, createLead]);
+
   const handleWhatsApp = useCallback(() => {
     const msg = `Hi, I'm interested in the ${car.brand} ${car.model} (${car.year}) listed for GH₵${car.salePrice.toLocaleString()} on GoCar Hub.`;
+    recordLead(msg);
     void Linking.openURL(`https://wa.me/${car.dealerPhone.replace('+', '')}?text=${encodeURIComponent(msg)}`);
-  }, [car]);
+  }, [car, recordLead]);
 
   const handleCall = useCallback(() => {
+    recordLead('Called via GoCar Hub');
     void Linking.openURL(`tel:${car.dealerPhone}`);
-  }, [car]);
+  }, [car, recordLead]);
 
   return (
     <View style={styles.listingCard}>

@@ -87,7 +87,15 @@ export default function BookingScreen() {
           );
         },
         onError: (err) => {
-          Alert.alert('Booking Failed', getErrorMessage(err, 'Please try different dates.'));
+          const message = getErrorMessage(err, 'Please try different dates.');
+          if (message.includes('KYC verification')) {
+            Alert.alert('Verification Required', message, [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Verify Now', onPress: () => router.push('/kyc-verification') },
+            ]);
+            return;
+          }
+          Alert.alert('Booking Failed', message);
         },
       }
     );
