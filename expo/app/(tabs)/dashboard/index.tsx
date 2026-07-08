@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
   Car,
-  TrendingUp,
   CalendarCheck,
   Heart,
   Wallet,
@@ -20,15 +19,13 @@ import {
   AlertTriangle,
   Eye,
   PhoneCall,
-  Users,
   ShieldCheck,
-  BarChart3,
 } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/providers/AuthProvider";
 import { useMyFleetVehicles } from "@/lib/queries/fleet";
 import { useMyDealerListings, useMyLeads } from "@/lib/queries/dealer";
-import { usePlatformStats, useAllUsers } from "@/lib/queries/admin";
+import AdminDashboardScreen from "@/app/admin-dashboard";
 
 // ─── Fleet Owner Dashboard ────────────────────────────────────────────────
 
@@ -192,74 +189,6 @@ function DealerDashboard() {
   );
 }
 
-// ─── Admin Dashboard ───────────────────────────────────────────────────────
-
-function AdminDashboard() {
-  const { data: stats } = usePlatformStats();
-  const { data: allUsers = [] } = useAllUsers();
-
-  return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={sd.content}>
-      <View style={sd.statsGrid}>
-        <View style={sd.statCardWide}>
-          <Users size={18} color={Colors.info} />
-          <Text style={sd.statValue}>{stats?.totalUsers ?? 0}</Text>
-          <Text style={sd.statLabel}>Users</Text>
-        </View>
-        <View style={sd.statCardWide}>
-          <BarChart3 size={18} color={Colors.success} />
-          <Text style={sd.statValue}>GH₵{(stats?.totalSubscriptionRevenue ?? 0).toLocaleString()}</Text>
-          <Text style={sd.statLabel}>Sub. Revenue</Text>
-        </View>
-        <View style={sd.statCardWide}>
-          <CalendarCheck size={18} color={Colors.orange.primary} />
-          <Text style={sd.statValue}>{stats?.totalBookings ?? 0}</Text>
-          <Text style={sd.statLabel}>Bookings</Text>
-        </View>
-        <View style={sd.statCardWide}>
-          <ShieldCheck size={18} color={Colors.warning} />
-          <Text style={sd.statValue}>{stats?.pendingKYC ?? 0}</Text>
-          <Text style={sd.statLabel}>Pending KYC</Text>
-        </View>
-      </View>
-
-      <View style={sd.growthCard}>
-        <TrendingUp size={18} color={Colors.success} />
-        <View style={sd.growthInfo}>
-          <Text style={sd.growthLabel}>Monthly Growth</Text>
-          <Text style={sd.growthValue}>{(stats?.monthlyGrowth ?? 0) >= 0 ? '+' : ''}{stats?.monthlyGrowth ?? 0}%</Text>
-        </View>
-        <View style={sd.growthBar}>
-          <View style={[sd.growthFill, { width: `${Math.min(Math.max(stats?.monthlyGrowth ?? 0, 0), 100)}%` }]} />
-        </View>
-      </View>
-
-      <Text style={sd.sectionTitle}>Users</Text>
-
-      {allUsers.slice(0, 5).map((user) => {
-        const statusCfg: Record<string, { bg: string; text: string }> = {
-          active: { bg: Colors.success + "20", text: Colors.success },
-          suspended: { bg: Colors.error + "20", text: Colors.error },
-          pending: { bg: Colors.warning + "20", text: Colors.warning },
-        };
-        const statusKey = user.isSuspended ? 'suspended' : user.verificationStatus === 'pending' ? 'pending' : 'active';
-        const cfg = statusCfg[statusKey];
-        return (
-          <View key={user.id} style={sd.userCard}>
-            <Image source={{ uri: user.avatar }} style={sd.userAvatar} contentFit="cover" />
-            <View style={sd.userInfo}>
-              <Text style={sd.userName}>{user.name}</Text>
-              <Text style={sd.userEmail}>{user.email}</Text>
-            </View>
-            <View style={[sd.statusBadge, { backgroundColor: cfg.bg }]}>
-              <Text style={[sd.statusText, { color: cfg.text }]}>{statusKey.replace("_", " ").toUpperCase()}</Text>
-            </View>
-          </View>
-        );
-      })}
-    </ScrollView>
-  );
-}
 
 // ─── Customer Dashboard ────────────────────────────────────────────────────
 
@@ -359,7 +288,7 @@ export default function DashboardScreen() {
       </View>
       {currentRole === "fleet_owner" && <FleetDashboard />}
       {currentRole === "dealership" && <DealerDashboard />}
-      {currentRole === "admin" && <AdminDashboard />}
+      {currentRole === "admin" && <AdminDashboardScreen />}
       {currentRole === "customer" && <CustomerDashboard />}
     </View>
   );
