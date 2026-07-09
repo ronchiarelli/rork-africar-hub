@@ -57,7 +57,12 @@ Deno.serve(async (req: Request) => {
       return json({ error: `Minimum top-up is GH₵${MIN_TOPUP_AMOUNT}` }, 400);
     }
 
-    clientReference = `topup_${profile.id}_${crypto.randomUUID()}`;
+    // Hubtel rejects overly long ClientReference values (confirmed via a
+    // live 400 "exceeds maximum length" response) — the previous
+    // topup_{full uuid}_{full uuid} format was 79 chars. A truncated random
+    // hex string is still collision-resistant enough for this volume while
+    // staying well under any reasonable length cap.
+    clientReference = `topup_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
 
     const { error: insertError } = await adminClient.from('wallet_transactions').insert({
       wallet_id: profile.id,
