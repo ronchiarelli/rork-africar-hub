@@ -150,11 +150,18 @@ export type SubscriptionRow = {
   updated_at: string;
 }
 
+export type PlatformSettingsRow = {
+  id: boolean;
+  subscription_monthly_rate: number;
+  updated_at: string;
+}
+
 export type SubscriptionPaymentRow = {
   id: string;
   subscription_id: string;
   amount: number;
   status: SubscriptionPaymentStatusDb;
+  hubtel_reference: string | null;
   hubtel_transaction_id: string | null;
   period_start: string;
   period_end: string | null;
@@ -293,6 +300,7 @@ export type Database = {
       role_applications: TableDef<RoleApplicationRow, Partial<RoleApplicationRow> & { user_id: string; requested_role: UserRoleDb }>;
       subscriptions: TableDef<SubscriptionRow>;
       subscription_payments: TableDef<SubscriptionPaymentRow>;
+      platform_settings: TableDef<PlatformSettingsRow>;
       promo_banners: TableDef<PromoBannerRow, Partial<PromoBannerRow>>;
       push_tokens: TableDef<PushTokenRow, Partial<PushTokenRow> & { user_id: string; token: string }>;
     };
@@ -337,6 +345,10 @@ export type Database = {
       };
       admin_extend_subscription: {
         Args: { p_user_id: string; p_days: number };
+        Returns: void;
+      };
+      admin_set_subscription_rate: {
+        Args: { p_rate: number };
         Returns: void;
       };
       admin_set_subscription_status: {

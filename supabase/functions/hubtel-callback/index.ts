@@ -38,30 +38,43 @@ Deno.serve(async (req: Request) => {
       return new Response('ok', { status: 200 });
     }
 
-    if (!SUCCESS_STATUSES.has(status)) {
-      // Failed/cancelled payment — mark it so, no credit.
-      const adminClient = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-      await adminClient
-        .from('wallet_transactions')
-        .update({ status: 'failed' })
-        .eq('hubtel_reference', clientReference)
-        .eq('status', 'pending');
-      return new Response('ok', { status: 200 });
-    }
+    // References we generate are prefixed by which flow created them —
+    // 'topup_' for wallet top-ups, 'sub_' for direct subscription payments —
+    // so the same callback can route to the right table/RPC for either.
+    const isSubscriptionPayment = String(clientReference).startsWith('sub_');
 
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    await adminClient.rpc('credit_wallet_from_topup', {
-      p_client_reference: clientReference,
-      p_amount: amount,
-      p_hubtel_transaction_id: String(hubtelTransactionId ?? ''),
-    });
+    if (!SUCCESS_STATUSES.has(status)) {
+      // Failed/cancelled payment — mark it so, no credit.
+      if (isSubscriptionPayment) {
+        await adminClient.rpc('fail_subscription_payment', { p_client_reference: clientReference });
+      } else {
+        await adminClient
+          .from('wallet_transactions')
+          .update({ status: 'failed' })
+          .eq('hubtel_reference', clientReference)
+          .eq('status', 'pending');
+      }
+      return new Response('ok', { status: 200 });
+    }
+
+    if (isSubscriptionPayment) {
+      await adminClient.rpc('complete_subscription_payment', {
+        p_client_reference: clientReference,
+        p_amount: amount,
+        p_hubtel_transaction_id: String(hubtelTransactionId ?? ''),
+      });
+    } else {
+      await adminClient.rpc('credit_wallet_from_topup', {
+        p_client_reference: clientReference,
+        p_amount: amount,
+        p_hubtel_transaction_id: String(hubtelTransactionId ?? ''),
+      });
+    }
 
     // Always 200 — Hubtel doesn't need our internal accept/reject reason,
     // and returning non-2xx just triggers callback retries.

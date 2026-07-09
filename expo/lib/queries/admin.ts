@@ -194,6 +194,32 @@ export function useSetSubscriptionStatus() {
   });
 }
 
+export function useSubscriptionRate() {
+  return useQuery({
+    queryKey: ['platform-subscription-rate'],
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase.from('platform_settings').select('subscription_monthly_rate').single();
+      if (error) throw error;
+      return data.subscription_monthly_rate;
+    },
+  });
+}
+
+export function useSetSubscriptionRate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (rate: number) => {
+      const { error } = await supabase.rpc('admin_set_subscription_rate', { p_rate: rate });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['platform-subscription-rate'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-subscriptions'] });
+      void queryClient.invalidateQueries({ queryKey: ['subscription'] });
+    },
+  });
+}
+
 export interface MonthlyTrend {
   monthStart: string;
   newUsers: number;

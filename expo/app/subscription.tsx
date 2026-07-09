@@ -1,11 +1,14 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { CheckCircle2, Clock3, AlertCircle, Zap } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
-import { useSubscription } from '@/lib/queries/subscriptions';
+import { useSubscription, useInitiateSubscriptionPayment } from '@/lib/queries/subscriptions';
+import { useSubscriptionRate } from '@/lib/queries/admin';
+import { getErrorMessage } from '@/lib/errors';
 
 const PLAN_FEATURES = [
   'List unlimited cars for rent or sale',
@@ -19,10 +22,24 @@ export default function SubscriptionScreen() {
   const router = useRouter();
   const { currentRole } = useAuth();
   const { data: sub, isLoading } = useSubscription();
+  const { data: platformRate } = useSubscriptionRate();
+  const displayRate = sub?.row?.amount ?? platformRate ?? 250;
+  const initiatePayment = useInitiateSubscriptionPayment();
 
   const handleSubscribe = useCallback(() => {
-    Alert.alert('Coming Soon', 'Mobile Money / card subscription payment via Hubtel is coming soon. Your account keeps its current access until then.');
-  }, []);
+    initiatePayment.mutate(undefined, {
+      onSuccess: async (data) => {
+        if (Platform.OS === 'web') {
+          window.open(data.checkoutUrl, '_blank');
+        } else {
+          await WebBrowser.openBrowserAsync(data.checkoutUrl);
+        }
+      },
+      onError: (err) => {
+        Alert.alert('Could not start payment', getErrorMessage(err, 'Something went wrong. Please try again.'));
+      },
+    });
+  }, [initiatePayment]);
 
   const roleLabel = currentRole === 'dealership' ? 'Dealership' : 'Fleet Owner';
 
@@ -33,7 +50,7 @@ export default function SubscriptionScreen() {
           <Text style={styles.headerLabel}>{roleLabel} Plan</Text>
           <View style={styles.priceRow}>
             <Text style={styles.currency}>GH₵</Text>
-            <Text style={styles.price}>150</Text>
+            <Text style={styles.price}>{displayRate}</Text>
             <Text style={styles.perMonth}>/month</Text>
           </View>
 
@@ -66,9 +83,14 @@ export default function SubscriptionScreen() {
           Subscriptions are billed monthly via Mobile Money or card through Hubtel. This covers your platform access only — payment for rentals/sales is arranged directly between you and your customers.
         </Text>
 
-        <Pressable style={styles.subscribeBtn} onPress={handleSubscribe} testID="subscribe-btn">
+        <Pressable
+          style={[styles.subscribeBtn, initiatePayment.isPending && styles.subscribeBtnDisabled]}
+          onPress={handleSubscribe}
+          disabled={initiatePayment.isPending}
+          testID="subscribe-btn"
+        >
           <Text style={styles.subscribeBtnText}>
-            {sub?.isActive && !sub.isTrialing ? 'Manage Subscription' : 'Subscribe Now'}
+            {initiatePayment.isPending ? 'Starting…' : sub?.isActive && !sub.isTrialing ? 'Renew Now' : 'Subscribe Now'}
           </Text>
         </Pressable>
 
@@ -129,6 +151,7 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     marginTop: 24,
   },
+  subscribeBtnDisabled: { opacity: 0.6 },
   subscribeBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700' as const },
   backBtn: { alignItems: 'center' as const, marginTop: 16, paddingVertical: 8 },
   backBtnText: { color: Colors.gray[500], fontSize: 14, fontWeight: '600' as const },

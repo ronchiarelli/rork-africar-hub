@@ -6,6 +6,7 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  TextInput,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -36,6 +37,8 @@ import {
   useAllSubscriptions,
   useExtendSubscription,
   useSetSubscriptionStatus,
+  useSubscriptionRate,
+  useSetSubscriptionRate,
   useMonthlyTrends,
   useTopCars,
 } from '@/lib/queries/admin';
@@ -80,6 +83,10 @@ export default function AdminDashboardScreen() {
   const { data: subscriptions = [] } = useAllSubscriptions();
   const extendSubscription = useExtendSubscription();
   const setSubscriptionStatus = useSetSubscriptionStatus();
+  const { data: subscriptionRate } = useSubscriptionRate();
+  const setSubscriptionRate = useSetSubscriptionRate();
+  const [isEditingRate, setIsEditingRate] = useState(false);
+  const [rateInput, setRateInput] = useState('');
   const { data: monthlyTrends = [] } = useMonthlyTrends();
   const { data: topCars = [] } = useTopCars();
 
@@ -107,6 +114,31 @@ export default function AdminDashboardScreen() {
       {
         text: '+30 days',
         onPress: () => extendSubscription.mutate({ userId, days: 30 }, { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not extend subscription.')) }),
+      },
+    ]);
+  };
+
+  const handleStartEditRate = () => {
+    setRateInput(String(subscriptionRate ?? ''));
+    setIsEditingRate(true);
+  };
+
+  const handleSaveRate = () => {
+    const rate = Number(rateInput);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      Alert.alert('Invalid Rate', 'Please enter a positive number.');
+      return;
+    }
+    Alert.alert('Update Subscription Rate', `Set the monthly rate to GH₵${rate} for all fleet owner and dealership accounts?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Confirm',
+        onPress: () => {
+          setSubscriptionRate.mutate(rate, {
+            onSuccess: () => setIsEditingRate(false),
+            onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update the subscription rate.')),
+          });
+        },
       },
     ]);
   };
@@ -383,6 +415,42 @@ export default function AdminDashboardScreen() {
 
         {activeTab === 'Subscriptions' && (
           <>
+            <View style={styles.rateCard}>
+              <View style={styles.rateInfo}>
+                <Text style={styles.rateLabel}>Monthly Subscription Rate</Text>
+                {isEditingRate ? (
+                  <View style={styles.rateEditRow}>
+                    <Text style={styles.rateCurrency}>GH₵</Text>
+                    <TextInput
+                      style={styles.rateInputField}
+                      value={rateInput}
+                      onChangeText={setRateInput}
+                      keyboardType="numeric"
+                      autoFocus
+                      testID="admin-rate-input"
+                    />
+                  </View>
+                ) : (
+                  <Text style={styles.rateValue}>GH₵{subscriptionRate ?? '—'}<Text style={styles.ratePerMonth}>/month</Text></Text>
+                )}
+              </View>
+              {isEditingRate ? (
+                <View style={styles.rateActionsRow}>
+                  <Pressable style={styles.rateCancelBtn} onPress={() => setIsEditingRate(false)} testID="admin-rate-cancel">
+                    <Text style={styles.rateCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable style={styles.rateSaveBtn} onPress={handleSaveRate} testID="admin-rate-save">
+                    <Text style={styles.rateSaveText}>Save</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable style={styles.rateEditBtn} onPress={handleStartEditRate} testID="admin-rate-edit">
+                  <Pencil size={14} color={Colors.orange.primary} />
+                  <Text style={styles.rateEditText}>Edit</Text>
+                </Pressable>
+              )}
+            </View>
+
             <Text style={styles.sectionTitle}>All Subscriptions ({subscriptions.length})</Text>
             {subscriptions.map((sub) => {
               const config = SUB_STATUS_CONFIG[sub.status] ?? SUB_STATUS_CONFIG.trialing;
@@ -845,6 +913,62 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  rateCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  rateInfo: { flex: 1 },
+  rateLabel: { fontSize: 12, fontWeight: '600' as const, color: Colors.gray[500] },
+  rateValue: { fontSize: 22, fontWeight: '800' as const, color: Colors.gray[900], marginTop: 4 },
+  ratePerMonth: { fontSize: 13, fontWeight: '600' as const, color: Colors.gray[500] },
+  rateEditRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6, marginTop: 6 },
+  rateCurrency: { fontSize: 16, fontWeight: '700' as const, color: Colors.gray[700] },
+  rateInputField: {
+    borderWidth: 1,
+    borderColor: Colors.gray[300],
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+    minWidth: 90,
+  },
+  rateEditBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: Colors.orange.primary + '15',
+  },
+  rateEditText: { fontSize: 13, fontWeight: '700' as const, color: Colors.orange.primary },
+  rateActionsRow: { flexDirection: 'row' as const, gap: 8 },
+  rateCancelBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: Colors.gray[100],
+  },
+  rateCancelText: { fontSize: 13, fontWeight: '700' as const, color: Colors.gray[700] },
+  rateSaveBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: Colors.orange.primary,
+  },
+  rateSaveText: { fontSize: 13, fontWeight: '700' as const, color: Colors.white },
   subHeader: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,

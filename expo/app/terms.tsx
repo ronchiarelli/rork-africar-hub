@@ -42,7 +42,7 @@ const SECTIONS: Section[] = [
   {
     heading: '5. Fleet Owner & Dealership Subscriptions',
     body: [
-      'Fleet owner and dealership accounts require an active monthly platform subscription to list vehicles. The current subscription fee is GH₵150/month, which includes an initial free trial period.',
+      'Fleet owner and dealership accounts require an active monthly platform subscription to list vehicles. The current subscription fee is GH₵250/month, which includes an initial free trial period.',
       'Subscriptions are billed through our payment partner, Hubtel, and renew automatically each period unless cancelled. If a subscription lapses, your vehicle listings are hidden from the marketplace until it is reactivated.',
       'GoCar Hub may change subscription pricing with reasonable notice to affected accounts.',
     ],

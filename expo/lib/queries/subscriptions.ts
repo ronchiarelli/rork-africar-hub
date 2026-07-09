@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
+import { getErrorMessage } from '@/lib/errors';
 import type { SubscriptionRow } from '@/types/database';
 
 export interface SubscriptionInfo {
@@ -37,5 +38,28 @@ export function useSubscription() {
       };
     },
     enabled: !!userId,
+  });
+}
+
+export function useInitiateSubscriptionPayment() {
+  const { currentUser } = useAuth();
+  const userId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke<{ checkoutUrl: string; clientReference: string }>(
+        'initiate-subscription-payment'
+      );
+      if (error) {
+        const context = (error as { context?: Response }).context;
+        const body = context ? await context.clone().json().catch(() => null) : null;
+        throw new Error(body?.error ?? getErrorMessage(error, 'Could not start payment'));
+      }
+      if (!data?.checkoutUrl) throw new Error('Could not start payment');
+      return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['subscription', userId] });
+    },
   });
 }
