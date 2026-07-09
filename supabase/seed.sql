@@ -6,14 +6,14 @@
 -- accounts, which don't exist until people actually sign up.
 
 insert into public.brands (name, logo, car_count) values
-  ('Toyota',      'https://www.carlogos.org/car-logos/toyota-logo-2020-europe.png', 0),
-  ('Mercedes',    'https://www.carlogos.org/car-logos/mercedes-benz-logo-2011.png', 0),
+  ('Toyota',      'https://www.carlogos.org/car-logos/toyota-logo-2020.png', 0),
+  ('Mercedes',    'https://www.carlogos.org/car-logos/mercedes-benz-logo.png', 0),
   ('BMW',         'https://www.carlogos.org/car-logos/bmw-logo-2020.png', 0),
   ('Range Rover', 'https://www.carlogos.org/car-logos/land-rover-logo.png', 0),
   ('Honda',       'https://www.carlogos.org/car-logos/honda-logo-2000.png', 0),
   ('Audi',        'https://www.carlogos.org/car-logos/audi-logo-2016.png', 0),
   ('Hyundai',     'https://www.carlogos.org/car-logos/hyundai-logo-2011.png', 0),
-  ('Nissan',      'https://www.carlogos.org/car-logos/nissan-logo-2020.png', 0)
+  ('Nissan',      'https://www.carlogos.org/car-logos/nissan-logo.png', 0)
 on conflict (name) do nothing;
 
 insert into public.cars (

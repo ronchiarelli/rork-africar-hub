@@ -1,27 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
+import { Car } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { Brand } from '@/types/car';
 
 interface BrandCardProps {
   brand: Brand;
   onPress: (brand: Brand) => void;
+  isSelected?: boolean;
 }
 
-export default React.memo(function BrandCard({ brand, onPress }: BrandCardProps) {
+export default React.memo(function BrandCard({ brand, onPress, isSelected }: BrandCardProps) {
+  const [logoFailed, setLogoFailed] = useState(false);
+
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       onPress={() => onPress(brand)}
       testID={`brand-${brand.id}`}
     >
-      <View style={styles.logoWrap}>
-        <Image
-          source={{ uri: brand.logo }}
-          style={styles.logo}
-          contentFit="contain"
-        />
+      <View style={[styles.logoWrap, isSelected && styles.logoWrapSelected]}>
+        {logoFailed || !brand.logo ? (
+          <Car size={26} color={Colors.gray[400]} />
+        ) : (
+          <Image
+            source={{ uri: brand.logo }}
+            style={styles.logo}
+            contentFit="contain"
+            onError={() => setLogoFailed(true)}
+          />
+        )}
       </View>
       <Text style={styles.name} numberOfLines={1}>{brand.name}</Text>
       <Text style={styles.count}>{brand.carCount} Cars</Text>
@@ -52,6 +61,10 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: Colors.gray[100],
+  },
+  logoWrapSelected: {
+    borderWidth: 2,
+    borderColor: Colors.orange.primary,
   },
   logo: {
     width: 36,

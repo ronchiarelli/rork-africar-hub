@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,11 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams } from 'expo-router';
 import { Search, SlidersHorizontal, X, MapPin } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
-import { useCars } from '@/lib/queries/cars';
+import { useCars, useBrands } from '@/lib/queries/cars';
 import CarCard from '@/components/CarCard';
 
 const CATEGORIES = ['All', 'SUV', 'Sedan', 'Hatchback', 'Van'];
@@ -28,13 +29,23 @@ const PRICE_RANGES = [
 
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ brand?: string }>();
   const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedTransmission, setSelectedTransmission] = useState('All');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedPriceRange, setSelectedPriceRange] = useState(0);
+  const [selectedBrand, setSelectedBrand] = useState('');
   const { data: cars = [] } = useCars();
+  const { data: brands = [] } = useBrands();
+
+  useEffect(() => {
+    if (params.brand) {
+      setSelectedBrand(params.brand);
+      setShowFilters(true);
+    }
+  }, [params.brand]);
 
   const filteredCars = useMemo(() => {
     return cars.filter((car) => {
@@ -42,16 +53,18 @@ export default function SearchScreen() {
         car.brand.toLowerCase().includes(query.toLowerCase()) ||
         car.model.toLowerCase().includes(query.toLowerCase()) ||
         car.location.toLowerCase().includes(query.toLowerCase());
+      const matchesBrand = selectedBrand === '' || car.brand === selectedBrand;
       const matchesCategory = selectedCategory === 'All' || car.category === selectedCategory;
       const matchesTransmission = selectedTransmission === 'All' || car.transmission === selectedTransmission;
       const matchesLocation = selectedLocation === '' || car.location === selectedLocation;
       const priceRange = PRICE_RANGES[selectedPriceRange];
       const matchesPrice = car.pricePerDay >= priceRange.min && car.pricePerDay <= priceRange.max;
-      return matchesQuery && matchesCategory && matchesTransmission && matchesLocation && matchesPrice;
+      return matchesQuery && matchesBrand && matchesCategory && matchesTransmission && matchesLocation && matchesPrice;
     });
-  }, [cars, query, selectedCategory, selectedTransmission, selectedLocation, selectedPriceRange]);
+  }, [cars, query, selectedBrand, selectedCategory, selectedTransmission, selectedLocation, selectedPriceRange]);
 
   const clearFilters = useCallback(() => {
+    setSelectedBrand('');
     setSelectedCategory('All');
     setSelectedTransmission('All');
     setSelectedLocation('');
@@ -61,12 +74,13 @@ export default function SearchScreen() {
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
+    if (selectedBrand !== '') count++;
     if (selectedCategory !== 'All') count++;
     if (selectedTransmission !== 'All') count++;
     if (selectedLocation !== '') count++;
     if (selectedPriceRange !== 0) count++;
     return count;
-  }, [selectedCategory, selectedTransmission, selectedLocation, selectedPriceRange]);
+  }, [selectedBrand, selectedCategory, selectedTransmission, selectedLocation, selectedPriceRange]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -106,6 +120,30 @@ export default function SearchScreen() {
 
       {showFilters && (
         <View style={styles.filtersContainer}>
+          <View style={styles.filterSection}>
+            <Text style={styles.filterLabel}>Brand</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.chipRow}>
+                <Pressable
+                  style={[styles.chip, selectedBrand === '' && styles.chipActive]}
+                  onPress={() => setSelectedBrand('')}
+                >
+                  <Text style={[styles.chipText, selectedBrand === '' && styles.chipTextActive]}>All</Text>
+                </Pressable>
+                {brands.map((brand) => (
+                  <Pressable
+                    key={brand.id}
+                    style={[styles.chip, selectedBrand === brand.name && styles.chipActive]}
+                    onPress={() => setSelectedBrand(brand.name)}
+                    testID={`search-brand-${brand.id}`}
+                  >
+                    <Text style={[styles.chipText, selectedBrand === brand.name && styles.chipTextActive]}>{brand.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+
           <View style={styles.filterSection}>
             <Text style={styles.filterLabel}>Category</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>

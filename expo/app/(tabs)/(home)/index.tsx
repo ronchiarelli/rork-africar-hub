@@ -82,8 +82,7 @@ export default function HomeScreen() {
   const { data: banner } = useActiveBanner();
 
   const handleBrandPress = useCallback((brand: Brand) => {
-    console.log('Brand pressed:', brand.name);
-    router.push('/search');
+    router.push({ pathname: '/search', params: { brand: brand.name } });
   }, [router]);
 
   const featuredSaleCars = saleCars.filter(c => c.isFeatured);
