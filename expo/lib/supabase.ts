@@ -17,6 +17,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // Only meaningful on web (checks window.location for a hash/query on
+    // init) — needed so the password-recovery link's token is picked up
+    // automatically when it lands on /reset-password. No-ops on native,
+    // which has no comparable URL to inspect.
+    detectSessionInUrl: true,
   },
 });

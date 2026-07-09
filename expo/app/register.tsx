@@ -64,10 +64,10 @@ export default function RegisterScreen() {
       if (accountType !== 'customer') {
         Alert.alert(
           'Account Created',
-          `Your account is ready. Your ${accountType === 'fleet_owner' ? 'Fleet Manager' : 'Car Dealer / Garage'} application has been submitted for admin review — you'll be upgraded once approved.`
+          `Your account is ready. Your ${accountType === 'fleet_owner' ? 'Fleet Manager' : 'Car Dealer / Garage'} application has been submitted for admin review — you'll be upgraded once approved. Next, let's verify your identity.`
         );
       }
-      router.replace('/(tabs)/(home)');
+      router.replace('/kyc-verification');
     } catch (e) {
       Alert.alert('Registration Failed', getErrorMessage(e, 'Please try again.'));
     }

@@ -16,7 +16,7 @@ void SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 const AUTH_GROUP = ['welcome', 'login', 'register'];
-const PUBLIC_STACK_ROUTES = ['car-details', 'terms', 'privacy'];
+const PUBLIC_STACK_ROUTES = ['car-details', 'terms', 'privacy', 'forgot-password', 'reset-password'];
 const PUBLIC_TAB_SEGMENTS = ['(home)', 'search'];
 const ROLE_GUARDED: Record<string, UserRole> = {
   'fleet-dashboard': 'fleet_owner',
@@ -109,6 +109,8 @@ function RootLayoutNav() {
           <Stack.Screen name="marketplace" options={{ title: "Marketplace", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+          <Stack.Screen name="reset-password" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
           <Stack.Screen name="settings" options={{ title: "Settings", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="terms" options={{ title: "Terms of Service", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
