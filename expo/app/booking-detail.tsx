@@ -7,6 +7,7 @@ import {
   Pressable,
   Linking,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -25,6 +26,8 @@ import {
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useBookingDetail } from '@/lib/queries/bookings';
+import { useGetOrCreateConversation } from '@/lib/queries/chat';
+import { getErrorMessage } from '@/lib/errors';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string; bg: string }> = {
   pending: { icon: <Clock3 size={18} color={Colors.warning} />, color: Colors.warning, label: 'Pending Approval', bg: Colors.warning + '15' },
@@ -38,13 +41,19 @@ export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: booking, isLoading } = useBookingDetail(id);
+  const getOrCreateConversation = useGetOrCreateConversation();
 
   const config = booking ? STATUS_CONFIG[booking.status] : null;
 
-  const handleWhatsApp = () => {
-    if (!booking) return;
-    const msg = `Hi, I have a booking for the ${booking.car.brand} ${booking.car.model} (Booking #${booking.id}).`;
-    void Linking.openURL(`https://wa.me/${booking.car.ownerPhone.replace('+', '')}?text=${encodeURIComponent(msg)}`);
+  const handleMessage = () => {
+    if (!booking || !booking.car.ownerId) return;
+    getOrCreateConversation.mutate(
+      { otherUserId: booking.car.ownerId, contextType: 'booking', contextId: booking.id, contextLabel: `${booking.car.brand} ${booking.car.model}` },
+      {
+        onSuccess: (conv) => router.push({ pathname: '/chat', params: { id: conv.id } }),
+        onError: (err) => Alert.alert('Could not start chat', getErrorMessage(err, 'Please try again.')),
+      }
+    );
   };
 
   const handleCall = () => {
@@ -156,7 +165,7 @@ export default function BookingDetailScreen() {
             </View>
           </View>
           <View style={styles.ownerActions}>
-            <Pressable style={styles.whatsappBtn} onPress={handleWhatsApp}>
+            <Pressable style={styles.messageBtn} onPress={handleMessage} testID="booking-detail-message-btn">
               <MessageCircle size={16} color={Colors.white} />
             </Pressable>
             <Pressable style={styles.callBtn} onPress={handleCall}>
@@ -360,11 +369,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     gap: 8,
   },
-  whatsappBtn: {
+  messageBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.purple.medium,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },

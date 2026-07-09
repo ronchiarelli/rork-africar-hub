@@ -14,6 +14,7 @@ import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, Mess
 import Colors from '@/constants/colors';
 import { useMyFleetVehicles, usePendingOwnerBookings, type PendingBooking } from '@/lib/queries/fleet';
 import { useReviewBooking } from '@/lib/queries/bookings';
+import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { getErrorMessage } from '@/lib/errors';
 
 const VEHICLE_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
@@ -28,6 +29,7 @@ export default function FleetDashboardScreen() {
   const { data: fleetVehicles = [] } = useMyFleetVehicles();
   const { data: pendingBookings = [] } = usePendingOwnerBookings();
   const reviewBooking = useReviewBooking();
+  const getOrCreateConversation = useGetOrCreateConversation();
 
   const earnings = useMemo(() => {
     const totalRevenue = fleetVehicles.reduce((s, v) => s + v.totalEarnings, 0);
@@ -37,11 +39,15 @@ export default function FleetDashboardScreen() {
     return { totalRevenue, completedTrips, activeRentals, maintenanceCount };
   }, [fleetVehicles]);
 
-  const handleWhatsApp = useCallback((booking: PendingBooking) => {
-    if (!booking.customerPhone) return;
-    const message = `Hi ${booking.customerName}, this is regarding your booking request for the ${booking.car.brand} ${booking.car.model}.`;
-    void Linking.openURL(`https://wa.me/${booking.customerPhone.replace('+', '')}?text=${encodeURIComponent(message)}`);
-  }, []);
+  const handleMessage = useCallback((booking: PendingBooking) => {
+    getOrCreateConversation.mutate(
+      { otherUserId: booking.customerId, contextType: 'booking', contextId: booking.id, contextLabel: `${booking.car.brand} ${booking.car.model}` },
+      {
+        onSuccess: (conv) => router.push({ pathname: '/chat', params: { id: conv.id } }),
+        onError: (err) => Alert.alert('Could not start chat', getErrorMessage(err, 'Please try again.')),
+      }
+    );
+  }, [getOrCreateConversation, router]);
 
   const handleCall = useCallback((booking: PendingBooking) => {
     if (!booking.customerPhone) return;
@@ -98,17 +104,17 @@ export default function FleetDashboardScreen() {
                   </View>
                   <Text style={styles.requestDetailText}>{booking.pickupDate} → {booking.returnDate} ({booking.totalDays}d)</Text>
                   <Text style={styles.requestPrice}>GH₵{booking.totalPrice.toLocaleString()}</Text>
-                  {booking.customerPhone ? (
-                    <View style={styles.contactRow}>
-                      <Pressable style={styles.whatsappBtn} onPress={() => handleWhatsApp(booking)} testID={`booking-whatsapp-${booking.id}`}>
-                        <MessageCircle size={14} color={Colors.white} />
-                        <Text style={styles.contactBtnText}>WhatsApp</Text>
-                      </Pressable>
+                  <View style={styles.contactRow}>
+                    <Pressable style={styles.messageBtn} onPress={() => handleMessage(booking)} testID={`booking-message-${booking.id}`}>
+                      <MessageCircle size={14} color={Colors.white} />
+                      <Text style={styles.contactBtnText}>Message</Text>
+                    </Pressable>
+                    {booking.customerPhone ? (
                       <Pressable style={styles.callBtn} onPress={() => handleCall(booking)} testID={`booking-call-${booking.id}`}>
                         <Phone size={14} color={Colors.white} />
                       </Pressable>
-                    </View>
-                  ) : null}
+                    ) : null}
+                  </View>
                   <View style={styles.requestActions}>
                     <Pressable
                       style={[styles.actionBtn, styles.rejectBtn]}
@@ -324,7 +330,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
   },
-  whatsappBtn: {
+  messageBtn: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
@@ -332,7 +338,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 10,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.purple.medium,
     flex: 1,
   },
   callBtn: {

@@ -25,6 +25,7 @@ export function mapCar(row: CarRow): Car {
     isAvailable: row.is_available,
     description: row.description ?? '',
     features: row.features,
+    ownerId: row.owner_id,
     ownerName: row.owner_name ?? '',
     ownerPhone: row.owner_phone ?? '',
   };
@@ -45,6 +46,7 @@ function mapSaleCar(row: SaleCarRow): SaleCar {
     fuelType: row.fuel_type,
     transmission: row.transmission,
     condition: row.condition,
+    dealerId: row.dealer_id,
     dealerName: row.dealer_name ?? '',
     dealerPhone: row.dealer_phone ?? '',
     dealerAvatar: row.dealer_avatar ?? '',

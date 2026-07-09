@@ -19,6 +19,7 @@ function mapSaleCar(row: SaleCarRow): SaleCar {
     fuelType: row.fuel_type,
     transmission: row.transmission,
     condition: row.condition,
+    dealerId: row.dealer_id,
     dealerName: row.dealer_name ?? '',
     dealerPhone: row.dealer_phone ?? '',
     dealerAvatar: row.dealer_avatar ?? '',
@@ -90,6 +91,7 @@ export function useMyLeads() {
       if (error) throw error;
       return (data as unknown as (LeadRow & { dealer_listing: DealerListingRow })[]).map((row): Lead => ({
         id: row.id,
+        customerId: row.customer_id,
         customerName: row.customer_name,
         customerPhone: row.customer_phone,
         carModel: row.car_model ?? '',
@@ -104,6 +106,7 @@ export function useMyLeads() {
 
 export interface NewLeadInput {
   saleCarId: string;
+  customerId: string;
   customerName: string;
   customerPhone: string;
   carModel: string;
@@ -127,6 +130,7 @@ export function useCreateLead() {
 
       const { error } = await supabase.from('leads').insert({
         dealer_listing_id: listing.id,
+        customer_id: input.customerId,
         customer_name: input.customerName,
         customer_phone: input.customerPhone,
         car_model: input.carModel,

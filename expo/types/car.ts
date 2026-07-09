@@ -19,6 +19,7 @@ export interface Car {
   isAvailable: boolean;
   description: string;
   features: string[];
+  ownerId: string | null;
   ownerName: string;
   ownerPhone: string;
 }
@@ -91,6 +92,7 @@ export interface DealerListing {
 
 export interface Lead {
   id: string;
+  customerId: string | null;
   customerName: string;
   customerPhone: string;
   carModel: string;
@@ -141,6 +143,7 @@ export interface SaleCar {
   fuelType: 'Petrol' | 'Diesel' | 'Hybrid' | 'Electric';
   transmission: 'Automatic' | 'Manual';
   condition: 'New' | 'Foreign Used' | 'Locally Used';
+  dealerId: string | null;
   dealerName: string;
   dealerPhone: string;
   dealerAvatar: string;

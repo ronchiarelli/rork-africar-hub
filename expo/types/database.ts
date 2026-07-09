@@ -112,11 +112,32 @@ export type DealerListingRow = {
 export type LeadRow = {
   id: string;
   dealer_listing_id: string;
+  customer_id: string | null;
   customer_name: string;
   customer_phone: string;
   car_model: string | null;
   message: string | null;
   status: LeadStatusDb;
+  created_at: string;
+}
+
+export type ConversationRow = {
+  id: string;
+  customer_id: string;
+  counterpart_id: string;
+  context_type: string | null;
+  context_id: string | null;
+  context_label: string | null;
+  last_message_at: string | null;
+  created_at: string;
+}
+
+export type ChatMessageRow = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  is_read: boolean;
   created_at: string;
 }
 
@@ -303,6 +324,8 @@ export type Database = {
       platform_settings: TableDef<PlatformSettingsRow>;
       promo_banners: TableDef<PromoBannerRow, Partial<PromoBannerRow>>;
       push_tokens: TableDef<PushTokenRow, Partial<PushTokenRow> & { user_id: string; token: string }>;
+      conversations: TableDef<ConversationRow>;
+      chat_messages: TableDef<ChatMessageRow>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -349,6 +372,18 @@ export type Database = {
       };
       admin_set_subscription_rate: {
         Args: { p_rate: number };
+        Returns: void;
+      };
+      get_or_create_conversation: {
+        Args: { p_other_user_id: string; p_context_type?: string | null; p_context_id?: string | null; p_context_label?: string | null };
+        Returns: ConversationRow;
+      };
+      send_message: {
+        Args: { p_conversation_id: string; p_body: string };
+        Returns: ChatMessageRow;
+      };
+      mark_conversation_read: {
+        Args: { p_conversation_id: string };
         Returns: void;
       };
       admin_set_subscription_status: {

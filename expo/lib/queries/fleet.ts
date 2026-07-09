@@ -6,6 +6,7 @@ import type { CarRow, FleetVehicleRow, BookingRow } from '@/types/database';
 import type { Car, FleetVehicle, Booking } from '@/types/car';
 
 export interface PendingBooking extends Booking {
+  customerId: string;
   customerName: string;
   customerPhone: string;
 }
@@ -83,6 +84,7 @@ export function usePendingOwnerBookings() {
           totalPrice: row.total_price,
           status: row.status,
           createdAt: row.created_at,
+          customerId: row.customer_id,
           customerName: row.customer?.name ?? 'Customer',
           customerPhone: row.customer?.phone ?? '',
         })

@@ -6,12 +6,15 @@ import {
   ScrollView,
   Pressable,
   Linking,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useMyDealerListings, useMyLeads } from '@/lib/queries/dealer';
+import { useGetOrCreateConversation } from '@/lib/queries/chat';
+import { getErrorMessage } from '@/lib/errors';
 import type { Lead } from '@/types/car';
 
 const LISTING_STATUS: Record<string, { bg: string; text: string }> = {
@@ -31,15 +34,22 @@ export default function DealerDashboardScreen() {
   const router = useRouter();
   const { data: listings = [] } = useMyDealerListings();
   const { data: leads = [] } = useMyLeads();
+  const getOrCreateConversation = useGetOrCreateConversation();
 
   const totalViews = listings.reduce((acc, l) => acc + l.views, 0);
   const totalLeads = listings.reduce((acc, l) => acc + l.leads, 0);
   const activeListings = listings.filter(l => l.status === 'active').length;
 
-  const handleLeadWhatsApp = useCallback((lead: Lead) => {
-    const message = `Hi ${lead.customerName}, thanks for your interest in the ${lead.carModel}!`;
-    void Linking.openURL(`https://wa.me/${lead.customerPhone.replace('+', '')}?text=${encodeURIComponent(message)}`);
-  }, []);
+  const handleLeadMessage = useCallback((lead: Lead) => {
+    if (!lead.customerId) return;
+    getOrCreateConversation.mutate(
+      { otherUserId: lead.customerId, contextType: 'sale_car', contextLabel: lead.carModel },
+      {
+        onSuccess: (conv) => router.push({ pathname: '/chat', params: { id: conv.id } }),
+        onError: (err) => Alert.alert('Could not start chat', getErrorMessage(err, 'Please try again.')),
+      }
+    );
+  }, [getOrCreateConversation, router]);
 
   const handleLeadCall = useCallback((lead: Lead) => {
     void Linking.openURL(`tel:${lead.customerPhone}`);
@@ -142,9 +152,11 @@ export default function DealerDashboardScreen() {
               <View style={styles.leadFooter}>
                 <Text style={styles.leadDate}>{lead.createdAt}</Text>
                 <View style={styles.leadActions}>
-                  <Pressable style={styles.leadWhatsappBtn} onPress={() => handleLeadWhatsApp(lead)} testID={`lead-whatsapp-${lead.id}`}>
-                    <MessageCircle size={14} color={Colors.white} />
-                  </Pressable>
+                  {lead.customerId ? (
+                    <Pressable style={styles.leadMessageBtn} onPress={() => handleLeadMessage(lead)} testID={`lead-message-${lead.id}`}>
+                      <MessageCircle size={14} color={Colors.white} />
+                    </Pressable>
+                  ) : null}
                   <Pressable style={styles.leadCallBtn} onPress={() => handleLeadCall(lead)} testID={`lead-call-${lead.id}`}>
                     <Phone size={14} color={Colors.white} />
                   </Pressable>
@@ -373,11 +385,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     gap: 8,
   },
-  leadWhatsappBtn: {
+  leadMessageBtn: {
     width: 30,
     height: 30,
     borderRadius: 10,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.purple.medium,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },

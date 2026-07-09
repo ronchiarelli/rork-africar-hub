@@ -105,6 +105,8 @@ function RootLayoutNav() {
           <Stack.Screen name="booking-detail" options={{ title: "Booking Details", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="favorites" options={{ title: "My Favorites", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="notifications" options={{ title: "Notifications", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="messages" options={{ title: "Messages", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="chat" options={{ title: "Chat", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="kyc-verification" options={{ title: "KYC Verification", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="marketplace" options={{ title: "Marketplace", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="welcome" options={{ headerShown: false }} />

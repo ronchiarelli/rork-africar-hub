@@ -8,26 +8,33 @@ import {
   TextInput,
   FlatList,
   Linking,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { Search, SlidersHorizontal, MapPin, Eye, MessageCircle, Phone, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useSaleCars } from '@/lib/queries/cars';
 import { useCreateLead } from '@/lib/queries/dealer';
+import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { useAuth } from '@/providers/AuthProvider';
+import { getErrorMessage } from '@/lib/errors';
 import { SaleCar } from '@/types/car';
 
 const CONDITIONS = ['All', 'New', 'Foreign Used', 'Locally Used'];
 const BRANDS = ['All', 'Toyota', 'Mercedes', 'BMW', 'Honda', 'Hyundai', 'Range Rover'];
 
 function SaleListingCard({ car }: { car: SaleCar }) {
+  const router = useRouter();
   const { currentUser } = useAuth();
   const createLead = useCreateLead();
+  const getOrCreateConversation = useGetOrCreateConversation();
 
   const recordLead = useCallback((message: string) => {
     if (!currentUser) return;
     createLead.mutate({
       saleCarId: car.id,
+      customerId: currentUser.id,
       customerName: currentUser.name,
       customerPhone: currentUser.phone,
       carModel: `${car.brand} ${car.model}`,
@@ -35,11 +42,22 @@ function SaleListingCard({ car }: { car: SaleCar }) {
     });
   }, [car, currentUser, createLead]);
 
-  const handleWhatsApp = useCallback(() => {
+  const handleMessage = useCallback(() => {
+    if (!currentUser) {
+      router.push('/login');
+      return;
+    }
+    if (!car.dealerId) return;
     const msg = `Hi, I'm interested in the ${car.brand} ${car.model} (${car.year}) listed for GH₵${car.salePrice.toLocaleString()} on GoCar Hub.`;
     recordLead(msg);
-    void Linking.openURL(`https://wa.me/${car.dealerPhone.replace('+', '')}?text=${encodeURIComponent(msg)}`);
-  }, [car, recordLead]);
+    getOrCreateConversation.mutate(
+      { otherUserId: car.dealerId, contextType: 'sale_car', contextId: car.id, contextLabel: `${car.brand} ${car.model}` },
+      {
+        onSuccess: (conv) => router.push({ pathname: '/chat', params: { id: conv.id } }),
+        onError: (err) => Alert.alert('Could not start chat', getErrorMessage(err, 'Please try again.')),
+      }
+    );
+  }, [car, currentUser, recordLead, getOrCreateConversation, router]);
 
   const handleCall = useCallback(() => {
     recordLead('Called via GoCar Hub');
@@ -95,7 +113,7 @@ function SaleListingCard({ car }: { car: SaleCar }) {
           </View>
 
           <View style={styles.actionBtns}>
-            <Pressable style={styles.whatsappBtn} onPress={handleWhatsApp}>
+            <Pressable style={styles.messageBtn} onPress={handleMessage} testID={`sale-car-message-${car.id}`}>
               <MessageCircle size={16} color={Colors.white} />
             </Pressable>
             <Pressable style={styles.callBtn} onPress={handleCall}>
@@ -418,11 +436,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     gap: 8,
   },
-  whatsappBtn: {
+  messageBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.purple.medium,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },

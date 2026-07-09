@@ -8,6 +8,7 @@ import {
   Linking,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +29,9 @@ import {
 import Colors from '@/constants/colors';
 import { useCarDetails } from '@/lib/queries/cars';
 import { useFavorites } from '@/providers/FavoritesProvider';
+import { useGetOrCreateConversation } from '@/lib/queries/chat';
+import { useAuth } from '@/providers/AuthProvider';
+import { getErrorMessage } from '@/lib/errors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -36,16 +40,27 @@ export default function CarDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { currentUser } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { data: car, isLoading } = useCarDetails(id);
+  const getOrCreateConversation = useGetOrCreateConversation();
 
-  const handleWhatsApp = useCallback(() => {
+  const handleMessage = useCallback(() => {
     if (!car) return;
-    const message = `Hi, I'm interested in renting the ${car.brand} ${car.model} listed on GoCar Hub.`;
-    const url = `https://wa.me/${car.ownerPhone.replace('+', '')}?text=${encodeURIComponent(message)}`;
-    void Linking.openURL(url);
-  }, [car]);
+    if (!currentUser) {
+      router.push('/login');
+      return;
+    }
+    if (!car.ownerId) return;
+    getOrCreateConversation.mutate(
+      { otherUserId: car.ownerId, contextType: 'car', contextId: car.id, contextLabel: `${car.brand} ${car.model}` },
+      {
+        onSuccess: (conv) => router.push({ pathname: '/chat', params: { id: conv.id } }),
+        onError: (err) => Alert.alert('Could not start chat', getErrorMessage(err, 'Please try again.')),
+      }
+    );
+  }, [car, currentUser, getOrCreateConversation, router]);
 
   const handleCall = useCallback(() => {
     if (!car) return;
@@ -202,7 +217,7 @@ export default function CarDetailsScreen() {
                 </View>
               </View>
               <View style={styles.ownerActions}>
-                <Pressable style={styles.whatsappBtn} onPress={handleWhatsApp}>
+                <Pressable style={styles.messageBtn} onPress={handleMessage} testID="car-details-message-btn">
                   <MessageCircle size={16} color={Colors.white} />
                 </Pressable>
                 <Pressable style={styles.callBtn} onPress={handleCall}>
@@ -500,11 +515,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     gap: 8,
   },
-  whatsappBtn: {
+  messageBtn: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#25D366',
+    backgroundColor: Colors.purple.medium,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },

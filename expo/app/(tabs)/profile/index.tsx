@@ -14,6 +14,7 @@ import {
   Shield,
   Heart,
   Bell,
+  MessageSquare,
   Car,
   Store,
   LayoutDashboard,
@@ -28,6 +29,7 @@ import {
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRequestRoleUpgrade } from '@/lib/queries/profile';
+import { useUnreadConversationsCount } from '@/lib/queries/chat';
 import { UserRole } from '@/types/car';
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -51,6 +53,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { currentUser, currentRole, logout } = useAuth();
   const requestRoleUpgrade = useRequestRoleUpgrade(currentUser?.id);
+  const unreadMessages = useUnreadConversationsCount();
 
   const handleLogout = useCallback(() => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -86,6 +89,12 @@ export default function ProfileScreen() {
   const menuItems: MenuItem[][] = [
     [
       { icon: <Heart size={20} color={Colors.orange.primary} />, label: 'My Favorites', route: '/favorites' },
+      {
+        icon: <MessageSquare size={20} color={Colors.purple.medium} />,
+        label: 'Messages',
+        route: '/messages',
+        badge: unreadMessages > 0 ? String(unreadMessages) : undefined,
+      },
       { icon: <Bell size={20} color={Colors.info} />, label: 'Notifications', route: '/notifications', badge: '3' },
       { icon: <ShieldCheck size={20} color={Colors.success} />, label: 'KYC Verification', route: '/kyc-verification' },
     ],

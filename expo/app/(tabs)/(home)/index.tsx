@@ -13,10 +13,11 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MapPin, Bell, Heart, Search, ChevronRight, Sparkles } from 'lucide-react-native';
+import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useCars, useBrands, useSaleCars } from '@/lib/queries/cars';
 import { useActiveBanner } from '@/lib/queries/banners';
+import { useUnreadConversationsCount } from '@/lib/queries/chat';
 import { useAuth } from '@/providers/AuthProvider';
 import CarCard from '@/components/CarCard';
 import BrandCard from '@/components/BrandCard';
@@ -80,6 +81,7 @@ export default function HomeScreen() {
   const { data: cars = [] } = useCars({ onlyAvailable: true });
   const { data: saleCars = [] } = useSaleCars();
   const { data: banner } = useActiveBanner();
+  const unreadMessages = useUnreadConversationsCount();
 
   const handleBrandPress = useCallback((brand: Brand) => {
     router.push({ pathname: '/search', params: { brand: brand.name } });
@@ -102,6 +104,10 @@ export default function HomeScreen() {
             <View style={styles.headerActions}>
               <Pressable onPress={() => router.push('/favorites')} style={styles.iconBtn} testID="fav-header-btn">
                 <Heart size={20} color={Colors.white} />
+              </Pressable>
+              <Pressable onPress={() => router.push('/messages')} style={styles.iconBtn} testID="messages-header-btn">
+                <MessageSquare size={20} color={Colors.white} />
+                {unreadMessages > 0 && <View style={styles.notifDot} />}
               </Pressable>
               <Pressable onPress={() => router.push('/notifications')} style={styles.iconBtn} testID="notif-header-btn">
                 <Bell size={20} color={Colors.white} />
