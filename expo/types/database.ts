@@ -258,6 +258,14 @@ export type PromoBannerRow = {
   updated_at: string;
 }
 
+export type PushTokenRow = {
+  id: string;
+  user_id: string;
+  token: string;
+  platform: string;
+  created_at: string;
+}
+
 type TableDef<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
   Row: Row;
   Insert: Insert;
@@ -286,6 +294,7 @@ export type Database = {
       subscriptions: TableDef<SubscriptionRow>;
       subscription_payments: TableDef<SubscriptionPaymentRow>;
       promo_banners: TableDef<PromoBannerRow, Partial<PromoBannerRow>>;
+      push_tokens: TableDef<PushTokenRow, Partial<PushTokenRow> & { user_id: string; token: string }>;
     };
     Views: Record<string, never>;
     Functions: {

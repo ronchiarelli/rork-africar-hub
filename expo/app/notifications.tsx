@@ -6,9 +6,11 @@ import {
   ScrollView,
   Pressable,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Bell, CalendarDays, CreditCard, Tag, ShieldCheck, Settings } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useNotifications, useMarkAllNotificationsRead } from '@/lib/queries/notifications';
+import { useNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from '@/lib/queries/notifications';
+import type { AppNotification } from '@/types/car';
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   booking: <CalendarDays size={18} color={Colors.info} />,
@@ -39,12 +41,21 @@ function formatTime(timestamp: string): string {
 }
 
 export default function NotificationsScreen() {
+  const router = useRouter();
   const { data: notifications = [] } = useNotifications();
   const markAllReadMutation = useMarkAllNotificationsRead();
+  const markReadMutation = useMarkNotificationRead();
 
   const markAllRead = useCallback(() => {
     markAllReadMutation.mutate();
   }, [markAllReadMutation]);
+
+  const handlePressNotification = useCallback((notif: AppNotification) => {
+    if (!notif.isRead) markReadMutation.mutate(notif.id);
+    if (notif.actionRoute) {
+      router.push({ pathname: notif.actionRoute, params: notif.actionParams } as never);
+    }
+  }, [markReadMutation, router]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -68,9 +79,11 @@ export default function NotificationsScreen() {
           </View>
         ) : (
           notifications.map((notif) => (
-            <View
+            <Pressable
               key={notif.id}
               style={[styles.notifCard, !notif.isRead && styles.notifCardUnread]}
+              onPress={() => handlePressNotification(notif)}
+              testID={`notification-${notif.id}`}
             >
               <View style={[styles.iconWrap, { backgroundColor: TYPE_BG[notif.type] ?? Colors.gray[100] }]}>
                 {TYPE_ICONS[notif.type] ?? <Bell size={18} color={Colors.gray[500]} />}
@@ -83,7 +96,7 @@ export default function NotificationsScreen() {
                 <Text style={styles.notifMessage} numberOfLines={2}>{notif.message}</Text>
               </View>
               {!notif.isRead && <View style={styles.unreadDot} />}
-            </View>
+            </Pressable>
           ))
         )}
       </ScrollView>

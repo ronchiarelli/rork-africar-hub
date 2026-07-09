@@ -34,6 +34,21 @@ export function useNotifications() {
   });
 }
 
+export function useMarkNotificationRead() {
+  const { currentUser } = useAuth();
+  const userId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', notificationId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    },
+  });
+}
+
 export function useMarkAllNotificationsRead() {
   const { currentUser } = useAuth();
   const userId = currentUser?.id;

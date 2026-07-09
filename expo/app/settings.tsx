@@ -20,8 +20,11 @@ import {
   Smartphone,
   LogOut,
 } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
+import { useHasPushToken, useEnablePushNotifications, useDisablePushNotifications } from '@/lib/queries/pushTokens';
+import { getErrorMessage } from '@/lib/errors';
 
 interface SettingItem {
   id: string;
@@ -35,12 +38,35 @@ interface SettingItem {
 }
 
 export default function SettingsScreen() {
-  const { logout } = useAuth();
+  const router = useRouter();
+  const { logout, currentUser } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
-  const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [biometricAuth, setBiometricAuth] = useState(false);
   const [twoFactor, setTwoFactor] = useState(false);
+  const { data: hasPushToken = false } = useHasPushToken(currentUser?.id);
+  const enablePush = useEnablePushNotifications(currentUser?.id);
+  const disablePush = useDisablePushNotifications(currentUser?.id);
+
+  const handleTogglePush = useCallback((value: boolean) => {
+    if (value) {
+      enablePush.mutate(undefined, {
+        onSuccess: (token) => {
+          if (!token) {
+            Alert.alert(
+              'Could Not Enable',
+              'Push notifications need a physical device with notification permission granted. You can still see updates in the Notifications tab.'
+            );
+          }
+        },
+        onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not enable push notifications.')),
+      });
+    } else {
+      disablePush.mutate(undefined, {
+        onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not disable push notifications.')),
+      });
+    }
+  }, [enablePush, disablePush]);
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
@@ -75,8 +101,8 @@ export default function SettingsScreen() {
           icon: <Bell size={20} color={Colors.orange.primary} />,
           label: 'Push Notifications',
           type: 'toggle',
-          isOn: pushNotifications,
-          onToggle: setPushNotifications,
+          isOn: hasPushToken,
+          onToggle: handleTogglePush,
         },
         {
           id: 'email',
@@ -150,12 +176,14 @@ export default function SettingsScreen() {
           icon: <FileText size={20} color={Colors.gray[600]} />,
           label: 'Terms of Service',
           type: 'navigate',
+          onPress: () => router.push('/terms'),
         },
         {
           id: 'privacy',
           icon: <Shield size={20} color={Colors.gray[600]} />,
           label: 'Privacy Policy',
           type: 'navigate',
+          onPress: () => router.push('/privacy'),
         },
       ],
     },

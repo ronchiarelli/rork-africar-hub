@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Alert } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { FavoritesProvider } from "@/providers/FavoritesProvider";
 import { useSubscription } from "@/lib/queries/subscriptions";
+import { registerForPushNotificationsAsync } from "@/lib/pushNotifications";
 import BottomNavBar from "@/components/BottomNavBar";
 import { UserRole } from "@/types/car";
 
@@ -15,7 +16,7 @@ void SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 const AUTH_GROUP = ['welcome', 'login', 'register'];
-const PUBLIC_STACK_ROUTES = ['car-details'];
+const PUBLIC_STACK_ROUTES = ['car-details', 'terms', 'privacy'];
 const PUBLIC_TAB_SEGMENTS = ['(home)', 'search'];
 const ROLE_GUARDED: Record<string, UserRole> = {
   'fleet-dashboard': 'fleet_owner',
@@ -42,6 +43,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const { data: subscription, isLoading: isSubscriptionLoading } = useSubscription();
   const segments = useSegments();
   const router = useRouter();
+  const pushRegisteredForUserId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!currentUser?.id || pushRegisteredForUserId.current === currentUser.id) return;
+    pushRegisteredForUserId.current = currentUser.id;
+    void registerForPushNotificationsAsync(currentUser.id);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -103,6 +111,8 @@ function RootLayoutNav() {
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
           <Stack.Screen name="settings" options={{ title: "Settings", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="terms" options={{ title: "Terms of Service", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="privacy" options={{ title: "Privacy Policy", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="help-support" options={{ title: "Help & Support", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="wallet" options={{ title: "My Wallet", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="review" options={{ title: "Write a Review", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
