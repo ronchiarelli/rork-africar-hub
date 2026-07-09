@@ -118,8 +118,12 @@ export function useCreateLead() {
         .from('dealer_listings')
         .select('id')
         .eq('sale_car_id', input.saleCarId)
-        .single();
-      if (listingError || !listing) throw new Error('Could not find this listing');
+        .maybeSingle();
+      if (listingError) throw listingError;
+      // Catalog/demo listings with no real dealer have no dealer_listings row
+      // (the auto-create trigger skips null dealer_id) — nothing to attach
+      // a lead to, so this is a silent no-op rather than a user-facing error.
+      if (!listing) return;
 
       const { error } = await supabase.from('leads').insert({
         dealer_listing_id: listing.id,

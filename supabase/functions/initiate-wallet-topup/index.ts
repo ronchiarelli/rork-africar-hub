@@ -82,9 +82,18 @@ Deno.serve(async (req: Request) => {
     // browser itself; React Native's fetch never sends one for native app
     // calls. Use that to pick a redirect Hubtel can actually follow — a
     // plain https:// URL for web, an app-scheme deep link for native —
-    // without needing to hardcode or configure the web hosting domain.
+    // without needing to hardcode the web hosting domain. This endpoint can
+    // be called directly (not just from the app), so Origin is untrusted
+    // input: only honor it if it matches a known allowlist, otherwise fall
+    // back to the safe native deep link rather than letting a caller point
+    // Hubtel's redirect at an arbitrary domain.
+    const allowedWebOrigins = (Deno.env.get('ALLOWED_WEB_ORIGINS') ?? '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
     const webOrigin = req.headers.get('origin');
-    const returnBase = webOrigin ? `${webOrigin}/wallet` : `${appScheme}://wallet`;
+    const isAllowedOrigin = !!webOrigin && allowedWebOrigins.includes(webOrigin);
+    const returnBase = isAllowedOrigin ? `${webOrigin}/wallet` : `${appScheme}://wallet`;
 
     const hubtelResponse = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
       method: 'POST',

@@ -16,7 +16,6 @@ import { ArrowLeft, Mail, Lock, User, Phone, Eye, EyeOff, Car, Building2, Store 
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
-import { supabase } from '@/lib/supabase';
 
 type AccountType = 'customer' | 'fleet_owner' | 'dealership';
 
@@ -43,20 +42,24 @@ export default function RegisterScreen() {
       return;
     }
     try {
-      const { needsEmailConfirmation, userId } = await register(name, email, phone, password);
+      const { needsEmailConfirmation } = await register(
+        name,
+        email,
+        phone,
+        password,
+        accountType !== 'customer' ? accountType : undefined
+      );
       if (needsEmailConfirmation) {
-        Alert.alert('Check Your Email', 'We sent a confirmation link to your email. Confirm it, then sign in.', [
-          { text: 'OK', onPress: () => router.replace('/login') },
-        ]);
+        Alert.alert(
+          'Check Your Email',
+          accountType !== 'customer'
+            ? `We sent a confirmation link to your email. Confirm it, then sign in — your ${accountType === 'fleet_owner' ? 'Fleet Manager' : 'Car Dealer / Garage'} application will be submitted automatically and reviewed by an admin.`
+            : 'We sent a confirmation link to your email. Confirm it, then sign in.',
+          [{ text: 'OK', onPress: () => router.replace('/login') }]
+        );
         return;
       }
       await login(email, password);
-      if (accountType !== 'customer' && userId) {
-        const { error: roleAppError } = await supabase
-          .from('role_applications')
-          .insert({ user_id: userId, requested_role: accountType });
-        if (roleAppError) console.error('Failed to submit role application:', roleAppError);
-      }
       router.dismissAll();
       if (accountType !== 'customer') {
         Alert.alert(
