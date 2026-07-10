@@ -2,20 +2,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import type { KycDocumentRow, KycDocTypeDb, KycStatusDb } from '@/types/database';
+import type { KycDocumentRow, KycDocTypeDb, KycDocSideDb, KycStatusDb } from '@/types/database';
 import type { KYCDocument } from '@/types/car';
 
-const REQUIRED_DOCS: { type: KycDocTypeDb; label: string }[] = [
-  { type: 'ghana_card', label: 'National ID (Ghana Card)' },
-  { type: 'drivers_license', label: "Driver's License" },
-  { type: 'passport', label: 'Passport' },
-  { type: 'selfie', label: 'Selfie Verification' },
+const REQUIRED_DOCS: { type: KycDocTypeDb; side: KycDocSideDb; label: string }[] = [
+  { type: 'ghana_card', side: 'front', label: 'National ID (Ghana Card) — Front' },
+  { type: 'ghana_card', side: 'back', label: 'National ID (Ghana Card) — Back' },
+  { type: 'passport', side: 'single', label: 'Passport' },
+  { type: 'drivers_license', side: 'front', label: "Driver's License — Front" },
+  { type: 'drivers_license', side: 'back', label: "Driver's License — Back" },
+  { type: 'selfie', side: 'single', label: 'Selfie Verification' },
 ];
 
-function mapDoc(type: KycDocTypeDb, label: string, row: KycDocumentRow | undefined): KYCDocument {
+function findDoc(rows: KycDocumentRow[], type: KycDocTypeDb, side: KycDocSideDb) {
+  return rows.find((r) => r.type === type && r.side === side);
+}
+
+function mapDoc(type: KycDocTypeDb, side: KycDocSideDb, label: string, row: KycDocumentRow | undefined): KYCDocument {
   return {
-    id: type,
+    id: `${type}_${side}`,
     type,
+    side,
     label,
     status: row?.status ?? 'not_uploaded',
     uploadedAt: row?.uploaded_at ?? undefined,
@@ -35,7 +42,7 @@ export function useKycDocuments() {
         .eq('user_id', userId as string);
       if (error) throw error;
       const rows = data as KycDocumentRow[];
-      return REQUIRED_DOCS.map(({ type, label }) => mapDoc(type, label, rows.find((r) => r.type === type)));
+      return REQUIRED_DOCS.map(({ type, side, label }) => mapDoc(type, side, label, findDoc(rows, type, side)));
     },
     enabled: !!userId,
   });
@@ -47,7 +54,7 @@ export function useUploadKycDocument() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (docType: KycDocTypeDb) => {
+    mutationFn: async ({ type, side }: { type: KycDocTypeDb; side: KycDocSideDb }) => {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         throw new Error('Photo library permission is required to upload a document.');
@@ -64,7 +71,7 @@ export function useUploadKycDocument() {
       const response = await fetch(uri);
       const blob = await response.blob();
       const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
-      const path = `${userId}/${docType}.${fileExt}`;
+      const path = `${userId}/${type}_${side}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage.from('kyc-documents').upload(path, blob, {
         contentType: blob.type || 'image/jpeg',
@@ -75,13 +82,14 @@ export function useUploadKycDocument() {
       const { error: upsertError } = await supabase.from('kyc_documents').upsert(
         {
           user_id: userId as string,
-          type: docType,
-          label: REQUIRED_DOCS.find((d) => d.type === docType)?.label,
+          type,
+          side,
+          label: REQUIRED_DOCS.find((d) => d.type === type && d.side === side)?.label,
           status: 'uploaded',
           storage_path: path,
           uploaded_at: new Date().toISOString(),
         },
-        { onConflict: 'user_id,type' }
+        { onConflict: 'user_id,type,side' }
       );
       if (upsertError) throw upsertError;
 
@@ -99,6 +107,7 @@ export interface PendingKycReview {
   userName: string;
   userEmail: string;
   type: KycDocTypeDb;
+  side: KycDocSideDb;
   label: string;
   uploadedAt: string | null;
 }
@@ -121,6 +130,7 @@ export function usePendingKycDocuments() {
         userName: row.profile?.name ?? 'Unknown',
         userEmail: row.profile?.email ?? '',
         type: row.type,
+        side: row.side,
         label: row.label ?? row.type,
         uploadedAt: row.uploaded_at,
       }));
@@ -149,6 +159,7 @@ export function useReviewKycDocument() {
 export interface AdminKycDocument {
   docId: string | null;
   type: KycDocTypeDb;
+  side: KycDocSideDb;
   label: string;
   status: KycStatusDb;
   uploadedAt: string | null;
@@ -168,8 +179,8 @@ export function useUserKycDocuments(userId: string | undefined) {
       const rows = data as KycDocumentRow[];
 
       return Promise.all(
-        REQUIRED_DOCS.map(async ({ type, label }) => {
-          const row = rows.find((r) => r.type === type);
+        REQUIRED_DOCS.map(async ({ type, side, label }) => {
+          const row = findDoc(rows, type, side);
           let imageUrl: string | null = null;
           if (row?.storage_path) {
             const { data: signed } = await supabase.storage
@@ -180,6 +191,7 @@ export function useUserKycDocuments(userId: string | undefined) {
           return {
             docId: row?.id ?? null,
             type,
+            side,
             label,
             status: row?.status ?? 'not_uploaded',
             uploadedAt: row?.uploaded_at ?? null,

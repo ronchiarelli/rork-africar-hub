@@ -200,10 +200,13 @@ export type FleetVehicleRow = {
   created_at: string;
 }
 
+export type KycDocSideDb = 'single' | 'front' | 'back';
+
 export type KycDocumentRow = {
   id: string;
   user_id: string;
   type: KycDocTypeDb;
+  side: KycDocSideDb;
   label: string | null;
   status: KycStatusDb;
   storage_path: string | null;

@@ -12,7 +12,7 @@ import Colors from '@/constants/colors';
 import { useKycDocuments, useUploadKycDocument } from '@/lib/queries/kyc';
 import { useMarkNotificationsReadByType } from '@/lib/queries/notifications';
 import { getErrorMessage } from '@/lib/errors';
-import type { KycDocTypeDb } from '@/types/database';
+import type { KycDocTypeDb, KycDocSideDb } from '@/types/database';
 import type { KYCDocument } from '@/types/car';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -24,7 +24,15 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
 
 const STATUS_RANK: Record<string, number> = { verified: 3, uploaded: 2, rejected: 1, not_uploaded: 0 };
 
-function DocCard({ doc, onUpload, isSelfie }: { doc: KYCDocument; onUpload: (type: KycDocTypeDb) => void; isSelfie?: boolean }) {
+function worstStatus(...statuses: string[]): string {
+  return statuses.reduce((worst, s) => (STATUS_RANK[s] < STATUS_RANK[worst] ? s : worst));
+}
+
+function bestStatus(...statuses: string[]): string {
+  return statuses.reduce((best, s) => (STATUS_RANK[s] > STATUS_RANK[best] ? s : best));
+}
+
+function DocCard({ doc, onUpload, isSelfie }: { doc: KYCDocument; onUpload: (type: KycDocTypeDb, side: KycDocSideDb) => void; isSelfie?: boolean }) {
   const config = STATUS_CONFIG[doc.status] ?? STATUS_CONFIG.not_uploaded;
   const showFacePlaceholder = isSelfie && doc.status === 'not_uploaded';
   return (
@@ -41,7 +49,7 @@ function DocCard({ doc, onUpload, isSelfie }: { doc: KYCDocument; onUpload: (typ
         </View>
       </View>
       {(doc.status === 'not_uploaded' || doc.status === 'rejected') && (
-        <Pressable style={styles.uploadBtn} onPress={() => onUpload(doc.type)} testID={`upload-${doc.id}`}>
+        <Pressable style={styles.uploadBtn} onPress={() => onUpload(doc.type, doc.side)} testID={`upload-${doc.id}`}>
           <Camera size={16} color={Colors.white} />
           <Text style={styles.uploadBtnText}>Upload</Text>
         </Pressable>
@@ -60,23 +68,31 @@ export default function KYCVerificationScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleUpload = useCallback((docType: KycDocTypeDb) => {
-    uploadDoc.mutate(docType, {
+  const handleUpload = useCallback((type: KycDocTypeDb, side: KycDocSideDb) => {
+    uploadDoc.mutate({ type, side }, {
       onError: (err) => Alert.alert('Upload Failed', getErrorMessage(err, 'Please try again.')),
     });
   }, [uploadDoc]);
 
-  const ghanaCard = documents.find((d) => d.type === 'ghana_card');
+  const ghanaCardFront = documents.find((d) => d.type === 'ghana_card' && d.side === 'front');
+  const ghanaCardBack = documents.find((d) => d.type === 'ghana_card' && d.side === 'back');
   const passport = documents.find((d) => d.type === 'passport');
-  const driversLicense = documents.find((d) => d.type === 'drivers_license');
+  const licenseFront = documents.find((d) => d.type === 'drivers_license' && d.side === 'front');
+  const licenseBack = documents.find((d) => d.type === 'drivers_license' && d.side === 'back');
   const selfie = documents.find((d) => d.type === 'selfie');
 
   const identityStatus = useMemo(() => {
-    if (!ghanaCard || !passport) return 'not_uploaded';
-    return STATUS_RANK[ghanaCard.status] >= STATUS_RANK[passport.status] ? ghanaCard.status : passport.status;
-  }, [ghanaCard, passport]);
+    if (!ghanaCardFront || !ghanaCardBack || !passport) return 'not_uploaded';
+    const ghanaCardStatus = worstStatus(ghanaCardFront.status, ghanaCardBack.status);
+    return bestStatus(ghanaCardStatus, passport.status);
+  }, [ghanaCardFront, ghanaCardBack, passport]);
 
-  const requiredGroupStatuses = [identityStatus, driversLicense?.status ?? 'not_uploaded', selfie?.status ?? 'not_uploaded'];
+  const licenseStatus = useMemo(() => {
+    if (!licenseFront || !licenseBack) return 'not_uploaded';
+    return worstStatus(licenseFront.status, licenseBack.status);
+  }, [licenseFront, licenseBack]);
+
+  const requiredGroupStatuses = [identityStatus, licenseStatus, selfie?.status ?? 'not_uploaded'];
   const completedCount = requiredGroupStatuses.filter((s) => s === 'verified').length;
   const progress = documents.length === 0 ? 0 : (completedCount / requiredGroupStatuses.length) * 100;
 
@@ -95,12 +111,20 @@ export default function KYCVerificationScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Identity Document</Text>
-        <Text style={styles.sectionSubtitle}>Provide either your National ID or Passport</Text>
-        {ghanaCard && <DocCard doc={ghanaCard} onUpload={handleUpload} />}
+        <Text style={styles.sectionSubtitle}>Provide both sides of your National ID, or your Passport</Text>
+        {ghanaCardFront && <DocCard doc={ghanaCardFront} onUpload={handleUpload} />}
+        {ghanaCardBack && <DocCard doc={ghanaCardBack} onUpload={handleUpload} />}
+        <View style={styles.orDivider}>
+          <View style={styles.orLine} />
+          <Text style={styles.orText}>OR</Text>
+          <View style={styles.orLine} />
+        </View>
         {passport && <DocCard doc={passport} onUpload={handleUpload} />}
 
         <Text style={styles.sectionTitle}>Driver's License</Text>
-        {driversLicense && <DocCard doc={driversLicense} onUpload={handleUpload} />}
+        <Text style={styles.sectionSubtitle}>Both sides are required</Text>
+        {licenseFront && <DocCard doc={licenseFront} onUpload={handleUpload} />}
+        {licenseBack && <DocCard doc={licenseBack} onUpload={handleUpload} />}
 
         <Text style={styles.sectionTitle}>Selfie Verification</Text>
         {selfie && <DocCard doc={selfie} onUpload={handleUpload} isSelfie />}
@@ -174,6 +198,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.gray[500],
     marginBottom: 12,
+  },
+  orDivider: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 10,
+    marginVertical: 8,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.gray[200],
+  },
+  orText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: Colors.gray[400],
   },
   docCard: {
     flexDirection: 'row' as const,

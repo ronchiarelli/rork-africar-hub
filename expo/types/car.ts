@@ -123,6 +123,7 @@ export interface AdminStats {
 export interface KYCDocument {
   id: string;
   type: 'ghana_card' | 'passport' | 'drivers_license' | 'selfie';
+  side: 'single' | 'front' | 'back';
   label: string;
   status: 'not_uploaded' | 'uploaded' | 'verified' | 'rejected';
   uploadedAt?: string;

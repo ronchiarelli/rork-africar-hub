@@ -146,7 +146,7 @@ export default function AdminUserDetailScreen() {
       {docs.map((doc) => {
         const config = DOC_STATUS_CONFIG[doc.status];
         return (
-          <View key={doc.type} style={styles.docCard}>
+          <View key={doc.type + doc.side} style={styles.docCard}>
             {doc.imageUrl ? (
               <Image source={{ uri: doc.imageUrl }} style={styles.docThumb} contentFit="cover" />
             ) : (
@@ -160,18 +160,18 @@ export default function AdminUserDetailScreen() {
               {!!doc.rejectionReason && <Text style={styles.docRejectionReason}>Reason: {doc.rejectionReason}</Text>}
               {doc.status === 'uploaded' && doc.docId && (
                 <View style={styles.docActionsRow}>
-                  <Pressable style={styles.docApproveBtn} onPress={() => handleReview(doc.docId as string, 'verified')} testID={`doc-approve-${doc.type}`}>
+                  <Pressable style={styles.docApproveBtn} onPress={() => handleReview(doc.docId as string, 'verified')} testID={`doc-approve-${doc.type}-${doc.side}`}>
                     <ShieldCheck size={14} color={Colors.white} />
                     <Text style={styles.docActionText}>Approve</Text>
                   </Pressable>
-                  <Pressable style={styles.docRejectBtn} onPress={() => handleReview(doc.docId as string, 'rejected')} testID={`doc-reject-${doc.type}`}>
+                  <Pressable style={styles.docRejectBtn} onPress={() => handleReview(doc.docId as string, 'rejected')} testID={`doc-reject-${doc.type}-${doc.side}`}>
                     <ShieldX size={14} color={Colors.white} />
                     <Text style={styles.docActionText}>Reject</Text>
                   </Pressable>
                 </View>
               )}
               {doc.status === 'verified' && doc.docId && (
-                <Pressable style={styles.docRevokeBtn} onPress={() => handleRevokeDoc(doc.docId as string)} testID={`doc-revoke-${doc.type}`}>
+                <Pressable style={styles.docRevokeBtn} onPress={() => handleRevokeDoc(doc.docId as string)} testID={`doc-revoke-${doc.type}-${doc.side}`}>
                   <Text style={styles.docRevokeText}>Revoke Verification</Text>
                 </Pressable>
               )}
