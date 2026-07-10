@@ -40,6 +40,12 @@
           "icon": "./assets/images/icon.png",
           "color": "#FF6B2C"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "GoCar Hub uses your camera to take a selfie photo for identity verification."
+        }
       ]
     ],
     "experiments": {

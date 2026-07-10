@@ -30,6 +30,38 @@ function mapDoc(type: KycDocTypeDb, side: KycDocSideDb, label: string, row: KycD
   };
 }
 
+// Shared by both the library-picker upload and the in-app camera capture
+// (selfie-camera.tsx) — takes a local file URI already selected/captured by
+// the caller and does the storage upload + row upsert.
+async function uploadKycFile(userId: string, uri: string, type: KycDocTypeDb, side: KycDocSideDb): Promise<string> {
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
+  const path = `${userId}/${type}_${side}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage.from('kyc-documents').upload(path, blob, {
+    contentType: blob.type || 'image/jpeg',
+    upsert: true,
+  });
+  if (uploadError) throw uploadError;
+
+  const { error: upsertError } = await supabase.from('kyc_documents').upsert(
+    {
+      user_id: userId,
+      type,
+      side,
+      label: REQUIRED_DOCS.find((d) => d.type === type && d.side === side)?.label,
+      status: 'uploaded',
+      storage_path: path,
+      uploaded_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,type,side' }
+  );
+  if (upsertError) throw upsertError;
+
+  return path;
+}
+
 export function useKycDocuments() {
   const { currentUser } = useAuth();
   const userId = currentUser?.id;
@@ -67,33 +99,24 @@ export function useUploadKycDocument() {
         return null; // user cancelled — not an error
       }
 
-      const uri = result.assets[0].uri;
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
-      const path = `${userId}/${type}_${side}.${fileExt}`;
+      return uploadKycFile(userId as string, result.assets[0].uri, type, side);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['kyc-documents', userId] });
+    },
+  });
+}
 
-      const { error: uploadError } = await supabase.storage.from('kyc-documents').upload(path, blob, {
-        contentType: blob.type || 'image/jpeg',
-        upsert: true,
-      });
-      if (uploadError) throw uploadError;
+// For a photo already captured in-app (the selfie camera screen) rather
+// than picked from the library.
+export function useUploadKycPhoto() {
+  const { currentUser } = useAuth();
+  const userId = currentUser?.id;
+  const queryClient = useQueryClient();
 
-      const { error: upsertError } = await supabase.from('kyc_documents').upsert(
-        {
-          user_id: userId as string,
-          type,
-          side,
-          label: REQUIRED_DOCS.find((d) => d.type === type && d.side === side)?.label,
-          status: 'uploaded',
-          storage_path: path,
-          uploaded_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,type,side' }
-      );
-      if (upsertError) throw upsertError;
-
-      return path;
+  return useMutation({
+    mutationFn: async ({ uri, type, side }: { uri: string; type: KycDocTypeDb; side: KycDocSideDb }) => {
+      return uploadKycFile(userId as string, uri, type, side);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['kyc-documents', userId] });

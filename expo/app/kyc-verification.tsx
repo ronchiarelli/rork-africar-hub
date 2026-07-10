@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, ScanFace } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useKycDocuments, useUploadKycDocument } from '@/lib/queries/kyc';
@@ -32,7 +33,7 @@ function bestStatus(...statuses: string[]): string {
   return statuses.reduce((best, s) => (STATUS_RANK[s] > STATUS_RANK[best] ? s : best));
 }
 
-function DocCard({ doc, onUpload, isSelfie }: { doc: KYCDocument; onUpload: (type: KycDocTypeDb, side: KycDocSideDb) => void; isSelfie?: boolean }) {
+function DocCard({ doc, onUpload, onOpenCamera, isSelfie }: { doc: KYCDocument; onUpload: (type: KycDocTypeDb, side: KycDocSideDb) => void; onOpenCamera?: () => void; isSelfie?: boolean }) {
   const config = STATUS_CONFIG[doc.status] ?? STATUS_CONFIG.not_uploaded;
   const showFacePlaceholder = isSelfie && doc.status === 'not_uploaded';
   return (
@@ -49,9 +50,13 @@ function DocCard({ doc, onUpload, isSelfie }: { doc: KYCDocument; onUpload: (typ
         </View>
       </View>
       {(doc.status === 'not_uploaded' || doc.status === 'rejected') && (
-        <Pressable style={styles.uploadBtn} onPress={() => onUpload(doc.type, doc.side)} testID={`upload-${doc.id}`}>
+        <Pressable
+          style={styles.uploadBtn}
+          onPress={() => (isSelfie && onOpenCamera ? onOpenCamera() : onUpload(doc.type, doc.side))}
+          testID={`upload-${doc.id}`}
+        >
           <Camera size={16} color={Colors.white} />
-          <Text style={styles.uploadBtnText}>Upload</Text>
+          <Text style={styles.uploadBtnText}>{isSelfie ? 'Take Selfie' : 'Upload'}</Text>
         </Pressable>
       )}
     </View>
@@ -59,6 +64,7 @@ function DocCard({ doc, onUpload, isSelfie }: { doc: KYCDocument; onUpload: (typ
 }
 
 export default function KYCVerificationScreen() {
+  const router = useRouter();
   const { data: documents = [] } = useKycDocuments();
   const uploadDoc = useUploadKycDocument();
   const markKycNotificationsRead = useMarkNotificationsReadByType('kyc');
@@ -127,7 +133,7 @@ export default function KYCVerificationScreen() {
         {licenseBack && <DocCard doc={licenseBack} onUpload={handleUpload} />}
 
         <Text style={styles.sectionTitle}>Selfie Verification</Text>
-        {selfie && <DocCard doc={selfie} onUpload={handleUpload} isSelfie />}
+        {selfie && <DocCard doc={selfie} onUpload={handleUpload} onOpenCamera={() => router.push('/selfie-camera')} isSelfie />}
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Why verify your identity?</Text>

@@ -109,6 +109,7 @@ function RootLayoutNav() {
           <Stack.Screen name="messages" options={{ title: "Messages", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="chat" options={{ title: "Chat", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="kyc-verification" options={{ title: "KYC Verification", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="selfie-camera" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
           <Stack.Screen name="marketplace" options={{ title: "Marketplace", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
