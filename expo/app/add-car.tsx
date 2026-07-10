@@ -9,16 +9,14 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Camera } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { useCreateCar } from '@/lib/queries/fleet';
 import { getErrorMessage } from '@/lib/errors';
+import MultiImagePicker from '@/components/MultiImagePicker';
 import type { Car } from '@/types/car';
 
 const CATEGORIES = ['SUV', 'Sedan', 'Hatchback', 'Van'];
@@ -51,7 +49,7 @@ export default function AddCarScreen() {
   const { currentUser } = useAuth();
   const createCar = useCreateCar();
 
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
@@ -66,48 +64,38 @@ export default function AddCarScreen() {
   const [horsepower, setHorsepower] = useState('');
   const [description, setDescription] = useState('');
 
-  const handlePickImage = useCallback(async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission Needed', 'Please allow photo library access to add a car photo.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-    }
-  }, []);
-
   const handleSubmit = useCallback(async () => {
     if (!currentUser) return;
-    if (currentUser.verificationStatus !== 'pending' && currentUser.verificationStatus !== 'approved') {
+    const isAdmin = currentUser.role === 'admin';
+    if (!isAdmin && currentUser.verificationStatus !== 'pending' && currentUser.verificationStatus !== 'approved') {
       Alert.alert('Verification Required', 'Please complete KYC verification before listing a car.', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Verify Now', onPress: () => router.push('/kyc-verification') },
       ]);
       return;
     }
-    if (!brand || !model || !pricePerDay || !imageUri) {
-      Alert.alert('Missing Info', 'Please fill in brand, model, daily price, and add a photo.');
+    if (!brand || !model || !pricePerDay || images.length === 0) {
+      Alert.alert('Missing Info', 'Please fill in brand, model, daily price, and add at least one photo.');
       return;
     }
 
     setIsUploading(true);
     try {
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-      const fileExt = imageUri.split('.').pop()?.split('?')[0] || 'jpg';
-      const path = `${currentUser.id}/${Date.now()}.${fileExt}`;
+      const uploadedUrls: string[] = [];
+      for (const uri of images) {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
+        const path = `${currentUser.id}/${Date.now()}-${uploadedUrls.length}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage.from('car-images').upload(path, blob, {
-        contentType: blob.type || 'image/jpeg',
-      });
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage.from('car-images').upload(path, blob, {
+          contentType: blob.type || 'image/jpeg',
+        });
+        if (uploadError) throw uploadError;
 
-      const { data: publicUrlData } = supabase.storage.from('car-images').getPublicUrl(path);
+        const { data: publicUrlData } = supabase.storage.from('car-images').getPublicUrl(path);
+        uploadedUrls.push(publicUrlData.publicUrl);
+      }
 
       createCar.mutate(
         {
@@ -115,7 +103,7 @@ export default function AddCarScreen() {
           model,
           year: Number(year) || new Date().getFullYear(),
           category,
-          image: publicUrlData.publicUrl,
+          images: uploadedUrls,
           pricePerDay: Number(pricePerDay) || 0,
           pricePerWeek: Number(pricePerWeek) || (Number(pricePerDay) || 0) * 6,
           location,
@@ -145,22 +133,15 @@ export default function AddCarScreen() {
     } finally {
       setIsUploading(false);
     }
-  }, [currentUser, brand, model, year, category, imageUri, pricePerDay, pricePerWeek, location, seats, transmission, fuelType, horsepower, description, createCar, router]);
+  }, [currentUser, brand, model, year, category, images, pricePerDay, pricePerWeek, location, seats, transmission, fuelType, horsepower, description, createCar, router]);
 
   const isBusy = isUploading || createCar.isPending;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Pressable style={styles.imagePicker} onPress={handlePickImage}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Camera size={28} color={Colors.gray[400]} />
-            <Text style={styles.imagePlaceholderText}>Add Photo</Text>
-          </View>
-        )}
-      </Pressable>
+      <Field label="Photos">
+        <MultiImagePicker images={images} onChange={setImages} />
+      </Field>
 
       <Field label="Brand">
         <TextInput style={styles.input} value={brand} onChangeText={setBrand} placeholder="e.g. Toyota" placeholderTextColor={Colors.gray[400]} />
@@ -217,21 +198,6 @@ export default function AddCarScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.gray[50] },
   content: { padding: 20, paddingBottom: 60 },
-  imagePicker: { marginBottom: 20 },
-  previewImage: { width: '100%', height: 200, borderRadius: 16 },
-  imagePlaceholder: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
-    backgroundColor: Colors.white,
-    borderWidth: 2,
-    borderColor: Colors.gray[200],
-    borderStyle: 'dashed' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 8,
-  },
-  imagePlaceholderText: { color: Colors.gray[400], fontSize: 14, fontWeight: '600' as const },
   field: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '700' as const, color: Colors.gray[700], marginBottom: 8 },
   input: {

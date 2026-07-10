@@ -28,6 +28,7 @@ import {
   CreditCard,
   BarChart3,
   MessageSquare,
+  Car,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { usePendingKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
@@ -241,6 +242,18 @@ export default function AdminDashboardScreen() {
                 <Text style={styles.alertTitle}>{pendingKyc.length} Pending KYC Reviews</Text>
                 <Text style={styles.alertText}>Users waiting for identity verification</Text>
               </View>
+            </View>
+
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsRow}>
+              <Pressable style={styles.quickActionBtn} onPress={() => router.push('/add-car')} testID="admin-add-car-btn">
+                <Car size={18} color={Colors.orange.primary} />
+                <Text style={styles.quickActionText}>Add Rental Car</Text>
+              </Pressable>
+              <Pressable style={styles.quickActionBtn} onPress={() => router.push('/add-sale-car')} testID="admin-add-sale-car-btn">
+                <Tag size={18} color={Colors.orange.primary} />
+                <Text style={styles.quickActionText}>Add Sale Car</Text>
+              </Pressable>
             </View>
           </>
         )}
@@ -716,6 +729,28 @@ const styles = StyleSheet.create({
     color: Colors.gray[600],
     marginTop: 2,
   },
+  quickActionsRow: {
+    flexDirection: 'row' as const,
+    gap: 10,
+  },
+  quickActionBtn: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.orange.faint,
+    borderRadius: 14,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  quickActionText: { fontSize: 13, fontWeight: '700' as const, color: Colors.gray[900] },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700' as const,

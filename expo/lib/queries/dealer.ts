@@ -150,7 +150,7 @@ export interface NewSaleCarInput {
   model: string;
   year: number;
   category: string;
-  image: string;
+  images: string[];
   salePrice: number;
   mileage: number;
   location: string;
@@ -169,14 +169,18 @@ export function useCreateSaleCar() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: NewSaleCarInput) => {
+      // Admins list platform/catalog cars with no real dealer, matching
+      // seed/demo inventory, so it stays visible to everyone regardless of
+      // any subscription state (admins don't carry one themselves).
+      const resolvedDealerId = currentUser?.role === 'admin' ? null : dealerId;
       const { error } = await supabase.from('sale_cars').insert({
-        dealer_id: dealerId,
+        dealer_id: resolvedDealerId,
         brand: input.brand,
         model: input.model,
         year: input.year,
         category: input.category,
-        image: input.image,
-        images: [input.image],
+        image: input.images[0],
+        images: input.images,
         sale_price: input.salePrice,
         mileage: input.mileage,
         location: input.location,

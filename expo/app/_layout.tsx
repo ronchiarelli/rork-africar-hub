@@ -18,14 +18,14 @@ const queryClient = new QueryClient();
 const AUTH_GROUP = ['welcome', 'login', 'register'];
 const PUBLIC_STACK_ROUTES = ['car-details', 'terms', 'privacy', 'forgot-password', 'reset-password'];
 const PUBLIC_TAB_SEGMENTS = ['(home)', 'search'];
-const ROLE_GUARDED: Record<string, UserRole> = {
-  'fleet-dashboard': 'fleet_owner',
-  'add-car': 'fleet_owner',
-  'dealer-dashboard': 'dealership',
-  'add-sale-car': 'dealership',
-  'admin-dashboard': 'admin',
-  'add-banner': 'admin',
-  'admin-user-detail': 'admin',
+const ROLE_GUARDED: Record<string, UserRole[]> = {
+  'fleet-dashboard': ['fleet_owner'],
+  'add-car': ['fleet_owner', 'admin'],
+  'dealer-dashboard': ['dealership'],
+  'add-sale-car': ['dealership', 'admin'],
+  'admin-dashboard': ['admin'],
+  'add-banner': ['admin'],
+  'admin-user-detail': ['admin'],
 };
 
 function isPublicRoute(segments: readonly string[]): boolean {
@@ -70,7 +70,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
     if (isLoggedIn && segments[0]) {
       const required = ROLE_GUARDED[segments[0]];
-      if (required && currentRole !== required) {
+      if (required && !required.includes(currentRole)) {
         router.replace('/(tabs)/(home)');
         return;
       }
@@ -79,6 +79,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         return;
       }
       if (
+        currentRole !== 'admin' &&
         SUBSCRIPTION_GATED_ROUTES.includes(segments[0]) &&
         !isSubscriptionLoading &&
         !subscription?.isActive

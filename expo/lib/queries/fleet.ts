@@ -99,7 +99,7 @@ export interface NewCarInput {
   model: string;
   year: number;
   category: string;
-  image: string;
+  images: string[];
   pricePerDay: number;
   pricePerWeek: number;
   location: string;
@@ -120,14 +120,19 @@ export function useCreateCar() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: NewCarInput) => {
+      // Admins list platform/catalog cars with no real owner (matching
+      // seed/demo inventory) so owner_subscription_active()'s null-owner
+      // short-circuit keeps it visible to everyone, rather than being tied
+      // to an admin account that never has its own subscription.
+      const resolvedOwnerId = currentUser?.role === 'admin' ? null : ownerId;
       const { error } = await supabase.from('cars').insert({
-        owner_id: ownerId,
+        owner_id: resolvedOwnerId,
         brand: input.brand,
         model: input.model,
         year: input.year,
         category: input.category,
-        image: input.image,
-        images: [input.image],
+        image: input.images[0],
+        images: input.images,
         price_per_day: input.pricePerDay,
         price_per_week: input.pricePerWeek,
         location: input.location,
