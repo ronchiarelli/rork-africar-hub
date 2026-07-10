@@ -10,11 +10,12 @@ import {
   ActivityIndicator,
   Switch,
   Platform,
+  PanResponder,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Camera, UploadCloud, Link2, Phone, Navigation } from 'lucide-react-native';
+import { Camera, UploadCloud, Link2, Phone, Navigation, Move, RotateCcw } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { useBanner, useCreateBanner, useUpdateBanner } from '@/lib/queries/banners';
@@ -33,11 +34,80 @@ const CTA_TYPES: { type: BannerCtaTypeDb; label: string; icon: typeof Navigation
   { type: 'phone', label: 'Phone Number', icon: Phone },
 ];
 
+// Matches the actual banner display's image slot (140x150 in
+// app/(tabs)/(home)/index.tsx's promoImage style) so repositioning here is
+// a true preview of what will show on the home screen.
+const CROP_FRAME_ASPECT_RATIO = 140 / 150;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
       {children}
+    </View>
+  );
+}
+
+interface ImageCropFrameProps {
+  imageUri: string;
+  focalX: number;
+  focalY: number;
+  onFocalChange: (x: number, y: number) => void;
+}
+
+// Lets the admin drag the image within its fixed display frame to choose
+// the focal point, mirroring expo-image's contentPosition percentage
+// semantics directly (0-100 on each axis) so the same value drives both
+// this preview and the real banner render on the home screen.
+function ImageCropFrame({ imageUri, focalX, focalY, onFocalChange }: ImageCropFrameProps) {
+  const frameSize = useRef({ width: 0, height: 0 });
+  const startFocal = useRef({ x: focalX, y: focalY });
+  const focalRef = useRef({ x: focalX, y: focalY });
+
+  useEffect(() => {
+    focalRef.current = { x: focalX, y: focalY };
+  }, [focalX, focalY]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 2 || Math.abs(gesture.dy) > 2,
+      onPanResponderGrant: () => {
+        startFocal.current = { ...focalRef.current };
+      },
+      onPanResponderMove: (_, gesture) => {
+        const { width, height } = frameSize.current;
+        if (!width || !height) return;
+        const nextX = clamp(startFocal.current.x - (gesture.dx / width) * 100, 0, 100);
+        const nextY = clamp(startFocal.current.y - (gesture.dy / height) * 100, 0, 100);
+        onFocalChange(nextX, nextY);
+      },
+    })
+  ).current;
+
+  return (
+    <View
+      style={styles.cropFrame}
+      onLayout={(e) => {
+        frameSize.current = { width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height };
+      }}
+      {...panResponder.panHandlers}
+      testID="banner-crop-frame"
+    >
+      <Image
+        source={{ uri: imageUri }}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        contentPosition={{ left: `${focalX}%`, top: `${focalY}%` }}
+      />
+      <View style={styles.cropFrameHint} pointerEvents="none">
+        <Move size={14} color={Colors.white} />
+        <Text style={styles.cropFrameHintText}>Drag to reposition</Text>
+      </View>
     </View>
   );
 }
@@ -59,6 +129,8 @@ export default function AddBannerScreen() {
   const [ctaLabel, setCtaLabel] = useState('Book Now');
   const [ctaType, setCtaType] = useState<BannerCtaTypeDb>('route');
   const [ctaDestination, setCtaDestination] = useState(CTA_ROUTES[0].route);
+  const [focalX, setFocalX] = useState(50);
+  const [focalY, setFocalY] = useState(50);
   const [isActive, setIsActive] = useState(true);
   const [displayOrder, setDisplayOrder] = useState('0');
   const dropZoneRef = useRef<View>(null);
@@ -72,6 +144,8 @@ export default function AddBannerScreen() {
     setCtaLabel(existingBanner.ctaLabel);
     setCtaType(existingBanner.ctaType);
     setCtaDestination(existingBanner.ctaRoute);
+    setFocalX(existingBanner.focalX);
+    setFocalY(existingBanner.focalY);
     setIsActive(existingBanner.isActive);
     setDisplayOrder(String(existingBanner.displayOrder));
   }, [existingBanner]);
@@ -88,6 +162,8 @@ export default function AddBannerScreen() {
     });
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
+      setFocalX(50);
+      setFocalY(50);
     }
   }, []);
 
@@ -95,6 +171,11 @@ export default function AddBannerScreen() {
     setCtaType(type);
     if (type === 'route') setCtaDestination(CTA_ROUTES[0].route);
     else setCtaDestination('');
+  }, []);
+
+  const handleResetPosition = useCallback(() => {
+    setFocalX(50);
+    setFocalY(50);
   }, []);
 
   // Drag-and-drop image upload on web — react-native-web renders View as a
@@ -116,6 +197,8 @@ export default function AddBannerScreen() {
       const file = e.dataTransfer?.files?.[0];
       if (file && file.type.startsWith('image/')) {
         setImageUri(URL.createObjectURL(file));
+        setFocalX(50);
+        setFocalY(50);
       }
     };
 
@@ -169,6 +252,8 @@ export default function AddBannerScreen() {
         ctaLabel,
         ctaRoute: ctaDestination,
         ctaType,
+        focalX,
+        focalY,
         isActive,
         displayOrder: Number(displayOrder) || 0,
       };
@@ -190,7 +275,7 @@ export default function AddBannerScreen() {
     } finally {
       setIsUploading(false);
     }
-  }, [tag, title, subtitle, imageUri, ctaLabel, ctaDestination, ctaType, isActive, displayOrder, isEditing, id, createBanner, updateBanner, router]);
+  }, [tag, title, subtitle, imageUri, ctaLabel, ctaDestination, ctaType, focalX, focalY, isActive, displayOrder, isEditing, id, createBanner, updateBanner, router]);
 
   const isBusy = isUploading || createBanner.isPending || updateBanner.isPending;
 
@@ -204,11 +289,31 @@ export default function AddBannerScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Pressable style={styles.imagePicker} onPress={() => void handlePickImage()}>
-        <View ref={dropZoneRef} style={isDragActive && styles.dropZoneActive}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
-          ) : (
+      <View ref={dropZoneRef} style={styles.imagePicker}>
+        {imageUri ? (
+          <>
+            <ImageCropFrame
+              imageUri={imageUri}
+              focalX={focalX}
+              focalY={focalY}
+              onFocalChange={(x, y) => {
+                setFocalX(x);
+                setFocalY(y);
+              }}
+            />
+            <View style={styles.imageActionsRow}>
+              <Pressable style={styles.imageActionBtn} onPress={() => void handlePickImage()} testID="banner-change-image">
+                <Camera size={14} color={Colors.gray[700]} />
+                <Text style={styles.imageActionText}>Change Image</Text>
+              </Pressable>
+              <Pressable style={styles.imageActionBtn} onPress={handleResetPosition} testID="banner-reset-position">
+                <RotateCcw size={14} color={Colors.gray[700]} />
+                <Text style={styles.imageActionText}>Reset Position</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <Pressable onPress={() => void handlePickImage()}>
             <View style={[styles.imagePlaceholder, isDragActive && styles.imagePlaceholderActive]}>
               {isDragActive ? (
                 <UploadCloud size={28} color={Colors.orange.primary} />
@@ -219,9 +324,15 @@ export default function AddBannerScreen() {
                 {isDragActive ? 'Drop image to upload' : Platform.OS === 'web' ? 'Drag & drop an image, or click to browse' : 'Add Banner Image'}
               </Text>
             </View>
-          )}
-        </View>
-      </Pressable>
+          </Pressable>
+        )}
+        {isDragActive && imageUri && (
+          <View style={styles.dropOverlay} pointerEvents="none">
+            <UploadCloud size={26} color={Colors.white} />
+            <Text style={styles.dropOverlayText}>Drop to replace image</Text>
+          </View>
+        )}
+      </View>
 
       <Field label="Tag (small label above the title)">
         <TextInput style={styles.input} value={tag} onChangeText={setTag} placeholder="e.g. WEEKEND SPECIAL" placeholderTextColor={Colors.gray[400]} />
@@ -302,8 +413,55 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.gray[50] },
   loadingWrap: { flex: 1, backgroundColor: Colors.gray[50], alignItems: 'center' as const, justifyContent: 'center' as const },
   content: { padding: 20, paddingBottom: 60 },
-  imagePicker: { marginBottom: 20 },
-  previewImage: { width: '100%', height: 160, borderRadius: 16 },
+  imagePicker: { marginBottom: 20, position: 'relative' as const },
+  cropFrame: {
+    width: '100%',
+    aspectRatio: CROP_FRAME_ASPECT_RATIO,
+    borderRadius: 16,
+    overflow: 'hidden' as const,
+    backgroundColor: Colors.gray[900],
+    position: 'relative' as const,
+  },
+  cropFrameHint: {
+    position: 'absolute' as const,
+    bottom: 10,
+    alignSelf: 'center' as const,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  cropFrameHintText: { color: Colors.white, fontSize: 12, fontWeight: '600' as const },
+  imageActionsRow: { flexDirection: 'row' as const, gap: 8, marginTop: 10 },
+  imageActionBtn: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  imageActionText: { fontSize: 13, fontWeight: '600' as const, color: Colors.gray[700] },
+  dropOverlay: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,107,44,0.85)',
+    borderRadius: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+  },
+  dropOverlayText: { color: Colors.white, fontSize: 14, fontWeight: '700' as const },
   imagePlaceholder: {
     width: '100%',
     height: 160,
@@ -322,7 +480,6 @@ const styles = StyleSheet.create({
   },
   imagePlaceholderText: { color: Colors.gray[400], fontSize: 14, fontWeight: '600' as const, paddingHorizontal: 20, textAlign: 'center' as const },
   imagePlaceholderTextActive: { color: Colors.orange.primary },
-  dropZoneActive: { borderRadius: 16 },
   field: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '700' as const, color: Colors.gray[700], marginBottom: 8 },
   input: {

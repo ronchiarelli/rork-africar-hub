@@ -11,6 +11,8 @@ export interface PromoBanner {
   ctaLabel: string;
   ctaRoute: string;
   ctaType: BannerCtaTypeDb;
+  focalX: number;
+  focalY: number;
   isActive: boolean;
   displayOrder: number;
 }
@@ -25,6 +27,8 @@ function mapBanner(row: PromoBannerRow): PromoBanner {
     ctaLabel: row.cta_label,
     ctaRoute: row.cta_route,
     ctaType: row.cta_type,
+    focalX: row.focal_x,
+    focalY: row.focal_y,
     isActive: row.is_active,
     displayOrder: row.display_order,
   };
@@ -88,6 +92,8 @@ export interface BannerInput {
   ctaLabel: string;
   ctaRoute: string;
   ctaType: BannerCtaTypeDb;
+  focalX: number;
+  focalY: number;
   isActive: boolean;
   displayOrder: number;
 }
@@ -109,6 +115,8 @@ export function useCreateBanner() {
         cta_label: input.ctaLabel,
         cta_route: input.ctaRoute,
         cta_type: input.ctaType,
+        focal_x: input.focalX,
+        focal_y: input.focalY,
         is_active: input.isActive,
         display_order: input.displayOrder,
       });
@@ -132,6 +140,8 @@ export function useUpdateBanner() {
           cta_label: input.ctaLabel,
           cta_route: input.ctaRoute,
           cta_type: input.ctaType,
+          focal_x: input.focalX,
+          focal_y: input.focalY,
           is_active: input.isActive,
           display_order: input.displayOrder,
         })

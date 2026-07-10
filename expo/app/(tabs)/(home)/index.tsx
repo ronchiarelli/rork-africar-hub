@@ -191,6 +191,7 @@ export default function HomeScreen() {
               source={{ uri: banner.imageUrl }}
               style={styles.promoImage}
               contentFit="cover"
+              contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
             />
           </View>
         )}

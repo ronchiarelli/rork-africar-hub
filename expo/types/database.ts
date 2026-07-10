@@ -283,6 +283,8 @@ export type PromoBannerRow = {
   cta_label: string;
   cta_route: string;
   cta_type: BannerCtaTypeDb;
+  focal_x: number;
+  focal_y: number;
   is_active: boolean;
   display_order: number;
   created_at: string;
