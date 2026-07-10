@@ -6,7 +6,7 @@ import type { KycDocumentRow, KycDocTypeDb, KycStatusDb } from '@/types/database
 import type { KYCDocument } from '@/types/car';
 
 const REQUIRED_DOCS: { type: KycDocTypeDb; label: string }[] = [
-  { type: 'ghana_card', label: 'Ghana Card' },
+  { type: 'ghana_card', label: 'National ID (Ghana Card)' },
   { type: 'drivers_license', label: "Driver's License" },
   { type: 'passport', label: 'Passport' },
   { type: 'selfie', label: 'Selfie Verification' },

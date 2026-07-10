@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,12 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
-import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera } from 'lucide-react-native';
+import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, ScanFace } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useKycDocuments, useUploadKycDocument } from '@/lib/queries/kyc';
 import { getErrorMessage } from '@/lib/errors';
 import type { KycDocTypeDb } from '@/types/database';
+import type { KYCDocument } from '@/types/car';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
   not_uploaded: { icon: <Upload size={18} color={Colors.gray[400]} />, color: Colors.gray[400], label: 'Not Uploaded' },
@@ -19,6 +20,34 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
   verified: { icon: <CheckCircle2 size={18} color={Colors.success} />, color: Colors.success, label: 'Verified' },
   rejected: { icon: <XCircle size={18} color={Colors.error} />, color: Colors.error, label: 'Rejected' },
 };
+
+const STATUS_RANK: Record<string, number> = { verified: 3, uploaded: 2, rejected: 1, not_uploaded: 0 };
+
+function DocCard({ doc, onUpload, isSelfie }: { doc: KYCDocument; onUpload: (type: KycDocTypeDb) => void; isSelfie?: boolean }) {
+  const config = STATUS_CONFIG[doc.status] ?? STATUS_CONFIG.not_uploaded;
+  const showFacePlaceholder = isSelfie && doc.status === 'not_uploaded';
+  return (
+    <View style={styles.docCard}>
+      <View style={styles.docLeft}>
+        <View style={[styles.docIconWrap, { backgroundColor: config.color + '15' }, showFacePlaceholder && styles.faceIconWrap]}>
+          {showFacePlaceholder ? <ScanFace size={22} color={Colors.orange.primary} /> : config.icon}
+        </View>
+        <View style={styles.docInfo}>
+          <Text style={styles.docLabel}>{doc.label}</Text>
+          <Text style={[styles.docStatus, { color: config.color }]}>{config.label}</Text>
+          {doc.uploadedAt && <Text style={styles.docDate}>Uploaded: {doc.uploadedAt}</Text>}
+          {showFacePlaceholder && <Text style={styles.faceHint}>Center your face in a well-lit photo</Text>}
+        </View>
+      </View>
+      {(doc.status === 'not_uploaded' || doc.status === 'rejected') && (
+        <Pressable style={styles.uploadBtn} onPress={() => onUpload(doc.type)} testID={`upload-${doc.id}`}>
+          <Camera size={16} color={Colors.white} />
+          <Text style={styles.uploadBtnText}>Upload</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
 
 export default function KYCVerificationScreen() {
   const { data: documents = [] } = useKycDocuments();
@@ -30,8 +59,19 @@ export default function KYCVerificationScreen() {
     });
   }, [uploadDoc]);
 
-  const completedCount = documents.filter((d) => d.status === 'verified').length;
-  const progress = (completedCount / documents.length) * 100;
+  const ghanaCard = documents.find((d) => d.type === 'ghana_card');
+  const passport = documents.find((d) => d.type === 'passport');
+  const driversLicense = documents.find((d) => d.type === 'drivers_license');
+  const selfie = documents.find((d) => d.type === 'selfie');
+
+  const identityStatus = useMemo(() => {
+    if (!ghanaCard || !passport) return 'not_uploaded';
+    return STATUS_RANK[ghanaCard.status] >= STATUS_RANK[passport.status] ? ghanaCard.status : passport.status;
+  }, [ghanaCard, passport]);
+
+  const requiredGroupStatuses = [identityStatus, driversLicense?.status ?? 'not_uploaded', selfie?.status ?? 'not_uploaded'];
+  const completedCount = requiredGroupStatuses.filter((s) => s === 'verified').length;
+  const progress = documents.length === 0 ? 0 : (completedCount / requiredGroupStatuses.length) * 100;
 
   return (
     <View style={styles.container}>
@@ -44,38 +84,19 @@ export default function KYCVerificationScreen() {
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
-          <Text style={styles.progressText}>{completedCount} of {documents.length} documents verified</Text>
+          <Text style={styles.progressText}>{completedCount} of {requiredGroupStatuses.length} requirements verified</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Required Documents</Text>
+        <Text style={styles.sectionTitle}>Identity Document</Text>
+        <Text style={styles.sectionSubtitle}>Provide either your National ID or Passport</Text>
+        {ghanaCard && <DocCard doc={ghanaCard} onUpload={handleUpload} />}
+        {passport && <DocCard doc={passport} onUpload={handleUpload} />}
 
-        {documents.map((doc) => {
-          const config = STATUS_CONFIG[doc.status] ?? STATUS_CONFIG.not_uploaded;
-          return (
-            <View key={doc.id} style={styles.docCard}>
-              <View style={styles.docLeft}>
-                <View style={[styles.docIconWrap, { backgroundColor: config.color + '15' }]}>
-                  {config.icon}
-                </View>
-                <View style={styles.docInfo}>
-                  <Text style={styles.docLabel}>{doc.label}</Text>
-                  <Text style={[styles.docStatus, { color: config.color }]}>{config.label}</Text>
-                  {doc.uploadedAt && <Text style={styles.docDate}>Uploaded: {doc.uploadedAt}</Text>}
-                </View>
-              </View>
-              {(doc.status === 'not_uploaded' || doc.status === 'rejected') && (
-                <Pressable
-                  style={styles.uploadBtn}
-                  onPress={() => handleUpload(doc.type)}
-                  testID={`upload-${doc.id}`}
-                >
-                  <Camera size={16} color={Colors.white} />
-                  <Text style={styles.uploadBtnText}>Upload</Text>
-                </Pressable>
-              )}
-            </View>
-          );
-        })}
+        <Text style={styles.sectionTitle}>Driver's License</Text>
+        {driversLicense && <DocCard doc={driversLicense} onUpload={handleUpload} />}
+
+        <Text style={styles.sectionTitle}>Selfie Verification</Text>
+        {selfie && <DocCard doc={selfie} onUpload={handleUpload} isSelfie />}
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Why verify your identity?</Text>
@@ -139,7 +160,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700' as const,
     color: Colors.gray[900],
-    marginBottom: 14,
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: Colors.gray[500],
+    marginBottom: 12,
   },
   docCard: {
     flexDirection: 'row' as const,
@@ -168,6 +195,12 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
+  faceIconWrap: {
+    borderWidth: 2,
+    borderColor: Colors.orange.primary,
+    borderStyle: 'dashed' as const,
+    borderRadius: 21,
+  },
   docInfo: {
     flex: 1,
   },
@@ -185,6 +218,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.gray[400],
     marginTop: 1,
+  },
+  faceHint: {
+    fontSize: 11,
+    color: Colors.gray[400],
+    marginTop: 2,
+    fontStyle: 'italic' as const,
   },
   uploadBtn: {
     flexDirection: 'row' as const,
