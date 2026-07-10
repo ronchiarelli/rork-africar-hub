@@ -82,6 +82,54 @@ export function useConversations() {
   return query;
 }
 
+type SupportConversationWithCustomer = ConversationRow & {
+  customer: { name: string } | null;
+  chat_messages: { is_read: boolean; sender_id: string }[];
+};
+
+// Admin-facing: every support enquiry, from any admin's point of view —
+// relies on the is_admin() RLS bypass on conversations/chat_messages rather
+// than a per-viewer filter, since any admin can pick up any thread.
+export function useSupportConversations() {
+  const query = useQuery({
+    queryKey: ['admin-support-conversations'],
+    queryFn: async (): Promise<ConversationSummary[]> => {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*, customer:profiles!customer_id(name), chat_messages(is_read, sender_id)')
+        .eq('context_type', 'support')
+        .order('last_message_at', { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return (data as unknown as SupportConversationWithCustomer[]).map((row) => ({
+        id: row.id,
+        otherUserId: row.customer_id,
+        otherUserName: row.customer?.name ?? 'User',
+        contextLabel: row.context_label,
+        lastMessageAt: row.last_message_at,
+        unreadCount: row.chat_messages.filter((m) => !m.is_read && m.sender_id === row.customer_id).length,
+      }));
+    },
+  });
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`support-conversations-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
+        void query.refetch();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+        void query.refetch();
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return query;
+}
+
 export function useUnreadConversationsCount() {
   const { data: conversations = [] } = useConversations();
   return conversations.reduce((sum, c) => sum + c.unreadCount, 0);
@@ -146,6 +194,42 @@ export function useGetOrCreateConversation() {
       });
       if (error) throw error;
       return data as ConversationRow;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+export function useStartSupportConversation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('start_support_conversation');
+      if (error) throw error;
+      return data as ConversationRow;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+// Starts (or reuses) the caller's support thread and sends one message in
+// it, for one-shot "contact support" forms that don't have a conversation
+// screen open yet — returns the conversation so the caller can navigate in.
+export function useSendSupportEnquiry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: string) => {
+      const { data: conv, error: convError } = await supabase.rpc('start_support_conversation');
+      if (convError) throw convError;
+      const { error: msgError } = await supabase.rpc('send_message', {
+        p_conversation_id: (conv as ConversationRow).id,
+        p_body: body,
+      });
+      if (msgError) throw msgError;
+      return conv as ConversationRow;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['conversations'] });

@@ -378,6 +378,10 @@ export type Database = {
         Args: { p_other_user_id: string; p_context_type?: string | null; p_context_id?: string | null; p_context_label?: string | null };
         Returns: ConversationRow;
       };
+      start_support_conversation: {
+        Args: Record<string, never>;
+        Returns: ConversationRow;
+      };
       send_message: {
         Args: { p_conversation_id: string; p_body: string };
         Returns: ChatMessageRow;

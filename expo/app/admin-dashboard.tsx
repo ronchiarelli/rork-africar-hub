@@ -27,6 +27,7 @@ import {
   ChevronRight,
   CreditCard,
   BarChart3,
+  MessageSquare,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { usePendingKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
@@ -43,9 +44,10 @@ import {
   useTopCars,
 } from '@/lib/queries/admin';
 import { useAllBanners, useSetBannerActive, useDeleteBanner } from '@/lib/queries/banners';
+import { useSupportConversations } from '@/lib/queries/chat';
 import { getErrorMessage } from '@/lib/errors';
 
-const TABS = ['Overview', 'Users', 'KYC', 'Roles', 'Banners', 'Subscriptions', 'Analytics'] as const;
+const TABS = ['Overview', 'Users', 'KYC', 'Roles', 'Banners', 'Subscriptions', 'Analytics', 'Support'] as const;
 type Tab = typeof TABS[number];
 
 const SUB_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
@@ -89,6 +91,7 @@ export default function AdminDashboardScreen() {
   const [rateInput, setRateInput] = useState('');
   const { data: monthlyTrends = [] } = useMonthlyTrends();
   const { data: topCars = [] } = useTopCars();
+  const { data: supportConversations = [] } = useSupportConversations();
 
   const handleKycDecision = (docId: string, decision: 'verified' | 'rejected') => {
     reviewKyc.mutate(
@@ -537,6 +540,41 @@ export default function AdminDashboardScreen() {
             )}
           </>
         )}
+
+        {activeTab === 'Support' && (
+          <>
+            <Text style={styles.sectionTitle}>Support Enquiries ({supportConversations.length})</Text>
+            {supportConversations.map((conv) => (
+              <Pressable
+                key={conv.id}
+                style={styles.supportCard}
+                onPress={() => router.push({ pathname: '/chat', params: { id: conv.id } })}
+                testID={`support-conversation-${conv.id}`}
+              >
+                <View style={styles.supportAvatarWrap}>
+                  <Text style={styles.supportAvatarInitial}>{conv.otherUserName.charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={styles.supportInfo}>
+                  <Text style={styles.supportName} numberOfLines={1}>{conv.otherUserName}</Text>
+                  {conv.lastMessageAt && (
+                    <Text style={styles.supportMeta}>Last activity {new Date(conv.lastMessageAt).toLocaleDateString()}</Text>
+                  )}
+                </View>
+                {conv.unreadCount > 0 && (
+                  <View style={styles.supportUnreadBadge}>
+                    <Text style={styles.supportUnreadText}>{conv.unreadCount > 9 ? '9+' : conv.unreadCount}</Text>
+                  </View>
+                )}
+              </Pressable>
+            ))}
+            {supportConversations.length === 0 && (
+              <View style={styles.emptyWrap}>
+                <MessageSquare size={40} color={Colors.gray[300]} />
+                <Text style={styles.emptyText}>No support enquiries yet</Text>
+              </View>
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -969,6 +1007,42 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.orange.primary,
   },
   rateSaveText: { fontSize: 13, fontWeight: '700' as const, color: Colors.white },
+  supportCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  supportAvatarWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.purple.faint,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  supportAvatarInitial: { fontSize: 16, fontWeight: '700' as const, color: Colors.purple.medium },
+  supportInfo: { flex: 1 },
+  supportName: { fontSize: 15, fontWeight: '700' as const, color: Colors.gray[900] },
+  supportMeta: { fontSize: 12, color: Colors.gray[500], marginTop: 2 },
+  supportUnreadBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.orange.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    paddingHorizontal: 6,
+  },
+  supportUnreadText: { color: Colors.white, fontSize: 11, fontWeight: '700' as const },
   subHeader: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,

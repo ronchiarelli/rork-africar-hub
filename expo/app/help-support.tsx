@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import {
   HelpCircle,
   ChevronDown,
@@ -20,6 +21,8 @@ import {
   BookOpen,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { useSendSupportEnquiry, useStartSupportConversation } from '@/lib/queries/chat';
+import { getErrorMessage } from '@/lib/errors';
 
 interface FAQItem {
   id: string;
@@ -88,17 +91,28 @@ function FAQAccordion({ item }: { item: FAQItem }) {
 }
 
 export default function HelpSupportScreen() {
+  const router = useRouter();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const sendEnquiry = useSendSupportEnquiry();
+  const startSupportConversation = useStartSupportConversation();
 
   const handleSend = () => {
     if (!subject.trim() || !message.trim()) {
       Alert.alert('Missing Fields', 'Please fill in both subject and message.');
       return;
     }
-    Alert.alert('Message Sent', 'Our support team will get back to you within 24 hours.');
-    setSubject('');
-    setMessage('');
+    sendEnquiry.mutate(`${subject.trim()}: ${message.trim()}`, {
+      onSuccess: (conv) => {
+        setSubject('');
+        setMessage('');
+        Alert.alert('Message Sent', 'Our support team will get back to you soon.', [
+          { text: 'View Conversation', onPress: () => router.push({ pathname: '/chat', params: { id: conv.id } }) },
+          { text: 'OK', style: 'cancel' },
+        ]);
+      },
+      onError: (err) => Alert.alert('Could not send', getErrorMessage(err, 'Please try again.')),
+    });
   };
 
   const handleWhatsApp = () => {
@@ -113,10 +127,21 @@ export default function HelpSupportScreen() {
     void Linking.openURL('mailto:support@gocarhub.gh');
   };
 
+  const handleChat = () => {
+    startSupportConversation.mutate(undefined, {
+      onSuccess: (conv) => router.push({ pathname: '/chat', params: { id: conv.id } }),
+      onError: (err) => Alert.alert('Could not start chat', getErrorMessage(err, 'Please try again.')),
+    });
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.contactRow}>
+          <Pressable style={[styles.contactBtn, { backgroundColor: Colors.orange.primary }]} onPress={handleChat} disabled={startSupportConversation.isPending} testID="support-chat-btn">
+            <MessageCircle size={22} color={Colors.white} />
+            <Text style={styles.contactBtnText}>Chat</Text>
+          </Pressable>
           <Pressable style={[styles.contactBtn, { backgroundColor: '#25D366' }]} onPress={handleWhatsApp}>
             <MessageCircle size={22} color={Colors.white} />
             <Text style={styles.contactBtnText}>WhatsApp</Text>
@@ -168,9 +193,14 @@ export default function HelpSupportScreen() {
               textAlignVertical="top"
             />
           </View>
-          <Pressable style={styles.sendBtn} onPress={handleSend}>
+          <Pressable
+            style={[styles.sendBtn, sendEnquiry.isPending && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            disabled={sendEnquiry.isPending}
+            testID="support-send-btn"
+          >
             <Send size={16} color={Colors.white} />
-            <Text style={styles.sendBtnText}>Send Message</Text>
+            <Text style={styles.sendBtnText}>{sendEnquiry.isPending ? 'Sending…' : 'Send Message'}</Text>
           </Pressable>
         </View>
 
@@ -194,11 +224,13 @@ const styles = StyleSheet.create({
   },
   contactRow: {
     flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     gap: 10,
     marginBottom: 20,
   },
   contactBtn: {
-    flex: 1,
+    flexBasis: '47%' as const,
+    flexGrow: 1,
     alignItems: 'center' as const,
     paddingVertical: 14,
     borderRadius: 14,
@@ -314,6 +346,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     gap: 8,
+  },
+  sendBtnDisabled: {
+    opacity: 0.6,
   },
   sendBtnText: {
     color: Colors.white,
