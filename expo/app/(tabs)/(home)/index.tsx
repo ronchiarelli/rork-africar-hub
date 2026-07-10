@@ -9,6 +9,7 @@ import {
   Animated,
   TextInput,
   Platform,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles } fr
 import Colors from '@/constants/colors';
 import { useCars, useBrands, useSaleCars } from '@/lib/queries/cars';
 import { useActiveBanner } from '@/lib/queries/banners';
+import type { BannerCtaTypeDb } from '@/types/database';
 import { useUnreadConversationsCount } from '@/lib/queries/chat';
 import { useAuth } from '@/providers/AuthProvider';
 import CarCard from '@/components/CarCard';
@@ -85,6 +87,16 @@ export default function HomeScreen() {
 
   const handleBrandPress = useCallback((brand: Brand) => {
     router.push({ pathname: '/search', params: { brand: brand.name } });
+  }, [router]);
+
+  const handleBannerPress = useCallback((ctaType: BannerCtaTypeDb, destination: string) => {
+    if (ctaType === 'url') {
+      void Linking.openURL(destination);
+    } else if (ctaType === 'phone') {
+      void Linking.openURL(`tel:${destination}`);
+    } else {
+      router.push(destination as never);
+    }
   }, [router]);
 
   const featuredSaleCars = saleCars.filter(c => c.isFeatured);
@@ -171,7 +183,7 @@ export default function HomeScreen() {
               <Text style={styles.promoTag}>{banner.tag}</Text>
               <Text style={styles.promoTitle}>{banner.title}</Text>
               <Text style={styles.promoSub}>{banner.subtitle}</Text>
-              <Pressable style={styles.promoBtn} onPress={() => router.push(banner.ctaRoute as never)}>
+              <Pressable style={styles.promoBtn} onPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)}>
                 <Text style={styles.promoBtnText}>{banner.ctaLabel}</Text>
               </Pressable>
             </View>

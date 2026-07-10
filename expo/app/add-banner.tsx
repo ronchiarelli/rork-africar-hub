@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,20 +9,28 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Camera } from 'lucide-react-native';
+import { Camera, UploadCloud, Link2, Phone, Navigation } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { useBanner, useCreateBanner, useUpdateBanner } from '@/lib/queries/banners';
 import { getErrorMessage } from '@/lib/errors';
+import type { BannerCtaTypeDb } from '@/types/database';
 
 const CTA_ROUTES = [
   { label: 'Search', route: '/search' },
   { label: 'Marketplace', route: '/marketplace' },
   { label: 'Home', route: '/(tabs)/(home)' },
+];
+
+const CTA_TYPES: { type: BannerCtaTypeDb; label: string; icon: typeof Navigation }[] = [
+  { type: 'route', label: 'In-App Page', icon: Navigation },
+  { type: 'url', label: 'External URL', icon: Link2 },
+  { type: 'phone', label: 'Phone Number', icon: Phone },
 ];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -43,14 +51,17 @@ export default function AddBannerScreen() {
   const updateBanner = useUpdateBanner();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [tag, setTag] = useState('');
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [ctaLabel, setCtaLabel] = useState('Book Now');
-  const [ctaRoute, setCtaRoute] = useState(CTA_ROUTES[0].route);
+  const [ctaType, setCtaType] = useState<BannerCtaTypeDb>('route');
+  const [ctaDestination, setCtaDestination] = useState(CTA_ROUTES[0].route);
   const [isActive, setIsActive] = useState(true);
   const [displayOrder, setDisplayOrder] = useState('0');
+  const dropZoneRef = useRef<View>(null);
 
   useEffect(() => {
     if (!existingBanner) return;
@@ -59,7 +70,8 @@ export default function AddBannerScreen() {
     setTitle(existingBanner.title);
     setSubtitle(existingBanner.subtitle);
     setCtaLabel(existingBanner.ctaLabel);
-    setCtaRoute(existingBanner.ctaRoute);
+    setCtaType(existingBanner.ctaType);
+    setCtaDestination(existingBanner.ctaRoute);
     setIsActive(existingBanner.isActive);
     setDisplayOrder(String(existingBanner.displayOrder));
   }, [existingBanner]);
@@ -79,9 +91,55 @@ export default function AddBannerScreen() {
     }
   }, []);
 
+  const handleCtaTypeChange = useCallback((type: BannerCtaTypeDb) => {
+    setCtaType(type);
+    if (type === 'route') setCtaDestination(CTA_ROUTES[0].route);
+    else setCtaDestination('');
+  }, []);
+
+  // Drag-and-drop image upload on web — react-native-web renders View as a
+  // real <div>, so we attach native drag/drop listeners via ref instead of
+  // relying on RN touch props, which don't cover HTML5 drag events.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = dropZoneRef.current as unknown as HTMLElement | null;
+    if (!node) return;
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragActive(true);
+    };
+    const handleDragLeave = () => setIsDragActive(false);
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragActive(false);
+      const file = e.dataTransfer?.files?.[0];
+      if (file && file.type.startsWith('image/')) {
+        setImageUri(URL.createObjectURL(file));
+      }
+    };
+
+    node.addEventListener('dragover', handleDragOver);
+    node.addEventListener('dragleave', handleDragLeave);
+    node.addEventListener('drop', handleDrop);
+    return () => {
+      node.removeEventListener('dragover', handleDragOver);
+      node.removeEventListener('dragleave', handleDragLeave);
+      node.removeEventListener('drop', handleDrop);
+    };
+  }, []);
+
   const handleSubmit = useCallback(async () => {
-    if (!tag || !title || !subtitle || !ctaLabel || !imageUri) {
-      Alert.alert('Missing Info', 'Please fill in all fields and add an image.');
+    if (!tag || !title || !subtitle || !ctaLabel || !imageUri || !ctaDestination) {
+      Alert.alert('Missing Info', 'Please fill in all fields, add an image, and set a call-to-action destination.');
+      return;
+    }
+    if (ctaType === 'url' && !/^https?:\/\/.+/i.test(ctaDestination)) {
+      Alert.alert('Invalid URL', 'External URLs must start with http:// or https://');
+      return;
+    }
+    if (ctaType === 'phone' && !/^\+?[0-9\s-]{7,}$/.test(ctaDestination)) {
+      Alert.alert('Invalid Phone Number', 'Enter a valid phone number, e.g. +233241234567');
       return;
     }
 
@@ -109,7 +167,8 @@ export default function AddBannerScreen() {
         subtitle,
         imageUrl: finalImageUrl,
         ctaLabel,
-        ctaRoute,
+        ctaRoute: ctaDestination,
+        ctaType,
         isActive,
         displayOrder: Number(displayOrder) || 0,
       };
@@ -131,7 +190,7 @@ export default function AddBannerScreen() {
     } finally {
       setIsUploading(false);
     }
-  }, [tag, title, subtitle, imageUri, ctaLabel, ctaRoute, isActive, displayOrder, isEditing, id, createBanner, updateBanner, router]);
+  }, [tag, title, subtitle, imageUri, ctaLabel, ctaDestination, ctaType, isActive, displayOrder, isEditing, id, createBanner, updateBanner, router]);
 
   const isBusy = isUploading || createBanner.isPending || updateBanner.isPending;
 
@@ -146,14 +205,22 @@ export default function AddBannerScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Pressable style={styles.imagePicker} onPress={() => void handlePickImage()}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Camera size={28} color={Colors.gray[400]} />
-            <Text style={styles.imagePlaceholderText}>Add Banner Image</Text>
-          </View>
-        )}
+        <View ref={dropZoneRef} style={isDragActive && styles.dropZoneActive}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.previewImage} contentFit="cover" />
+          ) : (
+            <View style={[styles.imagePlaceholder, isDragActive && styles.imagePlaceholderActive]}>
+              {isDragActive ? (
+                <UploadCloud size={28} color={Colors.orange.primary} />
+              ) : (
+                <Camera size={28} color={Colors.gray[400]} />
+              )}
+              <Text style={[styles.imagePlaceholderText, isDragActive && styles.imagePlaceholderTextActive]}>
+                {isDragActive ? 'Drop image to upload' : Platform.OS === 'web' ? 'Drag & drop an image, or click to browse' : 'Add Banner Image'}
+              </Text>
+            </View>
+          )}
+        </View>
       </Pressable>
 
       <Field label="Tag (small label above the title)">
@@ -168,19 +235,54 @@ export default function AddBannerScreen() {
       <Field label="Call-to-Action Button Label">
         <TextInput style={styles.input} value={ctaLabel} onChangeText={setCtaLabel} placeholder="e.g. Book Now" placeholderTextColor={Colors.gray[400]} />
       </Field>
-      <Field label="Call-to-Action Destination">
+      <Field label="Call-to-Action Type">
         <View style={styles.chipRow}>
-          {CTA_ROUTES.map((opt) => (
-            <Pressable
-              key={opt.route}
-              style={[styles.chip, ctaRoute === opt.route && styles.chipActive]}
-              onPress={() => setCtaRoute(opt.route)}
-            >
-              <Text style={[styles.chipText, ctaRoute === opt.route && styles.chipTextActive]}>{opt.label}</Text>
-            </Pressable>
-          ))}
+          {CTA_TYPES.map((opt) => {
+            const Icon = opt.icon;
+            const isActiveType = ctaType === opt.type;
+            return (
+              <Pressable
+                key={opt.type}
+                style={[styles.typeChip, isActiveType && styles.chipActive]}
+                onPress={() => handleCtaTypeChange(opt.type)}
+                testID={`banner-cta-type-${opt.type}`}
+              >
+                <Icon size={14} color={isActiveType ? Colors.white : Colors.gray[600]} />
+                <Text style={[styles.chipText, isActiveType && styles.chipTextActive]}>{opt.label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
       </Field>
+
+      {ctaType === 'route' ? (
+        <Field label="Call-to-Action Destination">
+          <View style={styles.chipRow}>
+            {CTA_ROUTES.map((opt) => (
+              <Pressable
+                key={opt.route}
+                style={[styles.chip, ctaDestination === opt.route && styles.chipActive]}
+                onPress={() => setCtaDestination(opt.route)}
+              >
+                <Text style={[styles.chipText, ctaDestination === opt.route && styles.chipTextActive]}>{opt.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Field>
+      ) : (
+        <Field label={ctaType === 'url' ? 'External URL' : 'Phone Number'}>
+          <TextInput
+            style={styles.input}
+            value={ctaDestination}
+            onChangeText={setCtaDestination}
+            placeholder={ctaType === 'url' ? 'https://example.com/promo' : '+233241234567'}
+            placeholderTextColor={Colors.gray[400]}
+            keyboardType={ctaType === 'phone' ? 'phone-pad' : 'url'}
+            autoCapitalize="none"
+            testID="banner-cta-destination"
+          />
+        </Field>
+      )}
       <Field label="Display Order (lower shows first)">
         <TextInput style={styles.input} value={displayOrder} onChangeText={setDisplayOrder} keyboardType="number-pad" placeholderTextColor={Colors.gray[400]} />
       </Field>
@@ -214,7 +316,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center' as const,
     gap: 8,
   },
-  imagePlaceholderText: { color: Colors.gray[400], fontSize: 14, fontWeight: '600' as const },
+  imagePlaceholderActive: {
+    backgroundColor: Colors.orange.faint,
+    borderColor: Colors.orange.primary,
+  },
+  imagePlaceholderText: { color: Colors.gray[400], fontSize: 14, fontWeight: '600' as const, paddingHorizontal: 20, textAlign: 'center' as const },
+  imagePlaceholderTextActive: { color: Colors.orange.primary },
+  dropZoneActive: { borderRadius: 16 },
   field: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '700' as const, color: Colors.gray[700], marginBottom: 8 },
   input: {
@@ -227,6 +335,15 @@ const styles = StyleSheet.create({
   },
   chipRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.gray[100] },
+  typeChip: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.gray[100],
+  },
   chipActive: { backgroundColor: Colors.orange.primary },
   chipText: { fontSize: 13, fontWeight: '500' as const, color: Colors.gray[700] },
   chipTextActive: { color: Colors.white },

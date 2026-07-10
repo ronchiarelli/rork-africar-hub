@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { PromoBannerRow } from '@/types/database';
+import type { PromoBannerRow, BannerCtaTypeDb } from '@/types/database';
 
 export interface PromoBanner {
   id: string;
@@ -10,6 +10,7 @@ export interface PromoBanner {
   imageUrl: string;
   ctaLabel: string;
   ctaRoute: string;
+  ctaType: BannerCtaTypeDb;
   isActive: boolean;
   displayOrder: number;
 }
@@ -23,6 +24,7 @@ function mapBanner(row: PromoBannerRow): PromoBanner {
     imageUrl: row.image_url,
     ctaLabel: row.cta_label,
     ctaRoute: row.cta_route,
+    ctaType: row.cta_type,
     isActive: row.is_active,
     displayOrder: row.display_order,
   };
@@ -85,6 +87,7 @@ export interface BannerInput {
   imageUrl: string;
   ctaLabel: string;
   ctaRoute: string;
+  ctaType: BannerCtaTypeDb;
   isActive: boolean;
   displayOrder: number;
 }
@@ -105,6 +108,7 @@ export function useCreateBanner() {
         image_url: input.imageUrl,
         cta_label: input.ctaLabel,
         cta_route: input.ctaRoute,
+        cta_type: input.ctaType,
         is_active: input.isActive,
         display_order: input.displayOrder,
       });
@@ -127,6 +131,7 @@ export function useUpdateBanner() {
           image_url: input.imageUrl,
           cta_label: input.ctaLabel,
           cta_route: input.ctaRoute,
+          cta_type: input.ctaType,
           is_active: input.isActive,
           display_order: input.displayOrder,
         })

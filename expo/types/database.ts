@@ -272,6 +272,8 @@ export type RoleApplicationRow = {
   reviewed_at: string | null;
 }
 
+export type BannerCtaTypeDb = 'route' | 'url' | 'phone';
+
 export type PromoBannerRow = {
   id: string;
   tag: string;
@@ -280,6 +282,7 @@ export type PromoBannerRow = {
   image_url: string;
   cta_label: string;
   cta_route: string;
+  cta_type: BannerCtaTypeDb;
   is_active: boolean;
   display_order: number;
   created_at: string;
