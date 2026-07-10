@@ -20,6 +20,8 @@ import { useCars, useBrands, useSaleCars } from '@/lib/queries/cars';
 import { useActiveBanner } from '@/lib/queries/banners';
 import type { BannerCtaTypeDb } from '@/types/database';
 import { useUnreadConversationsCount } from '@/lib/queries/chat';
+import { useNotifications } from '@/lib/queries/notifications';
+import NotificationBadge from '@/components/NotificationBadge';
 import { useAuth } from '@/providers/AuthProvider';
 import CarCard from '@/components/CarCard';
 import BrandCard from '@/components/BrandCard';
@@ -84,6 +86,8 @@ export default function HomeScreen() {
   const { data: saleCars = [] } = useSaleCars();
   const { data: banner } = useActiveBanner();
   const unreadMessages = useUnreadConversationsCount();
+  const { data: notifications = [] } = useNotifications();
+  const unreadNotifications = notifications.filter((n) => !n.isRead).length;
 
   const handleBrandPress = useCallback((brand: Brand) => {
     router.push({ pathname: '/search', params: { brand: brand.name } });
@@ -123,7 +127,11 @@ export default function HomeScreen() {
               </Pressable>
               <Pressable onPress={() => router.push('/notifications')} style={styles.iconBtn} testID="notif-header-btn">
                 <Bell size={20} color={Colors.white} />
-                <View style={styles.notifDot} />
+                {unreadNotifications > 0 && (
+                  <View style={styles.notifBadgeWrap}>
+                    <NotificationBadge count={unreadNotifications} />
+                  </View>
+                )}
               </Pressable>
             </View>
           </View>
@@ -389,6 +397,11 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
     backgroundColor: Colors.orange.primary,
+  },
+  notifBadgeWrap: {
+    position: 'absolute' as const,
+    top: -4,
+    right: -4,
   },
   greeting: {
     color: Colors.white,

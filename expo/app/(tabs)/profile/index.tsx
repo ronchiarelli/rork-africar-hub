@@ -30,6 +30,8 @@ import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRequestRoleUpgrade } from '@/lib/queries/profile';
 import { useUnreadConversationsCount } from '@/lib/queries/chat';
+import { useNotifications } from '@/lib/queries/notifications';
+import NotificationBadge from '@/components/NotificationBadge';
 import { UserRole } from '@/types/car';
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -44,7 +46,7 @@ interface MenuItem {
   label: string;
   route?: string;
   onPress?: () => void;
-  badge?: string;
+  badge?: number;
   color?: string;
 }
 
@@ -54,6 +56,9 @@ export default function ProfileScreen() {
   const { currentUser, currentRole, logout } = useAuth();
   const requestRoleUpgrade = useRequestRoleUpgrade(currentUser?.id);
   const unreadMessages = useUnreadConversationsCount();
+  const { data: notifications = [] } = useNotifications();
+  const unreadNotifications = notifications.filter((n) => !n.isRead).length;
+  const unreadKyc = notifications.filter((n) => !n.isRead && n.type === 'kyc').length;
 
   const handleLogout = useCallback(() => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -93,10 +98,10 @@ export default function ProfileScreen() {
         icon: <MessageSquare size={20} color={Colors.purple.medium} />,
         label: 'Messages',
         route: '/messages',
-        badge: unreadMessages > 0 ? String(unreadMessages) : undefined,
+        badge: unreadMessages,
       },
-      { icon: <Bell size={20} color={Colors.info} />, label: 'Notifications', route: '/notifications', badge: '3' },
-      { icon: <ShieldCheck size={20} color={Colors.success} />, label: 'KYC Verification', route: '/kyc-verification' },
+      { icon: <Bell size={20} color={Colors.info} />, label: 'Notifications', route: '/notifications', badge: unreadNotifications },
+      { icon: <ShieldCheck size={20} color={Colors.success} />, label: 'KYC Verification', route: '/kyc-verification', badge: unreadKyc },
     ],
     ...(currentRole === 'fleet_owner' ? [[
       { icon: <Car size={20} color={Colors.purple.medium} />, label: 'Fleet Dashboard', route: '/fleet-dashboard' },
@@ -178,11 +183,7 @@ export default function ProfileScreen() {
                   <Text style={[styles.menuLabel, item.color ? { color: item.color } : null]}>{item.label}</Text>
                 </View>
                 <View style={styles.menuRight}>
-                  {item.badge && (
-                    <View style={styles.menuBadge}>
-                      <Text style={styles.menuBadgeText}>{item.badge}</Text>
-                    </View>
-                  )}
+                  <NotificationBadge count={item.badge ?? 0} />
                   <ChevronRight size={16} color={Colors.gray[400]} />
                 </View>
               </Pressable>
@@ -319,18 +320,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     gap: 8,
-  },
-  menuBadge: {
-    backgroundColor: Colors.orange.primary,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  menuBadgeText: {
-    color: Colors.white,
-    fontSize: 11,
-    fontWeight: '700' as const,
   },
 });

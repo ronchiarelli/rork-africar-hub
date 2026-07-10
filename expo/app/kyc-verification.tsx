@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, ScanFace } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useKycDocuments, useUploadKycDocument } from '@/lib/queries/kyc';
+import { useMarkNotificationsReadByType } from '@/lib/queries/notifications';
 import { getErrorMessage } from '@/lib/errors';
 import type { KycDocTypeDb } from '@/types/database';
 import type { KYCDocument } from '@/types/car';
@@ -52,6 +53,12 @@ function DocCard({ doc, onUpload, isSelfie }: { doc: KYCDocument; onUpload: (typ
 export default function KYCVerificationScreen() {
   const { data: documents = [] } = useKycDocuments();
   const uploadDoc = useUploadKycDocument();
+  const markKycNotificationsRead = useMarkNotificationsReadByType('kyc');
+
+  useEffect(() => {
+    markKycNotificationsRead.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleUpload = useCallback((docType: KycDocTypeDb) => {
     uploadDoc.mutate(docType, {

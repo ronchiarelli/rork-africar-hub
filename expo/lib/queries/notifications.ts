@@ -63,3 +63,23 @@ export function useMarkAllNotificationsRead() {
     },
   });
 }
+
+export function useMarkNotificationsReadByType(type: AppNotification['type']) {
+  const { currentUser } = useAuth();
+  const userId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', userId as string)
+        .eq('type', type)
+        .eq('is_read', false);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+    },
+  });
+}
