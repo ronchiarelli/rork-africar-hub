@@ -176,7 +176,14 @@ export default function CropImageScreen() {
       uploadPhoto.mutate(
         { uri: result.uri, type, side },
         {
-          onSuccess: () => router.back(),
+          onSuccess: () => {
+            router.back();
+            // Fires after the pop completes — the doc card the user just
+            // uploaded has already disappeared (no more action needed until
+            // admin review), which with no confirmation reads as "nothing
+            // happened" rather than success.
+            setTimeout(() => Alert.alert('Uploaded', 'Your photo was submitted and is now under review.'), 300);
+          },
           onError: (err) => Alert.alert('Upload Failed', getErrorMessage(err, 'Please try again.')),
           onSettled: () => setIsProcessing(false),
         }

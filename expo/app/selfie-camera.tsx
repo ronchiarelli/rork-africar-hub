@@ -51,7 +51,10 @@ export default function SelfieCameraScreen() {
     uploadPhoto.mutate(
       { uri: capturedUri, type: 'selfie', side: 'single' },
       {
-        onSuccess: () => router.back(),
+        onSuccess: () => {
+          router.back();
+          setTimeout(() => Alert.alert('Uploaded', 'Your selfie was submitted and is now under review.'), 300);
+        },
         onError: (err) => Alert.alert('Upload Failed', getErrorMessage(err, 'Please try again.')),
       }
     );
