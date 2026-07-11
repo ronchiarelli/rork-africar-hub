@@ -16,6 +16,7 @@ import { X, RotateCcw, Check, Camera as CameraIcon } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useUploadKycPhoto } from '@/lib/queries/kyc';
 import { getErrorMessage } from '@/lib/errors';
+import IndeterminateProgressBar from '@/components/IndeterminateProgressBar';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GUIDE_SIZE = Math.min(SCREEN_WIDTH * 0.7, 280);
@@ -84,6 +85,11 @@ export default function SelfieCameraScreen() {
     return (
       <View style={styles.container}>
         <Image source={{ uri: capturedUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        {uploadPhoto.isPending && (
+          <View style={[styles.uploadProgressWrap, { top: insets.top + 16 }]}>
+            <IndeterminateProgressBar />
+          </View>
+        )}
         <View style={[styles.previewActions, { paddingBottom: insets.bottom + 24 }]}>
           <Pressable style={styles.retakeBtn} onPress={handleRetake} disabled={uploadPhoto.isPending} testID="selfie-retake">
             <RotateCcw size={20} color={Colors.white} />
@@ -235,6 +241,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center' as const,
     gap: 16,
     paddingHorizontal: 24,
+  },
+  uploadProgressWrap: {
+    position: 'absolute' as const,
+    left: 24,
+    right: 24,
   },
   retakeBtn: {
     flex: 1,

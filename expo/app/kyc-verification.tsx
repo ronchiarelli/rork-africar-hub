@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import Colors from '@/constants/colors';
 import { useKycDocuments, useUploadKycDocument } from '@/lib/queries/kyc';
 import { useMarkNotificationsReadByType } from '@/lib/queries/notifications';
 import { getErrorMessage } from '@/lib/errors';
+import IndeterminateProgressBar from '@/components/IndeterminateProgressBar';
 import type { KycDocTypeDb, KycDocSideDb } from '@/types/database';
 import type { KYCDocument } from '@/types/car';
 
@@ -33,31 +34,51 @@ function bestStatus(...statuses: string[]): string {
   return statuses.reduce((best, s) => (STATUS_RANK[s] > STATUS_RANK[best] ? s : best));
 }
 
-function DocCard({ doc, onUpload, onOpenCamera, isSelfie }: { doc: KYCDocument; onUpload: (type: KycDocTypeDb, side: KycDocSideDb) => void; onOpenCamera?: () => void; isSelfie?: boolean }) {
+function DocCard({
+  doc,
+  onUpload,
+  onOpenCamera,
+  isSelfie,
+  isUploading,
+}: {
+  doc: KYCDocument;
+  onUpload: (type: KycDocTypeDb, side: KycDocSideDb) => void;
+  onOpenCamera?: () => void;
+  isSelfie?: boolean;
+  isUploading?: boolean;
+}) {
   const config = STATUS_CONFIG[doc.status] ?? STATUS_CONFIG.not_uploaded;
   const showFacePlaceholder = isSelfie && doc.status === 'not_uploaded';
   return (
     <View style={styles.docCard}>
-      <View style={styles.docLeft}>
-        <View style={[styles.docIconWrap, { backgroundColor: config.color + '15' }, showFacePlaceholder && styles.faceIconWrap]}>
-          {showFacePlaceholder ? <ScanFace size={22} color={Colors.orange.primary} /> : config.icon}
+      <View style={styles.docCardRow}>
+        <View style={styles.docLeft}>
+          <View style={[styles.docIconWrap, { backgroundColor: config.color + '15' }, showFacePlaceholder && styles.faceIconWrap]}>
+            {showFacePlaceholder ? <ScanFace size={22} color={Colors.orange.primary} /> : config.icon}
+          </View>
+          <View style={styles.docInfo}>
+            <Text style={styles.docLabel}>{doc.label}</Text>
+            <Text style={[styles.docStatus, { color: config.color }]}>{isUploading ? 'Uploading…' : config.label}</Text>
+            {doc.uploadedAt && <Text style={styles.docDate}>Uploaded: {doc.uploadedAt}</Text>}
+            {showFacePlaceholder && !isUploading && <Text style={styles.faceHint}>Center your face in a well-lit photo</Text>}
+          </View>
         </View>
-        <View style={styles.docInfo}>
-          <Text style={styles.docLabel}>{doc.label}</Text>
-          <Text style={[styles.docStatus, { color: config.color }]}>{config.label}</Text>
-          {doc.uploadedAt && <Text style={styles.docDate}>Uploaded: {doc.uploadedAt}</Text>}
-          {showFacePlaceholder && <Text style={styles.faceHint}>Center your face in a well-lit photo</Text>}
-        </View>
+        {(doc.status === 'not_uploaded' || doc.status === 'rejected') && (
+          <Pressable
+            style={[styles.uploadBtn, isUploading && styles.uploadBtnDisabled]}
+            onPress={() => (isSelfie && onOpenCamera ? onOpenCamera() : onUpload(doc.type, doc.side))}
+            disabled={isUploading}
+            testID={`upload-${doc.id}`}
+          >
+            <Camera size={16} color={Colors.white} />
+            <Text style={styles.uploadBtnText}>{isUploading ? 'Uploading' : isSelfie ? 'Take Selfie' : 'Upload'}</Text>
+          </Pressable>
+        )}
       </View>
-      {(doc.status === 'not_uploaded' || doc.status === 'rejected') && (
-        <Pressable
-          style={styles.uploadBtn}
-          onPress={() => (isSelfie && onOpenCamera ? onOpenCamera() : onUpload(doc.type, doc.side))}
-          testID={`upload-${doc.id}`}
-        >
-          <Camera size={16} color={Colors.white} />
-          <Text style={styles.uploadBtnText}>{isSelfie ? 'Take Selfie' : 'Upload'}</Text>
-        </Pressable>
+      {isUploading && (
+        <View style={styles.progressWrap}>
+          <IndeterminateProgressBar />
+        </View>
       )}
     </View>
   );
@@ -68,6 +89,7 @@ export default function KYCVerificationScreen() {
   const { data: documents = [] } = useKycDocuments();
   const uploadDoc = useUploadKycDocument();
   const markKycNotificationsRead = useMarkNotificationsReadByType('kyc');
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   useEffect(() => {
     markKycNotificationsRead.mutate();
@@ -75,7 +97,9 @@ export default function KYCVerificationScreen() {
   }, []);
 
   const handleUpload = useCallback((type: KycDocTypeDb, side: KycDocSideDb) => {
+    setUploadingId(`${type}_${side}`);
     uploadDoc.mutate({ type, side }, {
+      onSettled: () => setUploadingId(null),
       onError: (err) => Alert.alert('Upload Failed', getErrorMessage(err, 'Please try again.')),
     });
   }, [uploadDoc]);
@@ -118,22 +142,30 @@ export default function KYCVerificationScreen() {
 
         <Text style={styles.sectionTitle}>Identity Document</Text>
         <Text style={styles.sectionSubtitle}>Provide both sides of your National ID, or your Passport</Text>
-        {ghanaCardFront && <DocCard doc={ghanaCardFront} onUpload={handleUpload} />}
-        {ghanaCardBack && <DocCard doc={ghanaCardBack} onUpload={handleUpload} />}
+        {ghanaCardFront && <DocCard doc={ghanaCardFront} onUpload={handleUpload} isUploading={uploadingId === ghanaCardFront.id} />}
+        {ghanaCardBack && <DocCard doc={ghanaCardBack} onUpload={handleUpload} isUploading={uploadingId === ghanaCardBack.id} />}
         <View style={styles.orDivider}>
           <View style={styles.orLine} />
           <Text style={styles.orText}>OR</Text>
           <View style={styles.orLine} />
         </View>
-        {passport && <DocCard doc={passport} onUpload={handleUpload} />}
+        {passport && <DocCard doc={passport} onUpload={handleUpload} isUploading={uploadingId === passport.id} />}
 
         <Text style={styles.sectionTitle}>Driver's License</Text>
         <Text style={styles.sectionSubtitle}>Both sides are required</Text>
-        {licenseFront && <DocCard doc={licenseFront} onUpload={handleUpload} />}
-        {licenseBack && <DocCard doc={licenseBack} onUpload={handleUpload} />}
+        {licenseFront && <DocCard doc={licenseFront} onUpload={handleUpload} isUploading={uploadingId === licenseFront.id} />}
+        {licenseBack && <DocCard doc={licenseBack} onUpload={handleUpload} isUploading={uploadingId === licenseBack.id} />}
 
         <Text style={styles.sectionTitle}>Selfie Verification</Text>
-        {selfie && <DocCard doc={selfie} onUpload={handleUpload} onOpenCamera={() => router.push('/selfie-camera')} isSelfie />}
+        {selfie && (
+          <DocCard
+            doc={selfie}
+            onUpload={handleUpload}
+            onOpenCamera={() => router.push('/selfie-camera')}
+            isSelfie
+            isUploading={uploadingId === selfie.id}
+          />
+        )}
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Why verify your identity?</Text>
@@ -222,9 +254,6 @@ const styles = StyleSheet.create({
     color: Colors.gray[400],
   },
   docCard: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
     backgroundColor: Colors.white,
     borderRadius: 14,
     padding: 14,
@@ -234,6 +263,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  docCardRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+  },
+  progressWrap: {
+    marginTop: 12,
   },
   docLeft: {
     flexDirection: 'row' as const,
@@ -286,6 +323,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
+  },
+  uploadBtnDisabled: {
+    opacity: 0.6,
   },
   uploadBtnText: {
     color: Colors.white,

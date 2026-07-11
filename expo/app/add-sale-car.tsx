@@ -17,6 +17,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useCreateSaleCar } from '@/lib/queries/dealer';
 import { getErrorMessage } from '@/lib/errors';
 import MultiImagePicker from '@/components/MultiImagePicker';
+import { ProgressBar } from '@/components/IndeterminateProgressBar';
 import type { SaleCar } from '@/types/car';
 
 const CATEGORIES = ['SUV', 'Sedan', 'Hatchback', 'Van'];
@@ -52,6 +53,7 @@ export default function AddSaleCarScreen() {
 
   const [images, setImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState(String(new Date().getFullYear()));
@@ -80,6 +82,7 @@ export default function AddSaleCarScreen() {
     }
 
     setIsUploading(true);
+    setUploadProgress({ done: 0, total: images.length });
     try {
       const uploadedUrls: string[] = [];
       for (const uri of images) {
@@ -95,6 +98,7 @@ export default function AddSaleCarScreen() {
 
         const { data: publicUrlData } = supabase.storage.from('car-images').getPublicUrl(path);
         uploadedUrls.push(publicUrlData.publicUrl);
+        setUploadProgress({ done: uploadedUrls.length, total: images.length });
       }
 
       createSaleCar.mutate(
@@ -130,6 +134,7 @@ export default function AddSaleCarScreen() {
       Alert.alert('Upload Failed', getErrorMessage(err, 'Could not upload the photo. Please try again.'));
     } finally {
       setIsUploading(false);
+      setUploadProgress({ done: 0, total: 0 });
     }
   }, [currentUser, brand, model, year, category, images, salePrice, mileage, location, fuelType, transmission, condition, description, createSaleCar, router]);
 
@@ -183,6 +188,17 @@ export default function AddSaleCarScreen() {
         />
       </Field>
 
+      {isBusy && (
+        <View style={styles.progressWrap}>
+          <ProgressBar progress={uploadProgress.total > 0 ? uploadProgress.done / uploadProgress.total : 1} />
+          <Text style={styles.progressText}>
+            {isUploading && uploadProgress.total > 0
+              ? `Uploading photo ${Math.min(uploadProgress.done + 1, uploadProgress.total)} of ${uploadProgress.total}…`
+              : 'Saving listing…'}
+          </Text>
+        </View>
+      )}
+
       <Pressable style={[styles.submitBtn, isBusy && styles.submitBtnDisabled]} onPress={() => void handleSubmit()} disabled={isBusy}>
         {isBusy ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.submitBtnText}>List This Car</Text>}
       </Pressable>
@@ -209,6 +225,8 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: Colors.orange.primary },
   chipText: { fontSize: 13, fontWeight: '500' as const, color: Colors.gray[700] },
   chipTextActive: { color: Colors.white },
+  progressWrap: { marginTop: 16, gap: 8 },
+  progressText: { fontSize: 13, color: Colors.gray[600], textAlign: 'center' as const, fontWeight: '600' as const },
   submitBtn: {
     backgroundColor: Colors.orange.primary,
     borderRadius: 16,

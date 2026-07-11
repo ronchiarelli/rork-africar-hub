@@ -20,6 +20,7 @@ import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { useBanner, useCreateBanner, useUpdateBanner } from '@/lib/queries/banners';
 import { getErrorMessage } from '@/lib/errors';
+import IndeterminateProgressBar from '@/components/IndeterminateProgressBar';
 import type { BannerCtaTypeDb } from '@/types/database';
 
 const CTA_ROUTES = [
@@ -402,6 +403,13 @@ export default function AddBannerScreen() {
         <Switch value={isActive} onValueChange={setIsActive} trackColor={{ true: Colors.orange.primary }} />
       </View>
 
+      {isBusy && (
+        <View style={styles.progressWrap}>
+          <IndeterminateProgressBar />
+          <Text style={styles.progressText}>{isUploading ? 'Uploading image…' : 'Saving banner…'}</Text>
+        </View>
+      )}
+
       <Pressable style={[styles.submitBtn, isBusy && styles.submitBtnDisabled]} onPress={() => void handleSubmit()} disabled={isBusy} testID="banner-submit">
         {isBusy ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.submitBtnText}>{isEditing ? 'Save Changes' : 'Create Banner'}</Text>}
       </Pressable>
@@ -462,6 +470,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dropOverlayText: { color: Colors.white, fontSize: 14, fontWeight: '700' as const },
+  progressWrap: { marginTop: 16, gap: 8 },
+  progressText: { fontSize: 13, color: Colors.gray[600], textAlign: 'center' as const, fontWeight: '600' as const },
   imagePlaceholder: {
     width: '100%',
     height: 160,
