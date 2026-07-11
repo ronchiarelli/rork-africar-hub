@@ -30,13 +30,41 @@ function mapDoc(type: KycDocTypeDb, side: KycDocSideDb, label: string, row: KycD
   };
 }
 
+// expo-camera's web implementation returns captured photos as a `data:`
+// URI (canvas.toDataURL()), not a blob: or file: URI. Two things break for
+// that shape specifically: (1) Safari's fetch() throws a generic "Load
+// failed" TypeError on large data: URIs even though the same URI works
+// fine as an <img>/Image source — confirmed live; (2) naively splitting the
+// URI on "." to guess a file extension returns the *entire* URI, since a
+// data: URI's mime header and base64 payload never contain a literal dot.
+// Decoding the base64 payload directly sidesteps both.
+function decodeDataUri(dataUri: string): { blob: Blob; ext: string } | null {
+  const match = dataUri.match(/^data:([^;,]+)(?:;[^,]*)?,(.*)$/s);
+  if (!match) return null;
+  const [, mime, data] = match;
+  const isBase64 = /;base64/.test(dataUri.slice(0, dataUri.indexOf(',')));
+  const binary = isBase64 ? atob(data) : decodeURIComponent(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const ext = mime.split('/').pop() || 'jpg';
+  return { blob: new Blob([bytes], { type: mime || 'image/jpeg' }), ext };
+}
+
 // Shared by both the library-picker upload and the in-app camera capture
 // (selfie-camera.tsx) — takes a local file URI already selected/captured by
 // the caller and does the storage upload + row upsert.
 async function uploadKycFile(userId: string, uri: string, type: KycDocTypeDb, side: KycDocSideDb): Promise<string> {
-  const response = await fetch(uri);
-  const blob = await response.blob();
-  const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
+  const decoded = uri.startsWith('data:') ? decodeDataUri(uri) : null;
+  let blob: Blob;
+  let fileExt: string;
+  if (decoded) {
+    blob = decoded.blob;
+    fileExt = decoded.ext;
+  } else {
+    const response = await fetch(uri);
+    blob = await response.blob();
+    fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
+  }
   const path = `${userId}/${type}_${side}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage.from('kyc-documents').upload(path, blob, {
