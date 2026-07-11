@@ -80,31 +80,23 @@ export function useKycDocuments() {
   });
 }
 
-export function useUploadKycDocument() {
-  const { currentUser } = useAuth();
-  const userId = currentUser?.id;
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ type, side }: { type: KycDocTypeDb; side: KycDocSideDb }) => {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        throw new Error('Photo library permission is required to upload a document.');
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.6,
-      });
-      if (result.canceled || !result.assets[0]) {
-        return null; // user cancelled — not an error
-      }
-
-      return uploadKycFile(userId as string, result.assets[0].uri, type, side);
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['kyc-documents', userId] });
-    },
+// Picks a library photo and hands the raw URI back to the caller (which
+// navigates to crop-image.tsx to clip it before it's actually uploaded via
+// useUploadKycPhoto) — kept separate from the upload step since cropping
+// happens on a different screen.
+export async function pickKycLibraryPhoto(): Promise<string | null> {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    throw new Error('Photo library permission is required to upload a document.');
+  }
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.8,
   });
+  if (result.canceled || !result.assets[0]) {
+    return null; // user cancelled — not an error
+  }
+  return result.assets[0].uri;
 }
 
 // For a photo already captured in-app (the selfie camera screen) rather
