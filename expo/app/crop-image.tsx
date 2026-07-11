@@ -34,12 +34,27 @@ const ASPECT_BY_TYPE: Record<KycDocTypeDb, number> = {
   selfie: 1,
 };
 
-const FRAME_WIDTH = Math.min(SCREEN_WIDTH - 40, 360);
+const MAX_FRAME_WIDTH = Math.min(SCREEN_WIDTH - 40, 360);
+// Reserve space for the title bar, hint text, and bottom action bar so a
+// portrait (passport) frame can't grow taller than what's actually left on
+// screen — fitting only to width previously produced a frame ~500pt tall
+// regardless of available height, overflowing on shorter devices.
+const MAX_FRAME_HEIGHT = SCREEN_HEIGHT - 260;
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function fitFrameSize(aspect: number): { width: number; height: number } {
+  let width = MAX_FRAME_WIDTH;
+  let height = width / aspect;
+  if (height > MAX_FRAME_HEIGHT) {
+    height = MAX_FRAME_HEIGHT;
+    width = height * aspect;
+  }
+  return { width, height };
 }
 
 export default function CropImageScreen() {
@@ -48,8 +63,7 @@ export default function CropImageScreen() {
   const params = useLocalSearchParams<{ uri: string; type: KycDocTypeDb; side: KycDocSideDb }>();
   const { uri, type, side } = params;
   const aspect = ASPECT_BY_TYPE[type] ?? 1.586;
-  const frameHeight = aspect >= 1 ? FRAME_WIDTH / aspect : FRAME_WIDTH / aspect;
-  const frameSize = { width: FRAME_WIDTH, height: frameHeight };
+  const frameSize = fitFrameSize(aspect);
 
   const [imgSize, setImgSize] = useState<{ width: number; height: number } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -145,10 +159,13 @@ export default function CropImageScreen() {
       const imgTopLeftX = frameSize.width / 2 + translateValue.current.x - (imgSize.width * displayScale) / 2;
       const imgTopLeftY = frameSize.height / 2 + translateValue.current.y - (imgSize.height * displayScale) / 2;
 
-      const originX = clamp(-imgTopLeftX / displayScale, 0, imgSize.width);
-      const originY = clamp(-imgTopLeftY / displayScale, 0, imgSize.height);
-      const cropWidth = Math.min(frameSize.width / displayScale, imgSize.width - originX);
-      const cropHeight = Math.min(frameSize.height / displayScale, imgSize.height - originY);
+      const originX = Math.round(clamp(-imgTopLeftX / displayScale, 0, imgSize.width));
+      const originY = Math.round(clamp(-imgTopLeftY / displayScale, 0, imgSize.height));
+      // Rounding origin can push it flush against the far edge on extreme
+      // pans/zooms — floor so width/height never go zero or negative, which
+      // would otherwise make manipulateAsync reject the crop outright.
+      const cropWidth = Math.max(1, Math.round(Math.min(frameSize.width / displayScale, imgSize.width - originX)));
+      const cropHeight = Math.max(1, Math.round(Math.min(frameSize.height / displayScale, imgSize.height - originY)));
 
       const result = await manipulateAsync(
         uri,

@@ -54,6 +54,9 @@ async function uploadKycFile(userId: string, uri: string, type: KycDocTypeDb, si
       status: 'uploaded',
       storage_path: path,
       uploaded_at: new Date().toISOString(),
+      // Clear any prior rejection note — a fresh resubmission awaiting
+      // review shouldn't still display the reason the last one was rejected.
+      rejection_reason: null,
     },
     { onConflict: 'user_id,type,side' }
   );
