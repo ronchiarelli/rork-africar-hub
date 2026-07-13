@@ -73,6 +73,7 @@ export interface AdminUserDetail extends AdminUserRow {
   phone: string;
   whatsapp: string;
   totalBookings: number;
+  acceptsInAppPayment: boolean;
 }
 
 export function useAdminUserDetail(userId: string | undefined) {
@@ -98,6 +99,7 @@ export function useAdminUserDetail(userId: string | undefined) {
         verificationStatus: row.verification_status,
         memberSince: row.member_since,
         totalBookings: row.total_bookings,
+        acceptsInAppPayment: row.accepts_inapp_payment,
       };
     },
     enabled: !!userId,
@@ -109,6 +111,20 @@ export function useSetUserSuspended() {
   return useMutation({
     mutationFn: async ({ userId, suspended }: { userId: string; suspended: boolean }) => {
       const { error } = await supabase.rpc('admin_set_suspended', { p_user_id: userId, p_suspended: suspended });
+      if (error) throw error;
+    },
+    onSuccess: (_data, { userId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-users'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-user-detail', userId] });
+    },
+  });
+}
+
+export function useSetInAppPaymentEnabled() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, enabled }: { userId: string; enabled: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_inapp_payment_enabled', { p_user_id: userId, p_enabled: enabled });
       if (error) throw error;
     },
     onSuccess: (_data, { userId }) => {

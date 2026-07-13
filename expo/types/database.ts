@@ -32,6 +32,7 @@ export type ProfileRow = {
   is_verified: boolean;
   verification_status: VerificationStatusDb;
   is_suspended: boolean;
+  accepts_inapp_payment: boolean;
   total_bookings: number;
   member_since: string;
   created_at: string;
@@ -142,6 +143,8 @@ export type ChatMessageRow = {
   created_at: string;
 }
 
+export type BookingPaymentStatusDb = 'unpaid' | 'paid';
+
 export type BookingRow = {
   id: string;
   car_id: string;
@@ -155,6 +158,7 @@ export type BookingRow = {
   insurance_fee: number;
   total_price: number;
   status: BookingStatusDb;
+  payment_status: BookingPaymentStatusDb;
   created_at: string;
   updated_at: string;
 }
@@ -385,6 +389,14 @@ export type Database = {
       admin_set_suspended: {
         Args: { p_user_id: string; p_suspended: boolean };
         Returns: void;
+      };
+      admin_set_inapp_payment_enabled: {
+        Args: { p_user_id: string; p_enabled: boolean };
+        Returns: void;
+      };
+      owner_accepts_inapp_payment: {
+        Args: { p_owner_id: string };
+        Returns: boolean;
       };
       admin_revoke_role: {
         Args: { p_user_id: string };

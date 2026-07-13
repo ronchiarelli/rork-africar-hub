@@ -39,9 +39,15 @@ Deno.serve(async (req: Request) => {
     }
 
     // References we generate are prefixed by which flow created them —
-    // 'topup_' for wallet top-ups, 'sub_' for direct subscription payments —
-    // so the same callback can route to the right table/RPC for either.
-    const isSubscriptionPayment = String(clientReference).startsWith('sub_');
+    // 'topup_' for wallet top-ups, 'sub_' for direct subscription payments,
+    // 'booking_' for in-app booking payments — so the same callback can
+    // route to the right table/RPC for any of them.
+    const referenceStr = String(clientReference);
+    const flow = referenceStr.startsWith('sub_')
+      ? 'subscription'
+      : referenceStr.startsWith('booking_')
+      ? 'booking'
+      : 'topup';
 
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -50,8 +56,10 @@ Deno.serve(async (req: Request) => {
 
     if (!SUCCESS_STATUSES.has(status)) {
       // Failed/cancelled payment — mark it so, no credit.
-      if (isSubscriptionPayment) {
+      if (flow === 'subscription') {
         await adminClient.rpc('fail_subscription_payment', { p_client_reference: clientReference });
+      } else if (flow === 'booking') {
+        await adminClient.rpc('fail_booking_payment', { p_client_reference: clientReference });
       } else {
         await adminClient
           .from('wallet_transactions')
@@ -62,8 +70,14 @@ Deno.serve(async (req: Request) => {
       return new Response('ok', { status: 200 });
     }
 
-    if (isSubscriptionPayment) {
+    if (flow === 'subscription') {
       await adminClient.rpc('complete_subscription_payment', {
+        p_client_reference: clientReference,
+        p_amount: amount,
+        p_hubtel_transaction_id: String(hubtelTransactionId ?? ''),
+      });
+    } else if (flow === 'booking') {
+      await adminClient.rpc('complete_booking_payment', {
         p_client_reference: clientReference,
         p_amount: amount,
         p_hubtel_transaction_id: String(hubtelTransactionId ?? ''),

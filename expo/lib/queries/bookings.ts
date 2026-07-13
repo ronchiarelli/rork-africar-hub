@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { mapCar } from '@/lib/queries/cars';
+import { getErrorMessage } from '@/lib/errors';
 import type { BookingRow, CarRow } from '@/types/database';
 import type { Booking } from '@/types/car';
 
@@ -17,6 +18,7 @@ function mapBooking(row: BookingWithCar): Booking {
     totalDays: row.total_days,
     totalPrice: row.total_price,
     status: row.status,
+    paymentStatus: row.payment_status,
     createdAt: row.created_at,
   };
 }
@@ -90,6 +92,40 @@ export function useReviewBooking() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+}
+
+// Whether this booking's car owner has been admin-allowlisted for in-app
+// Hubtel payment — a customer can't read another user's profiles row
+// directly, so this goes through a SECURITY-DEFINER RPC that only ever
+// returns a boolean (same shape as owner_subscription_active()).
+export function useOwnerAcceptsInAppPayment(ownerId: string | undefined) {
+  return useQuery({
+    queryKey: ['owner-accepts-inapp-payment', ownerId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('owner_accepts_inapp_payment', { p_owner_id: ownerId as string });
+      if (error) throw error;
+      return data as boolean;
+    },
+    enabled: !!ownerId,
+  });
+}
+
+export function useInitiateBookingPayment() {
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      const { data, error } = await supabase.functions.invoke<{ checkoutUrl: string; clientReference: string }>(
+        'initiate-booking-payment',
+        { body: { bookingId } }
+      );
+      if (error) {
+        const context = (error as { context?: Response }).context;
+        const body = context ? await context.clone().json().catch(() => null) : null;
+        throw new Error(body?.error ?? getErrorMessage(error, 'Could not start payment'));
+      }
+      if (!data?.checkoutUrl) throw new Error('Could not start payment');
+      return data;
     },
   });
 }

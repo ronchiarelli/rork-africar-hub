@@ -41,6 +41,7 @@ export interface Booking {
   totalDays: number;
   totalPrice: number;
   status: 'pending' | 'approved' | 'active' | 'completed' | 'cancelled';
+  paymentStatus: 'unpaid' | 'paid';
   createdAt: string;
 }
 

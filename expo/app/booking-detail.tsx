@@ -8,9 +8,11 @@ import {
   Linking,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import {
   CalendarDays,
   MapPin,
@@ -25,9 +27,10 @@ import {
   Car,
   AlertTriangle,
   ChevronRight,
+  CreditCard,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useBookingDetail } from '@/lib/queries/bookings';
+import { useBookingDetail, useOwnerAcceptsInAppPayment, useInitiateBookingPayment } from '@/lib/queries/bookings';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { useBookingIssueReports } from '@/lib/queries/issueReports';
 import { getErrorMessage } from '@/lib/errors';
@@ -51,6 +54,8 @@ export default function BookingDetailScreen() {
   const router = useRouter();
   const { data: booking, isLoading } = useBookingDetail(id);
   const { data: issueReports = [] } = useBookingIssueReports(id);
+  const { data: ownerAcceptsInAppPayment = false } = useOwnerAcceptsInAppPayment(booking?.car.ownerId ?? undefined);
+  const initiatePayment = useInitiateBookingPayment();
   const getOrCreateConversation = useGetOrCreateConversation();
 
   const config = booking ? STATUS_CONFIG[booking.status] : null;
@@ -71,8 +76,26 @@ export default function BookingDetailScreen() {
     void Linking.openURL(`tel:${booking.car.ownerPhone}`);
   };
 
+  const handlePayNow = () => {
+    if (!booking) return;
+    initiatePayment.mutate(booking.id, {
+      onSuccess: async (data) => {
+        if (Platform.OS === 'web') {
+          window.open(data.checkoutUrl, '_blank');
+        } else {
+          await WebBrowser.openBrowserAsync(data.checkoutUrl);
+        }
+      },
+      onError: (err) => {
+        Alert.alert('Could not start payment', getErrorMessage(err, 'Something went wrong. Please try again.'));
+      },
+    });
+  };
+
   const canReview = booking?.status === 'completed';
   const canReportIssue = booking?.status === 'approved' || booking?.status === 'active' || booking?.status === 'completed';
+  const canPayNow = booking?.status === 'approved' && ownerAcceptsInAppPayment && booking?.paymentStatus !== 'paid';
+  const isPaid = booking?.paymentStatus === 'paid';
 
   if (isLoading) {
     return (
@@ -96,9 +119,17 @@ export default function BookingDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={[styles.statusBanner, { backgroundColor: config.bg }]}>
-          {config.icon}
-          <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
+        <View style={styles.statusRow}>
+          <View style={[styles.statusBanner, { backgroundColor: config.bg }]}>
+            {config.icon}
+            <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
+          </View>
+          {isPaid && (
+            <View style={[styles.statusBanner, { backgroundColor: Colors.success + '15' }]}>
+              <CreditCard size={16} color={Colors.success} />
+              <Text style={[styles.statusText, { color: Colors.success }]}>Paid</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.carCard}>
@@ -163,6 +194,33 @@ export default function BookingDetailScreen() {
             </View>
           </View>
         </View>
+
+        {canPayNow && (
+          <>
+            <Text style={styles.sectionTitle}>Payment</Text>
+            <Pressable
+              style={styles.payNowCard}
+              onPress={handlePayNow}
+              disabled={initiatePayment.isPending}
+              testID="pay-now-btn"
+            >
+              <View style={styles.payNowLeft}>
+                <View style={styles.payNowIconWrap}>
+                  <CreditCard size={18} color={Colors.success} />
+                </View>
+                <View>
+                  <Text style={styles.payNowPrompt}>Pay for this booking</Text>
+                  <Text style={styles.payNowAmount}>GH₵{booking.totalPrice.toLocaleString()}</Text>
+                </View>
+              </View>
+              {initiatePayment.isPending ? (
+                <ActivityIndicator color={Colors.success} />
+              ) : (
+                <ChevronRight size={18} color={Colors.gray[400]} />
+              )}
+            </Pressable>
+          </>
+        )}
 
         <Text style={styles.sectionTitle}>Contact Owner</Text>
         <View style={styles.ownerCard}>
@@ -279,6 +337,11 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: '700' as const,
   },
+  statusRow: {
+    flexDirection: 'row' as const,
+    gap: 10,
+    marginBottom: 20,
+  },
   statusBanner: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -286,7 +349,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 14,
-    marginBottom: 20,
     alignSelf: 'flex-start' as const,
   },
   statusText: {
@@ -490,6 +552,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600' as const,
     color: Colors.gray[800],
+  },
+  payNowCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 24,
+  },
+  payNowLeft: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+  },
+  payNowIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.success + '15',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  payNowPrompt: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.gray[800],
+  },
+  payNowAmount: {
+    fontSize: 16,
+    fontWeight: '800' as const,
+    color: Colors.gray[900],
+    marginTop: 2,
   },
   issueCard: {
     backgroundColor: Colors.white,

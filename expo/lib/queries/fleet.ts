@@ -65,6 +65,7 @@ export function usePendingOwnerBookings() {
           totalDays: row.total_days,
           totalPrice: row.total_price,
           status: row.status,
+          paymentStatus: row.payment_status,
           createdAt: row.created_at,
           customerId: row.customer_id,
           customerName: row.customer?.name ?? 'Customer',

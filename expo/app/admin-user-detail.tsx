@@ -3,12 +3,13 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
-import { Phone, Mail, Calendar, ShieldCheck, ShieldX, UserX, UserCheck, X, MessageCircle } from 'lucide-react-native';
+import { Phone, Mail, Calendar, ShieldCheck, ShieldX, UserX, UserCheck, X, MessageCircle, CreditCard } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import {
   useAdminUserDetail,
   useSetUserSuspended,
   useRevokeRole,
+  useSetInAppPaymentEnabled,
 } from '@/lib/queries/admin';
 import { useUserKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
 import { getErrorMessage } from '@/lib/errors';
@@ -35,6 +36,7 @@ export default function AdminUserDetailScreen() {
   const reviewDoc = useReviewKycDocument();
   const setSuspended = useSetUserSuspended();
   const revokeRole = useRevokeRole();
+  const setInAppPaymentEnabled = useSetInAppPaymentEnabled();
   const [preview, setPreview] = useState<{ uri: string; label: string } | null>(null);
 
   const handleReview = (docId: string, decision: 'verified' | 'rejected') => {
@@ -69,6 +71,27 @@ export default function AdminUserDetailScreen() {
         },
       },
     ]);
+  };
+
+  const handleToggleInAppPayment = () => {
+    if (!user) return;
+    const action = user.acceptsInAppPayment ? 'disable' : 'enable';
+    Alert.alert(
+      user.acceptsInAppPayment ? 'Disable In-App Payment' : 'Enable In-App Payment',
+      `Are you sure you want to ${action} in-app Hubtel payment for this account's bookings?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: user.acceptsInAppPayment ? 'Disable' : 'Enable',
+          onPress: () => {
+            setInAppPaymentEnabled.mutate(
+              { userId: user.id, enabled: !user.acceptsInAppPayment },
+              { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update this setting.')) }
+            );
+          },
+        },
+      ]
+    );
   };
 
   const handleToggleSuspend = () => {
@@ -151,6 +174,21 @@ export default function AdminUserDetailScreen() {
           </Pressable>
         )}
       </View>
+
+      {(user.role === 'fleet_owner' || user.role === 'dealership') && (
+        <View style={styles.actionsRow}>
+          <Pressable
+            style={[styles.actionBtn, user.acceptsInAppPayment ? styles.revokeRoleBtn : styles.reactivateBtn]}
+            onPress={handleToggleInAppPayment}
+            testID="user-detail-toggle-inapp-payment"
+          >
+            <CreditCard size={16} color={Colors.white} />
+            <Text style={styles.actionBtnText}>
+              {user.acceptsInAppPayment ? 'Disable In-App Payment' : 'Enable In-App Payment'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       <Text style={styles.sectionTitle}>KYC Documents</Text>
       {docs.map((doc) => {
