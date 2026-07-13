@@ -101,6 +101,19 @@ export function useCarDetails(id: string | undefined) {
   });
 }
 
+export function useSaleCarDetails(id: string | undefined) {
+  return useQuery({
+    queryKey: ['sale_cars', id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('sale_cars').select('*').eq('id', id as string).single();
+      if (error) throw error;
+      return mapSaleCar(data as SaleCarRow);
+    },
+    enabled: !!id,
+    staleTime: 60_000,
+  });
+}
+
 export function useBrands() {
   return useQuery({
     queryKey: ['brands'],

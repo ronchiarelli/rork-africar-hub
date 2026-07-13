@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone } from 'lucide-react-native';
+import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone, Pencil } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useMyDealerListings, useMyLeads } from '@/lib/queries/dealer';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
@@ -93,7 +93,12 @@ export default function DealerDashboardScreen() {
           listings.map((listing) => {
             const statusConfig = LISTING_STATUS[listing.status] ?? LISTING_STATUS.active;
             return (
-              <View key={listing.id} style={styles.listingCard}>
+              <Pressable
+                key={listing.id}
+                style={styles.listingCard}
+                onPress={() => router.push({ pathname: '/add-sale-car', params: { id: listing.car.id } })}
+                testID={`edit-listing-${listing.car.id}`}
+              >
                 <Image source={{ uri: listing.car.image }} style={styles.listingImage} contentFit="cover" />
                 <View style={styles.listingInfo}>
                   <View style={styles.listingHeader}>
@@ -123,7 +128,10 @@ export default function DealerDashboardScreen() {
                     )}
                   </View>
                 </View>
-              </View>
+                <View style={styles.editIconWrap}>
+                  <Pencil size={14} color={Colors.gray[400]} />
+                </View>
+              </Pressable>
             );
           })
         )}
@@ -244,6 +252,7 @@ const styles = StyleSheet.create({
   },
   listingCard: {
     flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     backgroundColor: Colors.white,
     borderRadius: 16,
     marginBottom: 12,
@@ -253,6 +262,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
+  },
+  editIconWrap: {
+    paddingHorizontal: 14,
   },
   listingImage: {
     width: 110,

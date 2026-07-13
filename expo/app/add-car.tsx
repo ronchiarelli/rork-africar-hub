@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,15 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import { useCreateCar } from '@/lib/queries/fleet';
+import { useCreateCar, useUpdateCar } from '@/lib/queries/fleet';
+import { useCarDetails } from '@/lib/queries/cars';
 import { getErrorMessage } from '@/lib/errors';
 import MultiImagePicker from '@/components/MultiImagePicker';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
@@ -23,6 +25,10 @@ import type { Car } from '@/types/car';
 const CATEGORIES = ['SUV', 'Sedan', 'Hatchback', 'Van'];
 const TRANSMISSIONS: Car['transmission'][] = ['Automatic', 'Manual'];
 const FUEL_TYPES: Car['fuelType'][] = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
+const FEATURE_OPTIONS = [
+  'GPS Navigation', 'Bluetooth', 'Leather Seats', 'Sunroof', 'Backup Camera',
+  '4WD', 'Heated Seats', 'Premium Sound', 'Wireless Charging', 'Lane Assist',
+];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -45,10 +51,26 @@ function ChipRow<T extends string>({ options, value, onChange }: { options: T[];
   );
 }
 
+function MultiChipRow({ options, selected, onToggle }: { options: string[]; selected: string[]; onToggle: (v: string) => void }) {
+  return (
+    <View style={styles.chipRow}>
+      {options.map((opt) => (
+        <Pressable key={opt} style={[styles.chip, selected.includes(opt) && styles.chipActive]} onPress={() => onToggle(opt)}>
+          <Text style={[styles.chipText, selected.includes(opt) && styles.chipTextActive]}>{opt}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export default function AddCarScreen() {
   const router = useRouter();
   const { currentUser } = useAuth();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEditing = !!id;
+  const { data: existingCar, isLoading: isLoadingCar } = useCarDetails(id);
   const createCar = useCreateCar();
+  const updateCar = useUpdateCar();
 
   const [images, setImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -64,7 +86,32 @@ export default function AddCarScreen() {
   const [transmission, setTransmission] = useState<Car['transmission']>('Automatic');
   const [fuelType, setFuelType] = useState<Car['fuelType']>('Petrol');
   const [horsepower, setHorsepower] = useState('');
+  const [hasAC, setHasAC] = useState(true);
+  const [features, setFeatures] = useState<string[]>([]);
   const [description, setDescription] = useState('');
+
+  useEffect(() => {
+    if (!existingCar) return;
+    setImages(existingCar.images);
+    setBrand(existingCar.brand);
+    setModel(existingCar.model);
+    setYear(String(existingCar.year));
+    setCategory(existingCar.category);
+    setPricePerDay(String(existingCar.pricePerDay));
+    setPricePerWeek(String(existingCar.pricePerWeek));
+    setLocation(existingCar.location);
+    setSeats(String(existingCar.seats));
+    setTransmission(existingCar.transmission);
+    setFuelType(existingCar.fuelType);
+    setHorsepower(String(existingCar.horsepower));
+    setHasAC(existingCar.hasAC);
+    setFeatures(existingCar.features);
+    setDescription(existingCar.description);
+  }, [existingCar]);
+
+  const toggleFeature = useCallback((feature: string) => {
+    setFeatures((prev) => (prev.includes(feature) ? prev.filter((f) => f !== feature) : [...prev, feature]));
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!currentUser) return;
@@ -81,15 +128,23 @@ export default function AddCarScreen() {
       return;
     }
 
+    // Images already hosted (edit mode, pre-filled from the existing
+    // listing) are kept as-is — only newly-picked local URIs get uploaded,
+    // so re-saving an unchanged photo doesn't create a duplicate copy.
+    const imagesToUpload = images.filter((uri) => !uri.startsWith('http://') && !uri.startsWith('https://'));
     setIsUploading(true);
-    setUploadProgress({ done: 0, total: images.length });
+    setUploadProgress({ done: 0, total: imagesToUpload.length });
     try {
-      const uploadedUrls: string[] = [];
+      const finalUrls: string[] = [];
       for (const uri of images) {
+        if (uri.startsWith('http://') || uri.startsWith('https://')) {
+          finalUrls.push(uri);
+          continue;
+        }
         const response = await fetch(uri);
         const blob = await response.blob();
         const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
-        const path = `${currentUser.id}/${Date.now()}-${uploadedUrls.length}.${fileExt}`;
+        const path = `${currentUser.id}/${Date.now()}-${finalUrls.length}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage.from('car-images').upload(path, blob, {
           contentType: blob.type || 'image/jpeg',
@@ -97,53 +152,64 @@ export default function AddCarScreen() {
         if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = supabase.storage.from('car-images').getPublicUrl(path);
-        uploadedUrls.push(publicUrlData.publicUrl);
-        setUploadProgress({ done: uploadedUrls.length, total: images.length });
+        finalUrls.push(publicUrlData.publicUrl);
+        setUploadProgress((prev) => ({ done: prev.done + 1, total: prev.total }));
       }
 
-      createCar.mutate(
-        {
-          brand,
-          model,
-          year: Number(year) || new Date().getFullYear(),
-          category,
-          images: uploadedUrls,
-          pricePerDay: Number(pricePerDay) || 0,
-          pricePerWeek: Number(pricePerWeek) || (Number(pricePerDay) || 0) * 6,
-          location,
-          seats: Number(seats) || 5,
-          transmission,
-          fuelType,
-          horsepower: Number(horsepower) || 0,
-          hasAC: true,
-          description,
-          features: [],
-          ownerName: currentUser.name,
-          ownerPhone: currentUser.phone,
-        },
-        {
-          onSuccess: () => {
-            Alert.alert('Car Listed', 'Your car is now live and bookable.', [
-              { text: 'OK', onPress: () => router.back() },
-            ]);
-          },
-          onError: (err) => {
-            Alert.alert('Could Not List Car', getErrorMessage(err, 'Please try again.'));
-          },
-        }
-      );
+      const input = {
+        brand,
+        model,
+        year: Number(year) || new Date().getFullYear(),
+        category,
+        images: finalUrls,
+        pricePerDay: Number(pricePerDay) || 0,
+        pricePerWeek: Number(pricePerWeek) || (Number(pricePerDay) || 0) * 6,
+        location,
+        seats: Number(seats) || 5,
+        transmission,
+        fuelType,
+        horsepower: Number(horsepower) || 0,
+        hasAC,
+        description,
+        features,
+        ownerName: currentUser.name,
+        ownerPhone: currentUser.phone,
+      };
+
+      const mutation = isEditing
+        ? new Promise<void>((resolve, reject) => {
+            updateCar.mutate({ carId: id as string, input }, { onSuccess: () => resolve(), onError: reject });
+          })
+        : new Promise<void>((resolve, reject) => {
+            createCar.mutate(input, { onSuccess: () => resolve(), onError: reject });
+          });
+
+      await mutation;
+      Alert.alert(isEditing ? 'Listing Updated' : 'Car Listed', isEditing ? 'Your changes are live.' : 'Your car is now live and bookable.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
     } catch (err) {
-      Alert.alert('Upload Failed', getErrorMessage(err, 'Could not upload the photo. Please try again.'));
+      Alert.alert(isEditing ? 'Could Not Save Changes' : 'Could Not List Car', getErrorMessage(err, 'Please try again.'));
     } finally {
       setIsUploading(false);
       setUploadProgress({ done: 0, total: 0 });
     }
-  }, [currentUser, brand, model, year, category, images, pricePerDay, pricePerWeek, location, seats, transmission, fuelType, horsepower, description, createCar, router]);
+  }, [currentUser, brand, model, year, category, images, pricePerDay, pricePerWeek, location, seats, transmission, fuelType, horsepower, hasAC, features, description, isEditing, id, createCar, updateCar, router]);
 
-  const isBusy = isUploading || createCar.isPending;
+  const isBusy = isUploading || createCar.isPending || updateCar.isPending;
+
+  if (isEditing && isLoadingCar) {
+    return (
+      <View style={styles.loadingWrap}>
+        <Stack.Screen options={{ title: 'Edit Car' }} />
+        <ActivityIndicator color={Colors.orange.primary} />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Stack.Screen options={{ title: isEditing ? 'Edit Car' : 'List a Car' }} />
       <Field label="Photos">
         <MultiImagePicker images={images} onChange={setImages} />
       </Field>
@@ -181,6 +247,15 @@ export default function AddCarScreen() {
       <Field label="Horsepower">
         <TextInput style={styles.input} value={horsepower} onChangeText={setHorsepower} keyboardType="number-pad" placeholderTextColor={Colors.gray[400]} />
       </Field>
+      <Field label="Air Conditioning">
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel}>{hasAC ? 'Available' : 'Not available'}</Text>
+          <Switch value={hasAC} onValueChange={setHasAC} trackColor={{ false: Colors.gray[300], true: Colors.orange.primary + '80' }} thumbColor={hasAC ? Colors.orange.primary : '#f4f3f4'} />
+        </View>
+      </Field>
+      <Field label="Features">
+        <MultiChipRow options={FEATURE_OPTIONS} selected={features} onToggle={toggleFeature} />
+      </Field>
       <Field label="Description">
         <TextInput
           style={[styles.input, styles.textArea]}
@@ -205,7 +280,7 @@ export default function AddCarScreen() {
       )}
 
       <Pressable style={[styles.submitBtn, isBusy && styles.submitBtnDisabled]} onPress={() => void handleSubmit()} disabled={isBusy}>
-        {isBusy ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.submitBtnText}>List This Car</Text>}
+        {isBusy ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.submitBtnText}>{isEditing ? 'Save Changes' : 'List This Car'}</Text>}
       </Pressable>
     </ScrollView>
   );
@@ -213,6 +288,7 @@ export default function AddCarScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.gray[50] },
+  loadingWrap: { flex: 1, backgroundColor: Colors.gray[50], alignItems: 'center' as const, justifyContent: 'center' as const },
   content: { padding: 20, paddingBottom: 60 },
   field: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '700' as const, color: Colors.gray[700], marginBottom: 8 },
@@ -230,6 +306,16 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: Colors.orange.primary },
   chipText: { fontSize: 13, fontWeight: '500' as const, color: Colors.gray[700] },
   chipTextActive: { color: Colors.white },
+  switchRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  switchLabel: { fontSize: 14, color: Colors.gray[700], fontWeight: '500' as const },
   progressWrap: { marginTop: 16, gap: 8 },
   progressText: { fontSize: 13, color: Colors.gray[600], textAlign: 'center' as const, fontWeight: '600' as const },
   submitBtn: {

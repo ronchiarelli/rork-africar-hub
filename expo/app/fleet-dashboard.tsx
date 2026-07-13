@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, MessageCircle, Phone } from 'lucide-react-native';
+import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, MessageCircle, Phone, Pencil } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useMyFleetVehicles, usePendingOwnerBookings, type PendingBooking } from '@/lib/queries/fleet';
 import { useReviewBooking } from '@/lib/queries/bookings';
@@ -156,7 +156,12 @@ export default function FleetDashboardScreen() {
           fleetVehicles.map((vehicle) => {
             const statusConfig = VEHICLE_STATUS_CONFIG[vehicle.status] ?? VEHICLE_STATUS_CONFIG.active;
             return (
-              <View key={vehicle.id} style={styles.vehicleCard}>
+              <Pressable
+                key={vehicle.id}
+                style={styles.vehicleCard}
+                onPress={() => router.push({ pathname: '/add-car', params: { id: vehicle.carId } })}
+                testID={`edit-vehicle-${vehicle.carId}`}
+              >
                 <Image source={{ uri: vehicle.car.image }} style={styles.vehicleImage} contentFit="cover" />
                 <View style={styles.vehicleInfo}>
                   <View style={styles.vehicleHeader}>
@@ -180,7 +185,10 @@ export default function FleetDashboardScreen() {
                     </View>
                   ) : null}
                 </View>
-              </View>
+                <View style={styles.editIconWrap}>
+                  <Pencil size={14} color={Colors.gray[400]} />
+                </View>
+              </Pressable>
             );
           })
         )}
@@ -380,6 +388,7 @@ const styles = StyleSheet.create({
   },
   vehicleCard: {
     flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     backgroundColor: Colors.white,
     borderRadius: 16,
     marginBottom: 12,
@@ -389,6 +398,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
+  },
+  editIconWrap: {
+    paddingHorizontal: 14,
   },
   vehicleImage: {
     width: 110,

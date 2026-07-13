@@ -184,3 +184,38 @@ export function useCreateSaleCar() {
     },
   });
 }
+
+export function useUpdateSaleCar() {
+  const { currentUser } = useAuth();
+  const dealerId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ saleCarId, input }: { saleCarId: string; input: NewSaleCarInput }) => {
+      const { error } = await supabase
+        .from('sale_cars')
+        .update({
+          brand: input.brand,
+          model: input.model,
+          year: input.year,
+          category: input.category,
+          image: input.images[0],
+          images: input.images,
+          sale_price: input.salePrice,
+          mileage: input.mileage,
+          location: input.location,
+          fuel_type: input.fuelType,
+          transmission: input.transmission,
+          condition: input.condition,
+          description: input.description,
+          features: input.features,
+        })
+        .eq('id', saleCarId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, { saleCarId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings', dealerId] });
+      void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['sale_cars', saleCarId] });
+    },
+  });
+}

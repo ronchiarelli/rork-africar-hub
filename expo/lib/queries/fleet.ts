@@ -139,3 +139,40 @@ export function useCreateCar() {
     },
   });
 }
+
+export function useUpdateCar() {
+  const { currentUser } = useAuth();
+  const ownerId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ carId, input }: { carId: string; input: NewCarInput }) => {
+      const { error } = await supabase
+        .from('cars')
+        .update({
+          brand: input.brand,
+          model: input.model,
+          year: input.year,
+          category: input.category,
+          image: input.images[0],
+          images: input.images,
+          price_per_day: input.pricePerDay,
+          price_per_week: input.pricePerWeek,
+          location: input.location,
+          seats: input.seats,
+          transmission: input.transmission,
+          fuel_type: input.fuelType,
+          horsepower: input.horsepower,
+          has_ac: input.hasAC,
+          description: input.description,
+          features: input.features,
+        })
+        .eq('id', carId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, { carId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['my-fleet-vehicles', ownerId] });
+      void queryClient.invalidateQueries({ queryKey: ['cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['cars', carId] });
+    },
+  });
+}
