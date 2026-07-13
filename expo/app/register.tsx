@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -35,12 +36,14 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>('customer');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRegister = useCallback(async () => {
     if (!name || !email || !phone || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+    setIsSubmitting(true);
     try {
       const { needsEmailConfirmation } = await register(
         name,
@@ -70,6 +73,8 @@ export default function RegisterScreen() {
       router.replace('/kyc-verification');
     } catch (e) {
       Alert.alert('Registration Failed', getErrorMessage(e, 'Please try again.'));
+    } finally {
+      setIsSubmitting(false);
     }
   }, [name, email, phone, password, accountType, register, login, router]);
 
@@ -170,11 +175,12 @@ export default function RegisterScreen() {
             </View>
 
             <Pressable
-              style={({ pressed }) => [styles.registerBtn, pressed && styles.registerBtnPressed]}
+              style={({ pressed }) => [styles.registerBtn, (pressed || isSubmitting) && styles.registerBtnPressed]}
               onPress={() => void handleRegister()}
+              disabled={isSubmitting}
               testID="register-submit"
             >
-              <Text style={styles.registerBtnText}>Create Account</Text>
+              {isSubmitting ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.registerBtnText}>Create Account</Text>}
             </Pressable>
 
             <Text style={styles.legalText}>

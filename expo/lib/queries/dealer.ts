@@ -30,24 +30,6 @@ function mapSaleCar(row: SaleCarRow): SaleCar {
   };
 }
 
-export function useMySaleCars() {
-  const { currentUser } = useAuth();
-  const dealerId = currentUser?.id;
-  return useQuery({
-    queryKey: ['my-sale-cars', dealerId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sale_cars')
-        .select('*')
-        .eq('dealer_id', dealerId as string)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data as SaleCarRow[]).map(mapSaleCar);
-    },
-    enabled: !!dealerId,
-  });
-}
-
 type DealerListingWithCar = DealerListingRow & { sale_car: SaleCarRow };
 
 export function useMyDealerListings() {

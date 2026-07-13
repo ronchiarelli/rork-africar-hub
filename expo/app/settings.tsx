@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,19 +11,17 @@ import {
 import {
   Bell,
   Shield,
-  Moon,
   Globe,
   ChevronRight,
-  Info,
   FileText,
   Trash2,
-  Smartphone,
   LogOut,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { useHasPushToken, useEnablePushNotifications, useDisablePushNotifications } from '@/lib/queries/pushTokens';
+import { useSendSupportEnquiry } from '@/lib/queries/chat';
 import { getErrorMessage } from '@/lib/errors';
 
 interface SettingItem {
@@ -31,7 +29,7 @@ interface SettingItem {
   icon: React.ReactNode;
   label: string;
   value?: string;
-  type: 'toggle' | 'navigate' | 'action' | 'destructive';
+  type: 'toggle' | 'navigate' | 'static' | 'destructive';
   isOn?: boolean;
   onToggle?: (value: boolean) => void;
   onPress?: () => void;
@@ -40,13 +38,10 @@ interface SettingItem {
 export default function SettingsScreen() {
   const router = useRouter();
   const { logout, currentUser } = useAuth();
-  const [darkMode, setDarkMode] = useState(false);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [biometricAuth, setBiometricAuth] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(false);
   const { data: hasPushToken = false } = useHasPushToken(currentUser?.id);
   const enablePush = useEnablePushNotifications(currentUser?.id);
   const disablePush = useDisablePushNotifications(currentUser?.id);
+  const sendSupportEnquiry = useSendSupportEnquiry();
 
   const handleTogglePush = useCallback((value: boolean) => {
     if (value) {
@@ -71,19 +66,25 @@ export default function SettingsScreen() {
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
       'Delete Account',
-      'This action cannot be undone. All your data will be permanently removed.',
+      'This sends a deletion request to our support team for review — it cannot be undone once processed.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Request Deletion',
           style: 'destructive',
           onPress: () => {
-            Alert.alert('Request Submitted', 'Your account deletion request has been submitted for review.');
+            sendSupportEnquiry.mutate(
+              `Account deletion requested by ${currentUser?.name ?? 'user'} (${currentUser?.email ?? 'no email'}). Please review and process.`,
+              {
+                onSuccess: () => Alert.alert('Request Submitted', 'Our support team will follow up with you to confirm.'),
+                onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not submit your request. Please try again.')),
+              }
+            );
           },
         },
       ]
     );
-  }, []);
+  }, [sendSupportEnquiry, currentUser]);
 
   const handleLogout = useCallback(() => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -104,40 +105,17 @@ export default function SettingsScreen() {
           isOn: hasPushToken,
           onToggle: handleTogglePush,
         },
-        {
-          id: 'email',
-          icon: <FileText size={20} color={Colors.info} />,
-          label: 'Email Notifications',
-          type: 'toggle',
-          isOn: emailNotifications,
-          onToggle: setEmailNotifications,
-        },
       ],
     },
     {
       title: 'Security',
       items: [
         {
-          id: 'biometric',
-          icon: <Smartphone size={20} color={Colors.purple.medium} />,
-          label: 'Biometric Authentication',
-          type: 'toggle',
-          isOn: biometricAuth,
-          onToggle: setBiometricAuth,
-        },
-        {
-          id: '2fa',
-          icon: <Shield size={20} color={Colors.success} />,
-          label: 'Two-Factor Authentication',
-          type: 'toggle',
-          isOn: twoFactor,
-          onToggle: setTwoFactor,
-        },
-        {
           id: 'change_password',
           icon: <Shield size={20} color={Colors.warning} />,
           label: 'Change Password',
           type: 'navigate',
+          onPress: () => router.push('/change-password'),
         },
       ],
     },
@@ -145,32 +123,17 @@ export default function SettingsScreen() {
       title: 'Appearance',
       items: [
         {
-          id: 'dark_mode',
-          icon: <Moon size={20} color={Colors.purple.medium} />,
-          label: 'Dark Mode',
-          type: 'toggle',
-          isOn: darkMode,
-          onToggle: setDarkMode,
-        },
-        {
           id: 'language',
           icon: <Globe size={20} color={Colors.info} />,
           label: 'Language',
           value: 'English',
-          type: 'navigate',
+          type: 'static',
         },
       ],
     },
     {
       title: 'About',
       items: [
-        {
-          id: 'version',
-          icon: <Info size={20} color={Colors.gray[600]} />,
-          label: 'App Version',
-          value: '1.0.0',
-          type: 'navigate',
-        },
         {
           id: 'terms',
           icon: <FileText size={20} color={Colors.gray[600]} />,
@@ -240,13 +203,18 @@ export default function SettingsScreen() {
                         <Text style={styles.destructiveLabel}>{item.label}</Text>
                       </View>
                     </Pressable>
+                  ) : item.type === 'static' ? (
+                    <View style={styles.row}>
+                      <View style={styles.rowLeft}>
+                        <View style={styles.iconWrap}>{item.icon}</View>
+                        <Text style={styles.label}>{item.label}</Text>
+                      </View>
+                      {item.value && <Text style={styles.value}>{item.value}</Text>}
+                    </View>
                   ) : (
                     <Pressable
                       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-                      onPress={
-                        item.onPress ??
-                        (() => Alert.alert(item.label, 'This feature is coming soon!'))
-                      }
+                      onPress={item.onPress}
                     >
                       <View style={styles.rowLeft}>
                         <View style={styles.iconWrap}>{item.icon}</View>

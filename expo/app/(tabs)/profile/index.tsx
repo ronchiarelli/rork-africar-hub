@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Users,
   Wallet,
+  Pencil,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
@@ -146,6 +147,10 @@ export default function ProfileScreen() {
           <View style={styles.roleBadge}>
             <Text style={styles.roleText}>{ROLE_LABELS[currentRole]}</Text>
           </View>
+          <Pressable style={styles.editProfileBtn} onPress={() => router.push('/edit-profile')} testID="edit-profile-btn">
+            <Pencil size={13} color={Colors.white} />
+            <Text style={styles.editProfileText}>Edit Profile</Text>
+          </Pressable>
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
@@ -256,6 +261,21 @@ const styles = StyleSheet.create({
     color: Colors.orange.primary,
     fontSize: 12,
     fontWeight: '700' as const,
+  },
+  editProfileBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  editProfileText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '600' as const,
   },
   statsRow: {
     flexDirection: 'row' as const,

@@ -10,12 +10,14 @@ import {
   TextInput,
   Platform,
   Linking,
+  Modal,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles } from 'lucide-react-native';
+import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { LOCATIONS } from '@/constants/locations';
 import { useCars, useBrands, useSaleCars } from '@/lib/queries/cars';
 import { useActiveBanner } from '@/lib/queries/banners';
 import type { BannerCtaTypeDb } from '@/types/database';
@@ -81,6 +83,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { currentUser } = useAuth();
   const [searchText, setSearchText] = useState('');
+  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const { data: brands = [] } = useBrands();
   const { data: cars = [] } = useCars({ onlyAvailable: true });
   const { data: saleCars = [] } = useSaleCars();
@@ -91,6 +94,11 @@ export default function HomeScreen() {
 
   const handleBrandPress = useCallback((brand: Brand) => {
     router.push({ pathname: '/search', params: { brand: brand.name } });
+  }, [router]);
+
+  const handleLocationSelect = useCallback((loc: string) => {
+    setLocationPickerVisible(false);
+    router.push({ pathname: '/search', params: { location: loc } });
   }, [router]);
 
   const handleBannerPress = useCallback((ctaType: BannerCtaTypeDb, destination: string) => {
@@ -113,10 +121,11 @@ export default function HomeScreen() {
       >
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <View style={styles.headerTop}>
-            <View style={styles.locationWrap}>
+            <Pressable style={styles.locationWrap} onPress={() => setLocationPickerVisible(true)} testID="location-picker-btn">
               <MapPin size={16} color={Colors.orange.primary} />
               <Text style={styles.locationLabel}>Location</Text>
-            </View>
+              <ChevronRight size={14} color={Colors.gray[400]} style={{ transform: [{ rotate: '90deg' }] }} />
+            </Pressable>
             <View style={styles.headerActions}>
               <Pressable onPress={() => router.push('/favorites')} style={styles.iconBtn} testID="fav-header-btn">
                 <Heart size={20} color={Colors.white} />
@@ -241,6 +250,37 @@ export default function HomeScreen() {
       >
         <Search size={22} color={Colors.white} />
       </Pressable>
+
+      <Modal
+        visible={locationPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLocationPickerVisible(false)}
+      >
+        <Pressable style={styles.locationModalOverlay} onPress={() => setLocationPickerVisible(false)}>
+          <Pressable style={styles.locationModalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.locationModalHeader}>
+              <Text style={styles.locationModalTitle}>Choose a Location</Text>
+              <Pressable onPress={() => setLocationPickerVisible(false)} testID="close-location-picker">
+                <X size={20} color={Colors.gray[500]} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {LOCATIONS.map((loc) => (
+                <Pressable
+                  key={loc}
+                  style={styles.locationOption}
+                  onPress={() => handleLocationSelect(loc)}
+                  testID={`location-option-${loc}`}
+                >
+                  <MapPin size={16} color={Colors.orange.primary} />
+                  <Text style={styles.locationOptionText}>{loc}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -528,5 +568,41 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 10,
+  },
+  locationModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end' as const,
+  },
+  locationModalCard: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '70%' as const,
+  },
+  locationModalHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 12,
+  },
+  locationModalTitle: {
+    fontSize: 18,
+    fontWeight: '800' as const,
+    color: Colors.gray[900],
+  },
+  locationOption: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray[100],
+  },
+  locationOptionText: {
+    fontSize: 15,
+    fontWeight: '500' as const,
+    color: Colors.gray[800],
   },
 });

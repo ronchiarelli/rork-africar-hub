@@ -10,7 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack } from 'expo-router';
 import { Send } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useConversations, useMessages, useSendMessage, useMarkConversationRead, type ChatMessage } from '@/lib/queries/chat';
@@ -32,7 +32,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const [draft, setDraft] = useState('');
   const listRef = useRef<FlatList>(null);
 

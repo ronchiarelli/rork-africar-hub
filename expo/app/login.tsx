@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,18 +24,22 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = useCallback(async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+    setIsSubmitting(true);
     try {
       await login(email, password);
       router.dismissAll();
       router.replace('/(tabs)/(home)');
     } catch (e) {
       Alert.alert('Sign In Failed', getErrorMessage(e, 'Please check your credentials and try again.'));
+    } finally {
+      setIsSubmitting(false);
     }
   }, [email, password, login, router]);
 
@@ -94,11 +99,12 @@ export default function LoginScreen() {
             </Pressable>
 
             <Pressable
-              style={({ pressed }) => [styles.loginBtn, pressed && styles.loginBtnPressed]}
+              style={({ pressed }) => [styles.loginBtn, (pressed || isSubmitting) && styles.loginBtnPressed]}
               onPress={() => void handleLogin()}
+              disabled={isSubmitting}
               testID="login-submit"
             >
-              <Text style={styles.loginBtnText}>Sign In</Text>
+              {isSubmitting ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.loginBtnText}>Sign In</Text>}
             </Pressable>
 
             <View style={styles.signupRow}>

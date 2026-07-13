@@ -131,6 +131,8 @@ function RootLayoutNav() {
           <Stack.Screen name="add-banner" options={{ title: "Home Banner", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="admin-user-detail" options={{ title: "User Details", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="subscription" options={{ title: "Subscription", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="edit-profile" options={{ title: "Edit Profile", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="change-password" options={{ title: "Change Password", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
         </Stack>
       </View>
       {showNavBar && <BottomNavBar />}

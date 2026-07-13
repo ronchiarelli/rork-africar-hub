@@ -159,7 +159,7 @@ export default function KYCVerificationScreen() {
         </View>
         {passport && <DocCard doc={passport} onUpload={handleUpload} onPreview={handlePreview} />}
 
-        <Text style={styles.sectionTitle}>Driver's License</Text>
+        <Text style={styles.sectionTitle}>Driver&apos;s License</Text>
         <Text style={styles.sectionSubtitle}>Both sides are required</Text>
         {licenseFront && <DocCard doc={licenseFront} onUpload={handleUpload} onPreview={handlePreview} />}
         {licenseBack && <DocCard doc={licenseBack} onUpload={handleUpload} onPreview={handlePreview} />}

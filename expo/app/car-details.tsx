@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Share,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,6 +35,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const PRODUCTION_WEB_URL = 'https://gocar-hub.vercel.app';
 
 export default function CarDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -65,6 +67,16 @@ export default function CarDetailsScreen() {
   const handleCall = useCallback(() => {
     if (!car) return;
     void Linking.openURL(`tel:${car.ownerPhone}`);
+  }, [car]);
+
+  const handleShare = useCallback(() => {
+    if (!car) return;
+    void Share.share({
+      message: `Check out this ${car.brand} ${car.model} on GoCar Hub — GH₵${car.pricePerDay}/day. ${PRODUCTION_WEB_URL}/car-details?id=${car.id}`,
+      url: `${PRODUCTION_WEB_URL}/car-details?id=${car.id}`,
+    }).catch(() => {
+      Alert.alert('Could Not Share', 'Please try again.');
+    });
   }, [car]);
 
   if (isLoading) {
@@ -118,7 +130,7 @@ export default function CarDetailsScreen() {
                 <Pressable style={styles.backBtn} onPress={() => toggleFavorite(car.id)} testID="fav-detail-btn">
                   <Heart size={20} color={favorited ? Colors.orange.primary : Colors.white} fill={favorited ? Colors.orange.primary : 'transparent'} />
                 </Pressable>
-                <Pressable style={styles.backBtn}>
+                <Pressable style={styles.backBtn} onPress={handleShare} testID="share-btn">
                   <Share2 size={20} color={Colors.white} />
                 </Pressable>
               </View>

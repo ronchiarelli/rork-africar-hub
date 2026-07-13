@@ -29,7 +29,7 @@ const PRICE_RANGES = [
 
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ brand?: string }>();
+  const params = useLocalSearchParams<{ brand?: string; location?: string }>();
   const [query, setQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -46,6 +46,13 @@ export default function SearchScreen() {
       setShowFilters(true);
     }
   }, [params.brand]);
+
+  useEffect(() => {
+    if (params.location) {
+      setSelectedLocation(params.location);
+      setShowFilters(true);
+    }
+  }, [params.location]);
 
   const filteredCars = useMemo(() => {
     return cars.filter((car) => {

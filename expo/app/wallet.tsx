@@ -147,19 +147,22 @@ export default function WalletScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Transaction History</Text>
-          <Pressable onPress={() => Alert.alert('Coming Soon', 'Full transaction history with filtering is coming soon!')}>
-            <Text style={styles.seeAll}>See All</Text>
-          </Pressable>
         </View>
 
-        <View style={styles.txCard}>
-          {transactions.map((tx, idx) => (
-            <View key={tx.id}>
-              <TransactionRow tx={tx} />
-              {idx < transactions.length - 1 && <View style={styles.txDivider} />}
-            </View>
-          ))}
-        </View>
+        {transactions.length === 0 ? (
+          <View style={styles.emptyTxWrap}>
+            <Text style={styles.emptyTxText}>No transactions yet</Text>
+          </View>
+        ) : (
+          <View style={styles.txCard}>
+            {transactions.map((tx, idx) => (
+              <View key={tx.id}>
+                <TransactionRow tx={tx} />
+                {idx < transactions.length - 1 && <View style={styles.txDivider} />}
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.infoCard}>
           <AlertCircle size={18} color={Colors.orange.primary} />
@@ -324,10 +327,14 @@ const styles = StyleSheet.create({
     fontWeight: '800' as const,
     color: Colors.gray[900],
   },
-  seeAll: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: Colors.orange.primary,
+  emptyTxWrap: {
+    alignItems: 'center' as const,
+    paddingVertical: 30,
+    marginBottom: 16,
+  },
+  emptyTxText: {
+    fontSize: 14,
+    color: Colors.gray[500],
   },
   txCard: {
     backgroundColor: Colors.white,

@@ -23,24 +23,6 @@ function mapFleetVehicle(row: FleetVehicleRow & { car: CarRow }): FleetVehicle {
   };
 }
 
-export function useMyCars() {
-  const { currentUser } = useAuth();
-  const ownerId = currentUser?.id;
-  return useQuery({
-    queryKey: ['my-cars', ownerId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cars')
-        .select('*')
-        .eq('owner_id', ownerId as string)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data as CarRow[]).map(mapCar);
-    },
-    enabled: !!ownerId,
-  });
-}
-
 export function useMyFleetVehicles() {
   const { currentUser } = useAuth();
   const ownerId = currentUser?.id;
