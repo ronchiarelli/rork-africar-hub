@@ -50,7 +50,17 @@ export default function LoginScreen() {
         style={styles.keyboardView}
       >
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Pressable
+            style={styles.backBtn}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace('/(tabs)/(home)');
+              }
+            }}
+            testID="login-back-btn"
+          >
             <ArrowLeft size={20} color={Colors.white} />
           </Pressable>
         </View>
@@ -113,6 +123,14 @@ export default function LoginScreen() {
                 <Text style={styles.signupLink}>Sign Up</Text>
               </Pressable>
             </View>
+
+            <Pressable
+              style={styles.guestBtn}
+              onPress={() => router.replace('/(tabs)/(home)')}
+              testID="login-continue-as-guest"
+            >
+              <Text style={styles.guestBtnText}>Continue browsing as guest</Text>
+            </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -223,5 +241,16 @@ const styles = StyleSheet.create({
     color: Colors.orange.primary,
     fontSize: 14,
     fontWeight: '700' as const,
+  },
+  guestBtn: {
+    alignItems: 'center' as const,
+    marginTop: 18,
+    paddingVertical: 10,
+  },
+  guestBtnText: {
+    color: Colors.gray[400],
+    fontSize: 14,
+    fontWeight: '600' as const,
+    textDecorationLine: 'underline' as const,
   },
 });
