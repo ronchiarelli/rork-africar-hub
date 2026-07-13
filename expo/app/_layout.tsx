@@ -16,7 +16,8 @@ void SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 const AUTH_GROUP = ['welcome', 'login', 'register'];
-const PUBLIC_STACK_ROUTES = ['car-details', 'terms', 'privacy', 'forgot-password', 'reset-password'];
+const FULLSCREEN_MODAL_ROUTES = ['selfie-camera', 'crop-image', 'image-gallery'];
+const PUBLIC_STACK_ROUTES = ['car-details', 'image-gallery', 'terms', 'privacy', 'forgot-password', 'reset-password'];
 const PUBLIC_TAB_SEGMENTS = ['(home)', 'search'];
 const ROLE_GUARDED: Record<string, UserRole[]> = {
   'fleet-dashboard': ['fleet_owner'],
@@ -94,7 +95,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 function RootLayoutNav() {
   const segments = useSegments();
-  const showNavBar = !AUTH_GROUP.includes(segments[0]);
+  const showNavBar = !AUTH_GROUP.includes(segments[0]) && !FULLSCREEN_MODAL_ROUTES.includes(segments[0]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -111,6 +112,7 @@ function RootLayoutNav() {
           <Stack.Screen name="kyc-verification" options={{ title: "KYC Verification", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="selfie-camera" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
           <Stack.Screen name="crop-image" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
+          <Stack.Screen name="image-gallery" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
           <Stack.Screen name="marketplace" options={{ title: "Marketplace", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />

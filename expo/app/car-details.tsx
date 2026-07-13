@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,9 @@ import {
   Share2,
   MessageCircle,
   Phone,
+  ChevronLeft,
+  ChevronRight,
+  Expand,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useCarDetails } from '@/lib/queries/cars';
@@ -44,6 +47,7 @@ export default function CarDetailsScreen() {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { currentUser } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const heroScrollRef = useRef<ScrollView>(null);
 
   const { data: car, isLoading } = useCarDetails(id);
   const getOrCreateConversation = useGetOrCreateConversation();
@@ -68,6 +72,17 @@ export default function CarDetailsScreen() {
     if (!car) return;
     void Linking.openURL(`tel:${car.ownerPhone}`);
   }, [car]);
+
+  const openGallery = useCallback((index: number) => {
+    if (!car) return;
+    router.push({ pathname: '/image-gallery', params: { carId: car.id, index: String(index) } });
+  }, [car, router]);
+
+  const goToHeroImage = useCallback((idx: number, total: number) => {
+    const clamped = Math.max(0, Math.min(idx, total - 1));
+    heroScrollRef.current?.scrollTo({ x: clamped * SCREEN_WIDTH, animated: true });
+    setCurrentImageIndex(clamped);
+  }, []);
 
   const handleShare = useCallback(() => {
     if (!car) return;
@@ -109,6 +124,7 @@ export default function CarDetailsScreen() {
         <View style={styles.heroSection}>
           <View style={styles.imageContainer}>
             <ScrollView
+              ref={heroScrollRef}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
@@ -118,7 +134,9 @@ export default function CarDetailsScreen() {
               }}
             >
               {car.images.map((img, idx) => (
-                <Image key={idx} source={{ uri: img }} style={styles.heroImage} contentFit="cover" />
+                <Pressable key={idx} onPress={() => openGallery(idx)} testID={`hero-image-${idx}`}>
+                  <Image source={{ uri: img }} style={styles.heroImage} contentFit="cover" />
+                </Pressable>
               ))}
             </ScrollView>
 
@@ -133,8 +151,30 @@ export default function CarDetailsScreen() {
                 <Pressable style={styles.backBtn} onPress={handleShare} testID="share-btn">
                   <Share2 size={20} color={Colors.white} />
                 </Pressable>
+                <Pressable style={styles.backBtn} onPress={() => openGallery(currentImageIndex)} testID="expand-btn">
+                  <Expand size={20} color={Colors.white} />
+                </Pressable>
               </View>
             </View>
+
+            {car.images.length > 1 && currentImageIndex > 0 && (
+              <Pressable
+                style={[styles.heroNavBtn, styles.heroNavBtnLeft]}
+                onPress={() => goToHeroImage(currentImageIndex - 1, car.images.length)}
+                testID="hero-prev-btn"
+              >
+                <ChevronLeft size={22} color={Colors.white} />
+              </Pressable>
+            )}
+            {car.images.length > 1 && currentImageIndex < car.images.length - 1 && (
+              <Pressable
+                style={[styles.heroNavBtn, styles.heroNavBtnRight]}
+                onPress={() => goToHeroImage(currentImageIndex + 1, car.images.length)}
+                testID="hero-next-btn"
+              >
+                <ChevronRight size={22} color={Colors.white} />
+              </Pressable>
+            )}
 
             {car.images.length > 1 && (
               <View style={styles.dotsRow}>
@@ -341,6 +381,23 @@ const styles = StyleSheet.create({
   dotActive: {
     backgroundColor: Colors.orange.primary,
     width: 20,
+  },
+  heroNavBtn: {
+    position: 'absolute' as const,
+    top: '50%',
+    marginTop: -20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  heroNavBtnLeft: {
+    left: 12,
+  },
+  heroNavBtnRight: {
+    right: 12,
   },
   infoSection: {
     paddingHorizontal: 20,
