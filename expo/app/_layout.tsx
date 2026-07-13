@@ -125,6 +125,7 @@ function RootLayoutNav() {
           <Stack.Screen name="help-support" options={{ title: "Help & Support", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="wallet" options={{ title: "My Wallet", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="review" options={{ title: "Write a Review", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="report-issue" options={{ title: "Report an Issue", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="fleet-dashboard" options={{ title: "Fleet Dashboard", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="add-car" options={{ title: "List a Car", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="add-sale-car" options={{ title: "List a Car for Sale", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />

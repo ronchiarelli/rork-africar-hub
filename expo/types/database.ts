@@ -258,6 +258,20 @@ export type ReviewRow = {
   created_at: string;
 }
 
+export type IssueReportStatusDb = 'open' | 'in_review' | 'resolved';
+
+export type IssueReportRow = {
+  id: string;
+  booking_id: string;
+  car_id: string;
+  customer_id: string;
+  category: string;
+  description: string;
+  photo_url: string | null;
+  status: IssueReportStatusDb;
+  created_at: string;
+}
+
 export type FavoriteRow = {
   user_id: string;
   car_id: string;
@@ -325,6 +339,7 @@ export type Database = {
       wallet_transactions: TableDef<WalletTransactionRow>;
       notifications: TableDef<NotificationRow>;
       reviews: TableDef<ReviewRow>;
+      issue_reports: TableDef<IssueReportRow>;
       favorites: TableDef<FavoriteRow>;
       role_applications: TableDef<RoleApplicationRow, Partial<RoleApplicationRow> & { user_id: string; requested_role: UserRoleDb }>;
       subscriptions: TableDef<SubscriptionRow>;

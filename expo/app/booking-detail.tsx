@@ -23,10 +23,13 @@ import {
   XCircle,
   Clock3,
   Car,
+  AlertTriangle,
+  ChevronRight,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useBookingDetail } from '@/lib/queries/bookings';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
+import { useBookingIssueReports } from '@/lib/queries/issueReports';
 import { getErrorMessage } from '@/lib/errors';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string; bg: string }> = {
@@ -37,10 +40,17 @@ const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; labe
   cancelled: { icon: <XCircle size={18} color={Colors.error} />, color: Colors.error, label: 'Cancelled', bg: Colors.error + '15' },
 };
 
+const ISSUE_STATUS_CONFIG: Record<string, { color: string; label: string; bg: string }> = {
+  open: { color: Colors.warning, label: 'Open', bg: Colors.warning + '15' },
+  in_review: { color: Colors.info, label: 'In Review', bg: Colors.info + '15' },
+  resolved: { color: Colors.success, label: 'Resolved', bg: Colors.success + '15' },
+};
+
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: booking, isLoading } = useBookingDetail(id);
+  const { data: issueReports = [] } = useBookingIssueReports(id);
   const getOrCreateConversation = useGetOrCreateConversation();
 
   const config = booking ? STATUS_CONFIG[booking.status] : null;
@@ -62,6 +72,7 @@ export default function BookingDetailScreen() {
   };
 
   const canReview = booking?.status === 'completed';
+  const canReportIssue = booking?.status === 'approved' || booking?.status === 'active' || booking?.status === 'completed';
 
   if (isLoading) {
     return (
@@ -173,6 +184,48 @@ export default function BookingDetailScreen() {
             </Pressable>
           </View>
         </View>
+
+        {canReportIssue && (
+          <>
+            <Text style={styles.sectionTitle}>Report an Issue</Text>
+            <Pressable
+              style={styles.reportIssueCard}
+              onPress={() => router.push({ pathname: '/report-issue', params: { bookingId: booking.id } })}
+              testID="report-issue-btn"
+            >
+              <View style={styles.reportIssueLeft}>
+                <View style={styles.reportIssueIconWrap}>
+                  <AlertTriangle size={18} color={Colors.warning} />
+                </View>
+                <Text style={styles.reportIssuePrompt}>Something wrong with the car?</Text>
+              </View>
+              <ChevronRight size={18} color={Colors.gray[400]} />
+            </Pressable>
+          </>
+        )}
+
+        {issueReports.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Reported Issues</Text>
+            {issueReports.map((report) => {
+              const issueConfig = ISSUE_STATUS_CONFIG[report.status] ?? ISSUE_STATUS_CONFIG.open;
+              return (
+                <View key={report.id} style={styles.issueCard}>
+                  <View style={styles.issueHeader}>
+                    <Text style={styles.issueCategory}>{report.category}</Text>
+                    <View style={[styles.issueStatusBadge, { backgroundColor: issueConfig.bg }]}>
+                      <Text style={[styles.issueStatusText, { color: issueConfig.color }]}>{issueConfig.label}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.issueDescription}>{report.description}</Text>
+                  {report.photoUrl && (
+                    <Image source={{ uri: report.photoUrl }} style={styles.issuePhoto} contentFit="cover" />
+                  )}
+                </View>
+              );
+            })}
+          </>
+        )}
 
         {canReview && (
           <>
@@ -405,5 +458,79 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600' as const,
     color: Colors.gray[500],
+  },
+  reportIssueCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 24,
+  },
+  reportIssueLeft: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+  },
+  reportIssueIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.warning + '15',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  reportIssuePrompt: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: Colors.gray[800],
+  },
+  issueCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  issueHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 8,
+  },
+  issueCategory: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+  },
+  issueStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  issueStatusText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+  },
+  issueDescription: {
+    fontSize: 13,
+    color: Colors.gray[600],
+    lineHeight: 19,
+  },
+  issuePhoto: {
+    width: 90,
+    height: 90,
+    borderRadius: 12,
+    marginTop: 10,
   },
 });

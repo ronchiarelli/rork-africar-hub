@@ -44,6 +44,17 @@ export interface Booking {
   createdAt: string;
 }
 
+export interface CarIssueReport {
+  id: string;
+  bookingId: string;
+  carId: string;
+  category: string;
+  description: string;
+  photoUrl: string | null;
+  status: 'open' | 'in_review' | 'resolved';
+  createdAt: string;
+}
+
 export type UserRole = 'customer' | 'fleet_owner' | 'dealership' | 'admin';
 
 export interface UserProfile {
