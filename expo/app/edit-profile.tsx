@@ -18,16 +18,34 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { useUpdateProfile } from '@/lib/queries/profile';
 import { getErrorMessage } from '@/lib/errors';
+import { extensionFromBlob } from '@/lib/imageUpload';
+import type { UserProfile } from '@/types/car';
 
 export default function EditProfileScreen() {
-  const router = useRouter();
-  const { currentUser } = useAuth();
-  const updateProfile = useUpdateProfile(currentUser?.id);
+  const { currentUser, isLoading: isAuthLoading } = useAuth();
 
-  const [name, setName] = useState<string>(currentUser?.name ?? '');
-  const [phone, setPhone] = useState<string>(currentUser?.phone ?? '');
-  const [whatsapp, setWhatsapp] = useState<string>(currentUser?.whatsapp ?? '');
-  const [avatar, setAvatar] = useState<string>(currentUser?.avatar ?? '');
+  if (isAuthLoading || !currentUser) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={Colors.orange.primary} />
+      </View>
+    );
+  }
+
+  // Keyed on the user id so the form's local state (initialized below from
+  // currentUser) always mounts fresh with real data, instead of a stale
+  // empty-string initializer captured before the profile fetch resolved.
+  return <EditProfileForm key={currentUser.id} currentUser={currentUser} />;
+}
+
+function EditProfileForm({ currentUser }: { currentUser: UserProfile }) {
+  const router = useRouter();
+  const updateProfile = useUpdateProfile(currentUser.id);
+
+  const [name, setName] = useState<string>(currentUser.name ?? '');
+  const [phone, setPhone] = useState<string>(currentUser.phone ?? '');
+  const [whatsapp, setWhatsapp] = useState<string>(currentUser.whatsapp ?? '');
+  const [avatar, setAvatar] = useState<string>(currentUser.avatar ?? '');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
 
   const handlePickAvatar = useCallback(async () => {
@@ -42,14 +60,14 @@ export default function EditProfileScreen() {
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (result.canceled || !result.assets[0] || !currentUser?.id) return;
+    if (result.canceled || !result.assets[0]) return;
 
     setIsUploadingAvatar(true);
     try {
       const uri = result.assets[0].uri;
       const response = await fetch(uri);
       const blob = await response.blob();
-      const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
+      const fileExt = extensionFromBlob(blob, uri);
       const path = `${currentUser.id}/avatar-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage.from('car-images').upload(path, blob, {
@@ -64,7 +82,7 @@ export default function EditProfileScreen() {
     } finally {
       setIsUploadingAvatar(false);
     }
-  }, [currentUser?.id]);
+  }, [currentUser.id]);
 
   const handleSave = useCallback(() => {
     if (!name.trim()) {
@@ -75,7 +93,11 @@ export default function EditProfileScreen() {
       { name: name.trim(), phone: phone.trim(), whatsapp: whatsapp.trim(), avatar },
       {
         onSuccess: () => {
-          router.back();
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/(tabs)/profile');
+          }
         },
         onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not save your changes. Please try again.')),
       }
@@ -146,7 +168,7 @@ export default function EditProfileScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Email</Text>
           <View style={[styles.input, styles.inputDisabled]}>
-            <Text style={styles.disabledText}>{currentUser?.email}</Text>
+            <Text style={styles.disabledText}>{currentUser.email}</Text>
           </View>
         </View>
 
@@ -169,6 +191,7 @@ export default function EditProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.gray[50] },
+  loadingContainer: { flex: 1, backgroundColor: Colors.gray[50], alignItems: 'center' as const, justifyContent: 'center' as const },
   content: { padding: 20, paddingBottom: 40 },
   avatarSection: { alignItems: 'center' as const, marginBottom: 24 },
   avatarWrap: { position: 'relative' as const },
