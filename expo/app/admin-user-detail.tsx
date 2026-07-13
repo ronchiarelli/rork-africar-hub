@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Modal } from 'react-native';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
-import { Phone, Mail, Calendar, ShieldCheck, ShieldX, UserX, UserCheck } from 'lucide-react-native';
+import { Phone, Mail, Calendar, ShieldCheck, ShieldX, UserX, UserCheck, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import {
   useAdminUserDetail,
@@ -27,12 +28,14 @@ const DOC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: strin
 };
 
 export default function AdminUserDetailScreen() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: user, isLoading } = useAdminUserDetail(id);
   const { data: docs = [] } = useUserKycDocuments(id);
   const reviewDoc = useReviewKycDocument();
   const setSuspended = useSetUserSuspended();
   const revokeRole = useRevokeRole();
+  const [preview, setPreview] = useState<{ uri: string; label: string } | null>(null);
 
   const handleReview = (docId: string, decision: 'verified' | 'rejected') => {
     reviewDoc.mutate(
@@ -99,6 +102,7 @@ export default function AdminUserDetailScreen() {
   }
 
   return (
+    <>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.profileCard}>
         <Image source={{ uri: user.avatar }} style={styles.avatar} contentFit="cover" />
@@ -148,7 +152,9 @@ export default function AdminUserDetailScreen() {
         return (
           <View key={doc.type + doc.side} style={styles.docCard}>
             {doc.imageUrl ? (
-              <Image source={{ uri: doc.imageUrl }} style={styles.docThumb} contentFit="cover" />
+              <Pressable onPress={() => setPreview({ uri: doc.imageUrl as string, label: doc.label })} testID={`preview-${doc.type}-${doc.side}`}>
+                <Image source={{ uri: doc.imageUrl }} style={styles.docThumb} contentFit="cover" />
+              </Pressable>
             ) : (
               <View style={styles.docThumbPlaceholder} />
             )}
@@ -180,6 +186,21 @@ export default function AdminUserDetailScreen() {
         );
       })}
     </ScrollView>
+
+    <Modal visible={!!preview} transparent animationType="fade" onRequestClose={() => setPreview(null)}>
+      <View style={styles.previewOverlay}>
+        <Pressable style={[styles.previewClose, { top: insets.top + 16 }]} onPress={() => setPreview(null)} testID="preview-close">
+          <X size={22} color={Colors.white} />
+        </Pressable>
+        {preview && (
+          <>
+            <Text style={styles.previewLabel}>{preview.label}</Text>
+            <Image source={{ uri: preview.uri }} style={styles.previewImage} contentFit="contain" />
+          </>
+        )}
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -262,4 +283,31 @@ const styles = StyleSheet.create({
   docActionText: { color: Colors.white, fontSize: 11, fontWeight: '700' as const },
   docRevokeBtn: { marginTop: 8, alignSelf: 'flex-start' as const },
   docRevokeText: { color: Colors.error, fontSize: 12, fontWeight: '700' as const, textDecorationLine: 'underline' as const },
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    padding: 24,
+  },
+  previewClose: {
+    position: 'absolute' as const,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  previewLabel: {
+    color: Colors.white,
+    fontSize: 15,
+    fontWeight: '700' as const,
+    marginBottom: 16,
+  },
+  previewImage: {
+    width: '100%',
+    height: '75%',
+  },
 });

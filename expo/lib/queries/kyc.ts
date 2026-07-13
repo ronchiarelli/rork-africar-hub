@@ -18,7 +18,16 @@ function findDoc(rows: KycDocumentRow[], type: KycDocTypeDb, side: KycDocSideDb)
   return rows.find((r) => r.type === type && r.side === side);
 }
 
-function mapDoc(type: KycDocTypeDb, side: KycDocSideDb, label: string, row: KycDocumentRow | undefined): KYCDocument {
+async function getSignedKycUrl(storagePath: string | null | undefined): Promise<string | null> {
+  if (!storagePath) return null;
+  const { data: signed } = await supabase.storage
+    .from('kyc-documents')
+    .createSignedUrl(storagePath, 60 * 10);
+  return signed?.signedUrl ?? null;
+}
+
+async function mapDoc(type: KycDocTypeDb, side: KycDocSideDb, label: string, row: KycDocumentRow | undefined): Promise<KYCDocument> {
+  const imageUri = (await getSignedKycUrl(row?.storage_path)) ?? undefined;
   return {
     id: `${type}_${side}`,
     type,
@@ -26,19 +35,16 @@ function mapDoc(type: KycDocTypeDb, side: KycDocSideDb, label: string, row: KycD
     label,
     status: row?.status ?? 'not_uploaded',
     uploadedAt: row?.uploaded_at ?? undefined,
-    imageUri: undefined,
+    imageUri,
   };
 }
 
 // expo-camera's web implementation returns captured photos as a `data:`
-// URI (canvas.toDataURL()), not a blob: or file: URI. Two things break for
-// that shape specifically: (1) Safari's fetch() throws a generic "Load
-// failed" TypeError on large data: URIs even though the same URI works
-// fine as an <img>/Image source — confirmed live; (2) naively splitting the
-// URI on "." to guess a file extension returns the *entire* URI, since a
-// data: URI's mime header and base64 payload never contain a literal dot.
-// Decoding the base64 payload directly sidesteps both.
-function decodeDataUri(dataUri: string): { blob: Blob; ext: string } | null {
+// URI (canvas.toDataURL()), not a blob: or file: URI — and Safari's fetch()
+// throws a generic "Load failed" TypeError on large data: URIs even though
+// the same URI works fine as an <img>/Image source (confirmed live).
+// Decoding the base64 payload directly sidesteps it.
+function decodeDataUri(dataUri: string): { blob: Blob } | null {
   const match = dataUri.match(/^data:([^;,]+)(?:;[^,]*)?,(.*)$/s);
   if (!match) return null;
   const [, mime, data] = match;
@@ -46,8 +52,30 @@ function decodeDataUri(dataUri: string): { blob: Blob; ext: string } | null {
   const binary = isBase64 ? atob(data) : decodeURIComponent(data);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const ext = mime.split('/').pop() || 'jpg';
-  return { blob: new Blob([bytes], { type: mime || 'image/jpeg' }), ext };
+  return { blob: new Blob([bytes], { type: mime || 'image/jpeg' }) };
+}
+
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+  'image/gif': 'gif',
+};
+
+// Native picker/camera URIs aren't always a clean "name.ext" shape (e.g.
+// iOS document-provider URIs, blob: URLs keyed by UUID) — splitting on "."
+// to guess an extension silently produced garbage for those too (confirmed
+// live: a real upload's storage path came out as
+// "drivers_license_front.app/971b4799-...", the URI's own path fragment
+// mistaken for an extension). The blob's own MIME type is a far more
+// reliable source; only fall back to URI-sniffing, capped to a short
+// alnum token, if the type is missing or unrecognized.
+function extensionFromBlob(blob: Blob, uri: string): string {
+  if (blob.type && MIME_TO_EXT[blob.type]) return MIME_TO_EXT[blob.type];
+  const fromUri = uri.split('.').pop()?.split('?')[0] ?? '';
+  return /^[a-zA-Z0-9]{2,5}$/.test(fromUri) ? fromUri : 'jpg';
 }
 
 // Shared by both the library-picker upload and the in-app camera capture
@@ -55,16 +83,8 @@ function decodeDataUri(dataUri: string): { blob: Blob; ext: string } | null {
 // the caller and does the storage upload + row upsert.
 async function uploadKycFile(userId: string, uri: string, type: KycDocTypeDb, side: KycDocSideDb): Promise<string> {
   const decoded = uri.startsWith('data:') ? decodeDataUri(uri) : null;
-  let blob: Blob;
-  let fileExt: string;
-  if (decoded) {
-    blob = decoded.blob;
-    fileExt = decoded.ext;
-  } else {
-    const response = await fetch(uri);
-    blob = await response.blob();
-    fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
-  }
+  const blob = decoded ? decoded.blob : await (await fetch(uri)).blob();
+  const fileExt = extensionFromBlob(blob, uri);
   const path = `${userId}/${type}_${side}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage.from('kyc-documents').upload(path, blob, {
@@ -105,7 +125,9 @@ export function useKycDocuments() {
         .eq('user_id', userId as string);
       if (error) throw error;
       const rows = data as KycDocumentRow[];
-      return REQUIRED_DOCS.map(({ type, side, label }) => mapDoc(type, side, label, findDoc(rows, type, side)));
+      return Promise.all(
+        REQUIRED_DOCS.map(({ type, side, label }) => mapDoc(type, side, label, findDoc(rows, type, side)))
+      );
     },
     enabled: !!userId,
   });
@@ -227,13 +249,7 @@ export function useUserKycDocuments(userId: string | undefined) {
       return Promise.all(
         REQUIRED_DOCS.map(async ({ type, side, label }) => {
           const row = findDoc(rows, type, side);
-          let imageUrl: string | null = null;
-          if (row?.storage_path) {
-            const { data: signed } = await supabase.storage
-              .from('kyc-documents')
-              .createSignedUrl(row.storage_path, 60 * 10);
-            imageUrl = signed?.signedUrl ?? null;
-          }
+          const imageUrl = await getSignedKycUrl(row?.storage_path);
           return {
             docId: row?.id ?? null,
             type,

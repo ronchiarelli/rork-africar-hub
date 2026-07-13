@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  Modal,
 } from 'react-native';
+import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, ScanFace } from 'lucide-react-native';
+import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, ScanFace, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useKycDocuments, pickKycLibraryPhoto } from '@/lib/queries/kyc';
 import { useMarkNotificationsReadByType } from '@/lib/queries/notifications';
@@ -38,11 +41,13 @@ function DocCard({
   onUpload,
   onOpenCamera,
   isSelfie,
+  onPreview,
 }: {
   doc: KYCDocument;
   onUpload: (type: KycDocTypeDb, side: KycDocSideDb) => void;
   onOpenCamera?: () => void;
   isSelfie?: boolean;
+  onPreview: (uri: string, label: string) => void;
 }) {
   const config = STATUS_CONFIG[doc.status] ?? STATUS_CONFIG.not_uploaded;
   const showFacePlaceholder = isSelfie && doc.status === 'not_uploaded';
@@ -50,9 +55,15 @@ function DocCard({
     <View style={styles.docCard}>
       <View style={styles.docCardRow}>
         <View style={styles.docLeft}>
-          <View style={[styles.docIconWrap, { backgroundColor: config.color + '15' }, showFacePlaceholder && styles.faceIconWrap]}>
-            {showFacePlaceholder ? <ScanFace size={22} color={Colors.orange.primary} /> : config.icon}
-          </View>
+          {doc.imageUri ? (
+            <Pressable onPress={() => onPreview(doc.imageUri as string, doc.label)} testID={`preview-${doc.id}`}>
+              <Image source={{ uri: doc.imageUri }} style={styles.docThumb} contentFit="cover" />
+            </Pressable>
+          ) : (
+            <View style={[styles.docIconWrap, { backgroundColor: config.color + '15' }, showFacePlaceholder && styles.faceIconWrap]}>
+              {showFacePlaceholder ? <ScanFace size={22} color={Colors.orange.primary} /> : config.icon}
+            </View>
+          )}
           <View style={styles.docInfo}>
             <Text style={styles.docLabel}>{doc.label}</Text>
             <Text style={[styles.docStatus, { color: config.color }]}>{config.label}</Text>
@@ -77,8 +88,14 @@ function DocCard({
 
 export default function KYCVerificationScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: documents = [] } = useKycDocuments();
   const markKycNotificationsRead = useMarkNotificationsReadByType('kyc');
+  const [preview, setPreview] = useState<{ uri: string; label: string } | null>(null);
+
+  const handlePreview = useCallback((uri: string, label: string) => {
+    setPreview({ uri, label });
+  }, []);
 
   useEffect(() => {
     markKycNotificationsRead.mutate();
@@ -133,19 +150,19 @@ export default function KYCVerificationScreen() {
 
         <Text style={styles.sectionTitle}>Identity Document</Text>
         <Text style={styles.sectionSubtitle}>Provide both sides of your National ID, or your Passport</Text>
-        {ghanaCardFront && <DocCard doc={ghanaCardFront} onUpload={handleUpload} />}
-        {ghanaCardBack && <DocCard doc={ghanaCardBack} onUpload={handleUpload} />}
+        {ghanaCardFront && <DocCard doc={ghanaCardFront} onUpload={handleUpload} onPreview={handlePreview} />}
+        {ghanaCardBack && <DocCard doc={ghanaCardBack} onUpload={handleUpload} onPreview={handlePreview} />}
         <View style={styles.orDivider}>
           <View style={styles.orLine} />
           <Text style={styles.orText}>OR</Text>
           <View style={styles.orLine} />
         </View>
-        {passport && <DocCard doc={passport} onUpload={handleUpload} />}
+        {passport && <DocCard doc={passport} onUpload={handleUpload} onPreview={handlePreview} />}
 
         <Text style={styles.sectionTitle}>Driver's License</Text>
         <Text style={styles.sectionSubtitle}>Both sides are required</Text>
-        {licenseFront && <DocCard doc={licenseFront} onUpload={handleUpload} />}
-        {licenseBack && <DocCard doc={licenseBack} onUpload={handleUpload} />}
+        {licenseFront && <DocCard doc={licenseFront} onUpload={handleUpload} onPreview={handlePreview} />}
+        {licenseBack && <DocCard doc={licenseBack} onUpload={handleUpload} onPreview={handlePreview} />}
 
         <Text style={styles.sectionTitle}>Selfie Verification</Text>
         {selfie && (
@@ -153,6 +170,7 @@ export default function KYCVerificationScreen() {
             doc={selfie}
             onUpload={handleUpload}
             onOpenCamera={() => router.push('/selfie-camera')}
+            onPreview={handlePreview}
             isSelfie
           />
         )}
@@ -164,6 +182,20 @@ export default function KYCVerificationScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal visible={!!preview} transparent animationType="fade" onRequestClose={() => setPreview(null)}>
+        <View style={styles.previewOverlay}>
+          <Pressable style={[styles.previewClose, { top: insets.top + 16 }]} onPress={() => setPreview(null)} testID="preview-close">
+            <X size={22} color={Colors.white} />
+          </Pressable>
+          {preview && (
+            <>
+              <Text style={styles.previewLabel}>{preview.label}</Text>
+              <Image source={{ uri: preview.uri }} style={styles.previewImage} contentFit="contain" />
+            </>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -272,6 +304,12 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
+  docThumb: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: Colors.gray[100],
+  },
   faceIconWrap: {
     borderWidth: 2,
     borderColor: Colors.orange.primary,
@@ -332,5 +370,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.purple.dark,
     lineHeight: 20,
+  },
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    padding: 24,
+  },
+  previewClose: {
+    position: 'absolute' as const,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  previewLabel: {
+    color: Colors.white,
+    fontSize: 15,
+    fontWeight: '700' as const,
+    marginBottom: 16,
+  },
+  previewImage: {
+    width: '100%',
+    height: '75%',
   },
 });
