@@ -45,6 +45,10 @@ export async function registerForPushNotificationsAsync(userId: string): Promise
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
         importance: Notifications.AndroidImportance.MAX,
+        // Matches assets/sounds/car_horn.wav, bundled via the expo-notifications
+        // config plugin — Android ignores a per-notification `sound` once a
+        // channel exists, so the channel is what actually controls this.
+        sound: 'car_horn.wav',
       });
     }
 
