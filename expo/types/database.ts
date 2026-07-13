@@ -26,6 +26,7 @@ export type ProfileRow = {
   name: string;
   email: string;
   phone: string | null;
+  whatsapp: string | null;
   avatar: string | null;
   role: UserRoleDb;
   is_verified: boolean;

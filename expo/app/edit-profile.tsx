@@ -12,7 +12,7 @@ import {
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Camera } from 'lucide-react-native';
+import { Camera, MessageCircle } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
@@ -26,6 +26,7 @@ export default function EditProfileScreen() {
 
   const [name, setName] = useState<string>(currentUser?.name ?? '');
   const [phone, setPhone] = useState<string>(currentUser?.phone ?? '');
+  const [whatsapp, setWhatsapp] = useState<string>(currentUser?.whatsapp ?? '');
   const [avatar, setAvatar] = useState<string>(currentUser?.avatar ?? '');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
 
@@ -71,7 +72,7 @@ export default function EditProfileScreen() {
       return;
     }
     updateProfile.mutate(
-      { name: name.trim(), phone: phone.trim(), avatar },
+      { name: name.trim(), phone: phone.trim(), whatsapp: whatsapp.trim(), avatar },
       {
         onSuccess: () => {
           router.back();
@@ -79,7 +80,7 @@ export default function EditProfileScreen() {
         onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not save your changes. Please try again.')),
       }
     );
-  }, [name, phone, avatar, updateProfile, router]);
+  }, [name, phone, whatsapp, avatar, updateProfile, router]);
 
   return (
     <View style={styles.container}>
@@ -117,6 +118,29 @@ export default function EditProfileScreen() {
             keyboardType="phone-pad"
             testID="edit-phone-input"
           />
+        </View>
+
+        <View style={styles.field}>
+          <View style={styles.fieldLabelRow}>
+            <Text style={styles.fieldLabel}>WhatsApp Number</Text>
+            {!!phone && phone !== whatsapp && (
+              <Pressable onPress={() => setWhatsapp(phone)} testID="whatsapp-same-as-phone">
+                <Text style={styles.sameAsPhoneLink}>Same as phone</Text>
+              </Pressable>
+            )}
+          </View>
+          <View style={styles.inputWithIcon}>
+            <MessageCircle size={16} color={Colors.success} />
+            <TextInput
+              style={styles.inputWithIconField}
+              value={whatsapp}
+              onChangeText={setWhatsapp}
+              placeholder="Your WhatsApp number"
+              placeholderTextColor={Colors.gray[400]}
+              keyboardType="phone-pad"
+              testID="edit-whatsapp-input"
+            />
+          </View>
         </View>
 
         <View style={styles.field}>
@@ -172,6 +196,33 @@ const styles = StyleSheet.create({
   avatarHint: { marginTop: 10, fontSize: 13, color: Colors.gray[500] },
   field: { marginBottom: 18 },
   fieldLabel: { fontSize: 13, fontWeight: '600' as const, color: Colors.gray[700], marginBottom: 8 },
+  fieldLabelRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+  },
+  sameAsPhoneLink: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.orange.primary,
+    marginBottom: 8,
+  },
+  inputWithIcon: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 10,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+  },
+  inputWithIconField: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.gray[900],
+  },
   input: {
     backgroundColor: Colors.white,
     borderRadius: 12,

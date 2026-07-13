@@ -71,6 +71,7 @@ export function useAllUsers() {
 
 export interface AdminUserDetail extends AdminUserRow {
   phone: string;
+  whatsapp: string;
   totalBookings: number;
 }
 
@@ -90,6 +91,7 @@ export function useAdminUserDetail(userId: string | undefined) {
         name: row.name,
         email: row.email,
         phone: row.phone ?? '',
+        whatsapp: row.whatsapp ?? '',
         avatar: row.avatar ?? '',
         role: row.role,
         isSuspended: row.is_suspended,

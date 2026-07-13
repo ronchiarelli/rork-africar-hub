@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
-import { Phone, Mail, Calendar, ShieldCheck, ShieldX, UserX, UserCheck, X } from 'lucide-react-native';
+import { Phone, Mail, Calendar, ShieldCheck, ShieldX, UserX, UserCheck, X, MessageCircle } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import {
   useAdminUserDetail,
@@ -115,6 +115,12 @@ export default function AdminUserDetailScreen() {
           <View style={styles.metaRow}>
             <Phone size={14} color={Colors.gray[500]} />
             <Text style={styles.metaText}>{user.phone}</Text>
+          </View>
+        )}
+        {!!user.whatsapp && (
+          <View style={styles.metaRow}>
+            <MessageCircle size={14} color={Colors.gray[500]} />
+            <Text style={styles.metaText}>{user.whatsapp} (WhatsApp)</Text>
           </View>
         )}
         <View style={styles.metaRow}>

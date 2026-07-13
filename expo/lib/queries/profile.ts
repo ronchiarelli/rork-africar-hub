@@ -9,6 +9,7 @@ function mapProfile(row: ProfileRow): UserProfile {
     name: row.name,
     email: row.email,
     phone: row.phone ?? '',
+    whatsapp: row.whatsapp ?? '',
     avatar: row.avatar ?? '',
     isVerified: row.is_verified,
     verificationStatus: row.verification_status,
@@ -38,10 +39,10 @@ export function useProfile(userId: string | undefined) {
 export function useUpdateProfile(userId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (updates: Partial<Pick<UserProfile, 'name' | 'phone' | 'avatar'>>) => {
+    mutationFn: async (updates: Partial<Pick<UserProfile, 'name' | 'phone' | 'whatsapp' | 'avatar'>>) => {
       const { error } = await supabase
         .from('profiles')
-        .update({ name: updates.name, phone: updates.phone, avatar: updates.avatar })
+        .update({ name: updates.name, phone: updates.phone, whatsapp: updates.whatsapp, avatar: updates.avatar })
         .eq('id', userId as string);
       if (error) throw error;
     },
