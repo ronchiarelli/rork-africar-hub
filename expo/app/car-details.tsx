@@ -116,6 +116,8 @@ export default function CarDetailsScreen() {
   }
 
   const favorited = isFavorite(car.id);
+  // Sample/catalog cars (no real owner) aren't actually rentable.
+  const isSampleCar = car.ownerId === null;
 
   return (
     <View style={styles.container}>
@@ -139,6 +141,14 @@ export default function CarDetailsScreen() {
                 </Pressable>
               ))}
             </ScrollView>
+
+            {isSampleCar && (
+              <View style={styles.bookedOverlay} testID="car-details-booked-badge">
+                <View style={styles.bookedBadge}>
+                  <Text style={styles.bookedBadgeText}>Booked</Text>
+                </View>
+              </View>
+            )}
 
             <View style={[styles.headerOverlay, { paddingTop: insets.top + 8 }]}>
               <Pressable style={styles.backBtn} onPress={() => router.back()} testID="back-btn">
@@ -293,11 +303,12 @@ export default function CarDetailsScreen() {
           </View>
         </View>
         <Pressable
-          style={({ pressed }) => [styles.rentBtn, pressed && styles.rentBtnPressed]}
+          style={({ pressed }) => [styles.rentBtn, isSampleCar && styles.rentBtnDisabled, pressed && !isSampleCar && styles.rentBtnPressed]}
           onPress={() => router.push({ pathname: '/booking', params: { id: car.id } })}
+          disabled={isSampleCar}
           testID="rent-now-btn"
         >
-          <Text style={styles.rentBtnText}>Rent Now</Text>
+          <Text style={styles.rentBtnText}>{isSampleCar ? 'Booked' : 'Rent Now'}</Text>
         </Pressable>
       </View>
     </View>
@@ -654,9 +665,32 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.orange.bright,
     transform: [{ scale: 0.97 }],
   },
+  rentBtnDisabled: {
+    backgroundColor: Colors.gray[300],
+  },
   rentBtnText: {
     color: Colors.white,
     fontSize: 16,
     fontWeight: '700' as const,
+  },
+  bookedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  bookedBadge: {
+    backgroundColor: Colors.error,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 12,
+    transform: [{ rotate: '-8deg' }],
+  },
+  bookedBadgeText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: '800' as const,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase' as const,
   },
 });

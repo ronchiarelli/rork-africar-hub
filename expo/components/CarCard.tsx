@@ -24,6 +24,9 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
   const { isFavorite, toggleFavorite } = useFavorites();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const favorited = isFavorite(car.id);
+  // Sample/catalog cars (no real owner) aren't actually rentable — always
+  // show them as booked regardless of the real booked-today lookup.
+  const showBooked = isBooked || car.ownerId === null;
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
@@ -54,7 +57,7 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
         <Pressable style={styles.horizontalCardRow} onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
           <View style={styles.horizontalImageWrap}>
             <Image source={{ uri: car.image }} style={styles.horizontalImage} contentFit="cover" />
-            {isBooked && (
+            {showBooked && (
               <View style={styles.bookedOverlay} testID={`booked-badge-${car.id}`}>
                 <View style={styles.bookedBadge}>
                   <Text style={styles.bookedBadgeText}>Booked</Text>
@@ -92,7 +95,7 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
       <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
         <View style={styles.imageWrap}>
           <Image source={{ uri: car.image }} style={styles.image} contentFit="cover" />
-          {isBooked && (
+          {showBooked && (
             <View style={styles.bookedOverlay} testID={`booked-badge-${car.id}`}>
               <View style={styles.bookedBadge}>
                 <Text style={styles.bookedBadgeText}>Booked</Text>
