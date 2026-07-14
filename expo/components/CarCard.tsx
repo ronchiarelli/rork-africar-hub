@@ -16,9 +16,10 @@ import { useFavorites } from '@/providers/FavoritesProvider';
 interface CarCardProps {
   car: Car;
   variant?: 'horizontal' | 'vertical';
+  isBooked?: boolean;
 }
 
-export default React.memo(function CarCard({ car, variant = 'vertical' }: CarCardProps) {
+export default React.memo(function CarCard({ car, variant = 'vertical', isBooked = false }: CarCardProps) {
   const router = useRouter();
   const { isFavorite, toggleFavorite } = useFavorites();
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -53,6 +54,13 @@ export default React.memo(function CarCard({ car, variant = 'vertical' }: CarCar
         <Pressable style={styles.horizontalCardRow} onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
           <View style={styles.horizontalImageWrap}>
             <Image source={{ uri: car.image }} style={styles.horizontalImage} contentFit="cover" />
+            {isBooked && (
+              <View style={styles.bookedOverlay} testID={`booked-badge-${car.id}`}>
+                <View style={styles.bookedBadge}>
+                  <Text style={styles.bookedBadgeText}>Booked</Text>
+                </View>
+              </View>
+            )}
             <Pressable onPress={handleFavorite} style={styles.heartBtn} testID={`fav-btn-${car.id}`}>
               <Heart
                 size={18}
@@ -84,6 +92,13 @@ export default React.memo(function CarCard({ car, variant = 'vertical' }: CarCar
       <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
         <View style={styles.imageWrap}>
           <Image source={{ uri: car.image }} style={styles.image} contentFit="cover" />
+          {isBooked && (
+            <View style={styles.bookedOverlay} testID={`booked-badge-${car.id}`}>
+              <View style={styles.bookedBadge}>
+                <Text style={styles.bookedBadgeText}>Booked</Text>
+              </View>
+            </View>
+          )}
           <Pressable onPress={handleFavorite} style={styles.heartBtn} testID={`fav-btn-${car.id}`}>
             <Heart
               size={18}
@@ -166,6 +181,26 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 12,
     fontWeight: '600' as const,
+  },
+  bookedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  bookedBadge: {
+    backgroundColor: Colors.error,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
+    transform: [{ rotate: '-8deg' }],
+  },
+  bookedBadgeText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '800' as const,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase' as const,
   },
   info: {
     padding: 14,

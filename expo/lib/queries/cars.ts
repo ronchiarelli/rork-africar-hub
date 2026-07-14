@@ -137,3 +137,18 @@ export function useSaleCars() {
     staleTime: 60_000,
   });
 }
+
+// Car ids with a confirmed booking covering today — used to show a
+// "Booked" badge on browse cards. A single Set-returning call so screens
+// rendering many cards don't need one lookup per card.
+export function useBookedCarIds() {
+  return useQuery({
+    queryKey: ['cars-booked-today'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('cars_booked_today');
+      if (error) throw error;
+      return new Set((data ?? []).map((row) => row.cars_booked_today));
+    },
+    staleTime: 60_000,
+  });
+}

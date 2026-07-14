@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
-import { useCars, useBrands, useSaleCars } from '@/lib/queries/cars';
+import { useCars, useBrands, useSaleCars, useBookedCarIds } from '@/lib/queries/cars';
 import { useActiveBanner } from '@/lib/queries/banners';
 import type { BannerCtaTypeDb } from '@/types/database';
 import { useUnreadConversationsCount } from '@/lib/queries/chat';
@@ -86,6 +86,7 @@ export default function HomeScreen() {
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const { data: brands = [] } = useBrands();
   const { data: cars = [] } = useCars({ onlyAvailable: true });
+  const { data: bookedCarIds } = useBookedCarIds();
   const { data: saleCars = [] } = useSaleCars();
   const { data: banner } = useActiveBanner();
   const unreadMessages = useUnreadConversationsCount();
@@ -188,7 +189,7 @@ export default function HomeScreen() {
             horizontal
             data={cars.filter(c => c.isAvailable)}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <CarCard car={item} />}
+            renderItem={({ item }) => <CarCard car={item} isBooked={bookedCarIds?.has(item.id)} />}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.carList}
           />
@@ -238,7 +239,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>Near <Text style={styles.highlight}>You</Text></Text>
           </View>
           {cars.filter(c => c.isAvailable).slice(0, 3).map((car) => (
-            <CarCard key={car.id} car={car} variant="horizontal" />
+            <CarCard key={car.id} car={car} variant="horizontal" isBooked={bookedCarIds?.has(car.id)} />
           ))}
         </View>
       </ScrollView>

@@ -14,7 +14,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { Search, SlidersHorizontal, X, MapPin } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
-import { useCars, useBrands } from '@/lib/queries/cars';
+import { useCars, useBrands, useBookedCarIds } from '@/lib/queries/cars';
 import CarCard from '@/components/CarCard';
 
 const CATEGORIES = ['All', 'SUV', 'Sedan', 'Hatchback', 'Van'];
@@ -39,6 +39,7 @@ export default function SearchScreen() {
   const [selectedBrand, setSelectedBrand] = useState('');
   const { data: cars = [] } = useCars();
   const { data: brands = [] } = useBrands();
+  const { data: bookedCarIds } = useBookedCarIds();
 
   useEffect(() => {
     if (params.brand) {
@@ -241,7 +242,7 @@ export default function SearchScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.listItem}>
-            <CarCard car={item} variant="horizontal" />
+            <CarCard car={item} variant="horizontal" isBooked={bookedCarIds?.has(item.id)} />
           </View>
         )}
         showsVerticalScrollIndicator={false}
