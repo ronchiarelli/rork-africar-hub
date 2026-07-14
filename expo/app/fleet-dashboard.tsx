@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, MessageCircle, Phone, Pencil } from 'lucide-react-native';
+import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, MessageCircle, Phone, Pencil, ShieldCheck } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useMyFleetVehicles, usePendingOwnerBookings, type PendingBooking } from '@/lib/queries/fleet';
 import { useReviewBooking } from '@/lib/queries/bookings';
@@ -22,6 +22,13 @@ const VEHICLE_STATUS_CONFIG: Record<string, { bg: string; text: string; label: s
   rented: { bg: Colors.info + '20', text: Colors.info, label: 'Rented' },
   maintenance: { bg: Colors.warning + '20', text: Colors.warning, label: 'Maintenance' },
   inactive: { bg: Colors.gray[200], text: Colors.gray[600], label: 'Inactive' },
+};
+
+const KYC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+  none: { bg: Colors.gray[200], text: Colors.gray[600], label: 'KYC Not Started' },
+  pending: { bg: Colors.warning + '20', text: Colors.warning, label: 'KYC Pending Review' },
+  approved: { bg: Colors.success + '20', text: Colors.success, label: 'KYC Verified' },
+  rejected: { bg: Colors.error + '20', text: Colors.error, label: 'KYC Rejected' },
 };
 
 export default function FleetDashboardScreen() {
@@ -54,9 +61,20 @@ export default function FleetDashboardScreen() {
     void Linking.openURL(`tel:${booking.customerPhone}`);
   }, []);
 
-  const handleReview = (bookingId: string, decision: 'approved' | 'cancelled') => {
+  const handleReview = (booking: PendingBooking, decision: 'approved' | 'cancelled') => {
+    if (decision === 'approved' && booking.customerVerificationStatus !== 'approved') {
+      Alert.alert(
+        'KYC Not Verified',
+        `${booking.customerName} hasn't completed KYC verification yet. You can approve this booking once an admin has verified their ID documents.`,
+        [
+          { text: 'OK', style: 'cancel' },
+          { text: 'View ID Documents', onPress: () => router.push({ pathname: '/renter-kyc', params: { userId: booking.customerId, name: booking.customerName } }) },
+        ]
+      );
+      return;
+    }
     reviewBooking.mutate(
-      { bookingId, decision },
+      { bookingId: booking.id, decision },
       {
         onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update this booking.')),
       }
@@ -92,12 +110,22 @@ export default function FleetDashboardScreen() {
         {pendingBookings.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Booking Requests</Text>
-            {pendingBookings.map((booking) => (
+            {pendingBookings.map((booking) => {
+              const kycConfig = KYC_STATUS_CONFIG[booking.customerVerificationStatus] ?? KYC_STATUS_CONFIG.none;
+              return (
               <View key={booking.id} style={styles.requestCard}>
                 <Image source={{ uri: booking.car.image }} style={styles.requestImage} contentFit="cover" />
                 <View style={styles.requestInfo}>
                   <Text style={styles.requestModel} numberOfLines={1}>{booking.car.brand} {booking.car.model}</Text>
                   <Text style={styles.requestCustomer} numberOfLines={1}>{booking.customerName}</Text>
+                  <Pressable
+                    style={[styles.kycBadge, { backgroundColor: kycConfig.bg }]}
+                    onPress={() => router.push({ pathname: '/renter-kyc', params: { userId: booking.customerId, name: booking.customerName } })}
+                    testID={`booking-view-kyc-${booking.id}`}
+                  >
+                    <ShieldCheck size={11} color={kycConfig.text} />
+                    <Text style={[styles.kycBadgeText, { color: kycConfig.text }]}>{kycConfig.label}</Text>
+                  </Pressable>
                   <View style={styles.requestDetailRow}>
                     <MapPin size={11} color={Colors.gray[500]} />
                     <Text style={styles.requestDetailText}>{booking.pickupLocation}</Text>
@@ -118,7 +146,7 @@ export default function FleetDashboardScreen() {
                   <View style={styles.requestActions}>
                     <Pressable
                       style={[styles.actionBtn, styles.rejectBtn]}
-                      onPress={() => handleReview(booking.id, 'cancelled')}
+                      onPress={() => handleReview(booking, 'cancelled')}
                       disabled={reviewBooking.isPending}
                     >
                       <X size={14} color={Colors.error} />
@@ -126,7 +154,7 @@ export default function FleetDashboardScreen() {
                     </Pressable>
                     <Pressable
                       style={[styles.actionBtn, styles.approveBtn]}
-                      onPress={() => handleReview(booking.id, 'approved')}
+                      onPress={() => handleReview(booking, 'approved')}
                       disabled={reviewBooking.isPending}
                     >
                       <Check size={14} color={Colors.white} />
@@ -135,7 +163,8 @@ export default function FleetDashboardScreen() {
                   </View>
                 </View>
               </View>
-            ))}
+              );
+            })}
           </>
         )}
 
@@ -315,6 +344,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.gray[600],
     marginTop: 2,
+  },
+  kycBadge: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'flex-start' as const,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 6,
+  },
+  kycBadgeText: {
+    fontSize: 10,
+    fontWeight: '700' as const,
   },
   requestDetailRow: {
     flexDirection: 'row' as const,

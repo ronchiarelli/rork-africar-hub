@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { mapCar } from '@/lib/queries/cars';
-import type { CarRow, FleetVehicleRow, BookingRow } from '@/types/database';
+import type { CarRow, FleetVehicleRow, BookingRow, VerificationStatusDb } from '@/types/database';
 import type { Car, FleetVehicle, Booking } from '@/types/car';
 
 export interface PendingBooking extends Booking {
   customerId: string;
   customerName: string;
   customerPhone: string;
+  customerVerificationStatus: VerificationStatusDb;
 }
 
 function mapFleetVehicle(row: FleetVehicleRow & { car: CarRow }): FleetVehicle {
@@ -49,12 +50,12 @@ export function usePendingOwnerBookings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*, car:cars!inner(*), customer:profiles!customer_id(name, phone)')
+        .select('*, car:cars!inner(*), customer:profiles!customer_id(name, phone, verification_status)')
         .eq('status', 'pending')
         .eq('car.owner_id', ownerId as string)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data as unknown as (BookingRow & { car: CarRow; customer: { name: string; phone: string | null } })[]).map(
+      return (data as unknown as (BookingRow & { car: CarRow; customer: { name: string; phone: string | null; verification_status: VerificationStatusDb } | null })[]).map(
         (row): PendingBooking => ({
           id: row.id,
           carId: row.car_id,
@@ -70,6 +71,7 @@ export function usePendingOwnerBookings() {
           customerId: row.customer_id,
           customerName: row.customer?.name ?? 'Customer',
           customerPhone: row.customer?.phone ?? '',
+          customerVerificationStatus: row.customer?.verification_status ?? 'none',
         })
       );
     },
