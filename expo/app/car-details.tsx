@@ -142,14 +142,6 @@ export default function CarDetailsScreen() {
               ))}
             </ScrollView>
 
-            {isSampleCar && (
-              <View style={styles.bookedOverlay} testID="car-details-booked-badge">
-                <View style={styles.bookedBadge}>
-                  <Text style={styles.bookedBadgeText}>Booked</Text>
-                </View>
-              </View>
-            )}
-
             <View style={[styles.headerOverlay, { paddingTop: insets.top + 8 }]}>
               <Pressable style={styles.backBtn} onPress={() => router.back()} testID="back-btn">
                 <ArrowLeft size={20} color={Colors.white} />
@@ -197,6 +189,11 @@ export default function CarDetailsScreen() {
         </View>
 
         <View style={styles.infoSection}>
+          {isSampleCar && (
+            <View style={styles.bookedBadge} testID="car-details-booked-badge">
+              <Text style={styles.bookedBadgeText}>Booked</Text>
+            </View>
+          )}
           <View style={styles.topRow}>
             <View style={styles.nameWrap}>
               <Text style={styles.brand}>{car.brand}</Text>
@@ -673,22 +670,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700' as const,
   },
-  bookedOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
   bookedBadge: {
-    backgroundColor: Colors.error,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 12,
-    transform: [{ rotate: '-8deg' }],
+    alignSelf: 'flex-start' as const,
+    backgroundColor: Colors.error + '15',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 10,
   },
   bookedBadgeText: {
-    color: Colors.white,
-    fontSize: 16,
+    color: Colors.error,
+    fontSize: 11,
     fontWeight: '800' as const,
     letterSpacing: 0.5,
     textTransform: 'uppercase' as const,

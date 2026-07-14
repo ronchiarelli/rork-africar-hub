@@ -57,13 +57,6 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
         <Pressable style={styles.horizontalCardRow} onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
           <View style={styles.horizontalImageWrap}>
             <Image source={{ uri: car.image }} style={styles.horizontalImage} contentFit="cover" />
-            {showBooked && (
-              <View style={styles.bookedOverlay} testID={`booked-badge-${car.id}`}>
-                <View style={styles.bookedBadge}>
-                  <Text style={styles.bookedBadgeText}>Booked</Text>
-                </View>
-              </View>
-            )}
             <Pressable onPress={handleFavorite} style={styles.heartBtn} testID={`fav-btn-${car.id}`}>
               <Heart
                 size={18}
@@ -73,6 +66,11 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
             </Pressable>
           </View>
           <View style={styles.horizontalInfo}>
+            {showBooked && (
+              <View style={styles.bookedBadge} testID={`booked-badge-${car.id}`}>
+                <Text style={styles.bookedBadgeText}>Booked</Text>
+              </View>
+            )}
             <Text style={styles.cardBrand}>{car.brand}</Text>
             <Text style={styles.cardModel} numberOfLines={1}>{car.model}</Text>
             <View style={styles.locationRow}>
@@ -95,13 +93,6 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
       <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
         <View style={styles.imageWrap}>
           <Image source={{ uri: car.image }} style={styles.image} contentFit="cover" />
-          {showBooked && (
-            <View style={styles.bookedOverlay} testID={`booked-badge-${car.id}`}>
-              <View style={styles.bookedBadge}>
-                <Text style={styles.bookedBadgeText}>Booked</Text>
-              </View>
-            </View>
-          )}
           <Pressable onPress={handleFavorite} style={styles.heartBtn} testID={`fav-btn-${car.id}`}>
             <Heart
               size={18}
@@ -115,6 +106,11 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
           </View>
         </View>
         <View style={styles.info}>
+          {showBooked && (
+            <View style={styles.bookedBadge} testID={`booked-badge-${car.id}`}>
+              <Text style={styles.bookedBadgeText}>Booked</Text>
+            </View>
+          )}
           <Text style={styles.cardBrand}>{car.brand}</Text>
           <Text style={styles.cardModel} numberOfLines={1}>{car.model}</Text>
           <View style={styles.cardBottom}>
@@ -185,22 +181,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600' as const,
   },
-  bookedOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
   bookedBadge: {
-    backgroundColor: Colors.error,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 10,
-    transform: [{ rotate: '-8deg' }],
+    alignSelf: 'flex-start' as const,
+    backgroundColor: Colors.error + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 4,
   },
   bookedBadgeText: {
-    color: Colors.white,
-    fontSize: 13,
+    color: Colors.error,
+    fontSize: 10,
     fontWeight: '800' as const,
     letterSpacing: 0.5,
     textTransform: 'uppercase' as const,
