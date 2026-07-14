@@ -143,6 +143,7 @@ export interface NewSaleCarInput {
   features: string[];
   dealerName: string;
   dealerPhone: string;
+  dealerAvatar: string;
 }
 
 export function useCreateSaleCar() {
@@ -171,6 +172,7 @@ export function useCreateSaleCar() {
         condition: input.condition,
         dealer_name: input.dealerName,
         dealer_phone: input.dealerPhone,
+        dealer_avatar: input.dealerAvatar,
         is_featured: false,
         description: input.description,
         features: input.features,

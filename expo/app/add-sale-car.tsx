@@ -168,6 +168,7 @@ export default function AddSaleCarScreen() {
         features,
         dealerName: currentUser.name,
         dealerPhone: currentUser.phone,
+        dealerAvatar: currentUser.avatar,
       };
 
       const mutation = isEditing
