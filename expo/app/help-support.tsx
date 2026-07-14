@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useSendSupportEnquiry, useStartSupportConversation } from '@/lib/queries/chat';
+import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
 
 interface FAQItem {
@@ -92,12 +93,17 @@ function FAQAccordion({ item }: { item: FAQItem }) {
 
 export default function HelpSupportScreen() {
   const router = useRouter();
+  const { currentUser } = useAuth();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const sendEnquiry = useSendSupportEnquiry();
   const startSupportConversation = useStartSupportConversation();
 
   const handleSend = () => {
+    if (!currentUser) {
+      router.push('/login');
+      return;
+    }
     if (!subject.trim() || !message.trim()) {
       Alert.alert('Missing Fields', 'Please fill in both subject and message.');
       return;
@@ -128,6 +134,10 @@ export default function HelpSupportScreen() {
   };
 
   const handleChat = () => {
+    if (!currentUser) {
+      router.push('/login');
+      return;
+    }
     startSupportConversation.mutate(undefined, {
       onSuccess: (conv) => router.push({ pathname: '/chat', params: { id: conv.id } }),
       onError: (err) => Alert.alert('Could not start chat', getErrorMessage(err, 'Please try again.')),
