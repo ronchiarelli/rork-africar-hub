@@ -32,6 +32,7 @@ import {
   MessageSquare,
   Car,
   X,
+  Eye,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { usePendingKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
@@ -307,12 +308,7 @@ export default function AdminDashboardScreen() {
               <View key={doc.docId} style={styles.kycCard}>
                 <View style={styles.kycHeader}>
                   {doc.imageUrl ? (
-                    <Pressable
-                      onPress={() => setKycPreview({ uri: doc.imageUrl as string, label: `${doc.userName} — ${doc.label}` })}
-                      testID={`kyc-preview-${doc.docId}`}
-                    >
-                      <Image source={{ uri: doc.imageUrl }} style={styles.kycAvatar} contentFit="cover" />
-                    </Pressable>
+                    <Image source={{ uri: doc.imageUrl }} style={styles.kycAvatar} contentFit="cover" />
                   ) : (
                     <View style={styles.kycAvatarPlaceholder} />
                   )}
@@ -322,6 +318,17 @@ export default function AdminDashboardScreen() {
                     <Text style={styles.kycDate}>{doc.label} · Uploaded {doc.uploadedAt?.split('T')[0]}</Text>
                   </View>
                 </View>
+                <Pressable
+                  style={[styles.kycPreviewBtn, !doc.imageUrl && styles.kycPreviewBtnDisabled]}
+                  onPress={() => doc.imageUrl && setKycPreview({ uri: doc.imageUrl as string, label: `${doc.userName} — ${doc.label}` })}
+                  disabled={!doc.imageUrl}
+                  testID={`kyc-preview-${doc.docId}`}
+                >
+                  <Eye size={16} color={doc.imageUrl ? Colors.orange.primary : Colors.gray[400]} />
+                  <Text style={[styles.kycPreviewBtnText, !doc.imageUrl && styles.kycPreviewBtnTextDisabled]}>
+                    {doc.imageUrl ? 'Preview Document' : 'Preview unavailable'}
+                  </Text>
+                </Pressable>
                 <View style={styles.kycActions}>
                   <Pressable
                     style={styles.approveBtn}
@@ -889,6 +896,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.gray[400],
     marginTop: 2,
+  },
+  kycPreviewBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+    backgroundColor: Colors.orange.faint,
+    borderWidth: 1,
+    borderColor: Colors.orange.primary + '40',
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  kycPreviewBtnDisabled: {
+    backgroundColor: Colors.gray[100],
+    borderColor: Colors.gray[200],
+  },
+  kycPreviewBtnText: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: Colors.orange.primary,
+  },
+  kycPreviewBtnTextDisabled: {
+    color: Colors.gray[400],
   },
   kycActions: {
     flexDirection: 'row' as const,
