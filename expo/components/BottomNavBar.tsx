@@ -2,19 +2,20 @@ import React, { useCallback } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, CalendarDays, User, LayoutDashboard } from 'lucide-react-native';
+import { Home, CalendarDays, User, LayoutDashboard, Search } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 interface NavItem {
   label: string;
-  route: '/' | '/dashboard' | '/bookings' | '/profile';
+  route: '/' | '/dashboard' | '/bookings' | '/profile' | '/search';
   icon: typeof Home;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Home', route: '/', icon: Home },
   { label: 'Dashboard', route: '/dashboard', icon: LayoutDashboard },
   { label: 'Bookings', route: '/bookings', icon: CalendarDays },
+  { label: 'Home', route: '/', icon: Home },
+  { label: 'Search', route: '/search', icon: Search },
   { label: 'Profile', route: '/profile', icon: User },
 ];
 
@@ -80,10 +81,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center' as const,
   },
   bubble: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    marginTop: -22,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginTop: -24,
     backgroundColor: Colors.white,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
