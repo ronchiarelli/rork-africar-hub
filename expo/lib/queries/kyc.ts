@@ -178,6 +178,7 @@ export interface PendingKycReview {
   side: KycDocSideDb;
   label: string;
   uploadedAt: string | null;
+  imageUrl: string | null;
 }
 
 type KycDocumentWithProfile = KycDocumentRow & { profile: { name: string; email: string } | null };
@@ -192,16 +193,20 @@ export function usePendingKycDocuments() {
         .eq('status', 'uploaded')
         .order('uploaded_at', { ascending: true });
       if (error) throw error;
-      return (data as unknown as KycDocumentWithProfile[]).map((row) => ({
-        docId: row.id,
-        userId: row.user_id,
-        userName: row.profile?.name ?? 'Unknown',
-        userEmail: row.profile?.email ?? '',
-        type: row.type,
-        side: row.side,
-        label: row.label ?? row.type,
-        uploadedAt: row.uploaded_at,
-      }));
+      const rows = data as unknown as KycDocumentWithProfile[];
+      return Promise.all(
+        rows.map(async (row) => ({
+          docId: row.id,
+          userId: row.user_id,
+          userName: row.profile?.name ?? 'Unknown',
+          userEmail: row.profile?.email ?? '',
+          type: row.type,
+          side: row.side,
+          label: row.label ?? row.type,
+          uploadedAt: row.uploaded_at,
+          imageUrl: await getSignedKycUrl(row.storage_path),
+        }))
+      );
     },
   });
 }

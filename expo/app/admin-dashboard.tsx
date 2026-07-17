@@ -7,7 +7,9 @@ import {
   Pressable,
   Alert,
   TextInput,
+  Modal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import {
@@ -29,6 +31,7 @@ import {
   BarChart3,
   MessageSquare,
   Car,
+  X,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { usePendingKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
@@ -73,7 +76,9 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
+  const [kycPreview, setKycPreview] = useState<{ uri: string; label: string } | null>(null);
   const { data: pendingKyc = [] } = usePendingKycDocuments();
   const reviewKyc = useReviewKycDocument();
   const { data: pendingRoleApps = [] } = usePendingRoleApplications();
@@ -184,6 +189,7 @@ export default function AdminDashboardScreen() {
   };
 
   return (
+    <>
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow} contentContainerStyle={styles.tabsRowContent}>
         {TABS.map((tab) => (
@@ -300,6 +306,16 @@ export default function AdminDashboardScreen() {
             {pendingKyc.map((doc) => (
               <View key={doc.docId} style={styles.kycCard}>
                 <View style={styles.kycHeader}>
+                  {doc.imageUrl ? (
+                    <Pressable
+                      onPress={() => setKycPreview({ uri: doc.imageUrl as string, label: `${doc.userName} — ${doc.label}` })}
+                      testID={`kyc-preview-${doc.docId}`}
+                    >
+                      <Image source={{ uri: doc.imageUrl }} style={styles.kycAvatar} contentFit="cover" />
+                    </Pressable>
+                  ) : (
+                    <View style={styles.kycAvatarPlaceholder} />
+                  )}
                   <View style={styles.kycInfo}>
                     <Text style={styles.kycName}>{doc.userName}</Text>
                     <Text style={styles.kycEmail}>{doc.userEmail}</Text>
@@ -590,6 +606,21 @@ export default function AdminDashboardScreen() {
         )}
       </ScrollView>
     </View>
+
+    <Modal visible={!!kycPreview} transparent animationType="fade" onRequestClose={() => setKycPreview(null)}>
+      <View style={styles.previewOverlay}>
+        <Pressable style={[styles.previewClose, { top: insets.top + 16 }]} onPress={() => setKycPreview(null)} testID="kyc-preview-close">
+          <X size={22} color={Colors.white} />
+        </Pressable>
+        {kycPreview && (
+          <>
+            <Text style={styles.previewLabel}>{kycPreview.label}</Text>
+            <Image source={{ uri: kycPreview.uri }} style={styles.previewImage} contentFit="contain" />
+          </>
+        )}
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -833,6 +864,13 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 16,
     marginRight: 12,
+  },
+  kycAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    marginRight: 12,
+    backgroundColor: Colors.gray[100],
   },
   kycInfo: {
     flex: 1,
@@ -1151,4 +1189,31 @@ const styles = StyleSheet.create({
   topCarInfo: { flex: 1 },
   topCarName: { fontSize: 14, fontWeight: '700' as const, color: Colors.gray[900] },
   topCarCount: { fontSize: 12, color: Colors.gray[500], marginTop: 2 },
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    padding: 24,
+  },
+  previewClose: {
+    position: 'absolute' as const,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  previewLabel: {
+    color: Colors.white,
+    fontSize: 15,
+    fontWeight: '700' as const,
+    marginBottom: 16,
+  },
+  previewImage: {
+    width: '100%',
+    height: '75%',
+  },
 });
