@@ -64,7 +64,9 @@ export default function RenterKycScreen() {
           {preview && (
             <>
               <Text style={styles.previewLabel}>{preview.label}</Text>
-              <Image source={{ uri: preview.uri }} style={styles.previewImage} contentFit="contain" />
+              <View style={styles.previewImageWrap}>
+                <Image source={{ uri: preview.uri }} style={styles.previewImage} contentFit="contain" />
+              </View>
             </>
           )}
         </View>
@@ -119,8 +121,12 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     marginBottom: 16,
   },
+  previewImageWrap: {
+    flex: 1,
+    width: '100%',
+  },
   previewImage: {
     width: '100%',
-    height: '75%',
+    height: '100%',
   },
 });
