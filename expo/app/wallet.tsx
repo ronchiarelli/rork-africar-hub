@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import {
   Wallet as WalletIcon,
@@ -24,6 +25,7 @@ import Colors from '@/constants/colors';
 import { useWallet, useInitiateWalletTopUp } from '@/lib/queries/wallet';
 import { useSubscription } from '@/lib/queries/subscriptions';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { WalletTransaction } from '@/types/car';
 
 function TransactionRow({ tx }: { tx: WalletTransaction }) {
@@ -57,6 +59,7 @@ function TransactionRow({ tx }: { tx: WalletTransaction }) {
 
 export default function WalletScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: wallet } = useWallet();
   const { data: subscription } = useSubscription();
   const initiateTopUp = useInitiateWalletTopUp();
@@ -102,7 +105,7 @@ export default function WalletScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.balanceCard}>
           <View style={styles.balanceHeader}>
             <View style={styles.balanceIconWrap}>

@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, ScanFace, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useKycDocuments, pickKycLibraryPhoto } from '@/lib/queries/kyc';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { useMarkNotificationsReadByType } from '@/lib/queries/notifications';
 import { getErrorMessage } from '@/lib/errors';
 import type { KycDocTypeDb, KycDocSideDb } from '@/types/database';
@@ -136,7 +137,7 @@ export default function KYCVerificationScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <ShieldCheck size={24} color={Colors.orange.primary} />

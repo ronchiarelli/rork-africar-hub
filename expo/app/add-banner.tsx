@@ -14,10 +14,12 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Camera, UploadCloud, Link2, Phone, Navigation, Move, RotateCcw } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { useBanner, useCreateBanner, useUpdateBanner } from '@/lib/queries/banners';
 import { getErrorMessage } from '@/lib/errors';
 import IndeterminateProgressBar from '@/components/IndeterminateProgressBar';
@@ -115,6 +117,7 @@ function ImageCropFrame({ imageUri, focalX, focalY, onFocalChange }: ImageCropFr
 
 export default function AddBannerScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEditing = !!id;
   const { data: existingBanner, isLoading: isLoadingBanner } = useBanner(id);
@@ -289,7 +292,7 @@ export default function AddBannerScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
       <View ref={dropZoneRef} style={styles.imagePicker}>
         {imageUri ? (
           <>

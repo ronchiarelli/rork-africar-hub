@@ -6,6 +6,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { Phone, Mail, Calendar, ShieldCheck, ShieldX, UserX, UserCheck, X, MessageCircle, CreditCard } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import {
   useAdminUserDetail,
   useSetUserSuspended,
@@ -128,7 +129,7 @@ export default function AdminUserDetailScreen() {
 
   return (
     <>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
       <View style={styles.profileCard}>
         <Image source={{ uri: user.avatar }} style={styles.avatar} contentFit="cover" />
         <Text style={styles.name}>{user.name}</Text>

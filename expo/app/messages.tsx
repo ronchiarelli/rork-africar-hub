@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MessageSquare } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useConversations } from '@/lib/queries/chat';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 function formatTime(timestamp: string | null): string {
   if (!timestamp) return '';
@@ -20,11 +22,12 @@ function formatTime(timestamp: string | null): string {
 
 export default function MessagesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: conversations = [] } = useConversations();
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         {conversations.length === 0 ? (
           <View style={styles.emptyWrap}>
             <MessageSquare size={48} color={Colors.gray[300]} />

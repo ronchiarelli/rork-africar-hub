@@ -7,9 +7,11 @@ import {
   Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bell, CalendarDays, CreditCard, Tag, ShieldCheck, Settings } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from '@/lib/queries/notifications';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import type { AppNotification } from '@/types/car';
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -42,6 +44,7 @@ function formatTime(timestamp: string): string {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: notifications = [] } = useNotifications();
   const markAllReadMutation = useMarkAllNotificationsRead();
   const markReadMutation = useMarkNotificationRead();
@@ -70,7 +73,7 @@ export default function NotificationsScreen() {
         </View>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         {notifications.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Bell size={48} color={Colors.gray[300]} />

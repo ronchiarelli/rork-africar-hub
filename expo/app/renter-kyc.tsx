@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { useUserKycDocuments } from '@/lib/queries/kyc';
 
 const DOC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
@@ -31,7 +32,7 @@ export default function RenterKycScreen() {
 
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <Text style={styles.intro}>
           Identity documents submitted by {name || 'this requester'}. Documents are reviewed and verified by GoCar Hub admins.
         </Text>

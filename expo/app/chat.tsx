@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Send } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useConversations, useMessages, useSendMessage, useMarkConversationRead, type ChatMessage } from '@/lib/queries/chat';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 function formatTime(timestamp: string): string {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -32,6 +34,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
   const listRef = useRef<FlatList>(null);
 
@@ -89,7 +92,7 @@ export default function ChatScreen() {
           />
         )}
 
-        <View style={styles.inputRow}>
+        <View style={[styles.inputRow, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
           <TextInput
             style={styles.input}
             placeholder="Type a message..."

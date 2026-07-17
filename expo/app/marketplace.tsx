@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Search, SlidersHorizontal, MapPin, Eye, MessageCircle, Phone, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -19,6 +20,7 @@ import { useCreateLead } from '@/lib/queries/dealer';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { SaleCar } from '@/types/car';
 
 const CONDITIONS = ['All', 'New', 'Foreign Used', 'Locally Used'];
@@ -132,6 +134,7 @@ function SaleListingCard({ car }: { car: SaleCar }) {
 }
 
 export default function MarketplaceScreen() {
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   const [selectedCondition, setSelectedCondition] = useState('All');
   const [selectedBrand, setSelectedBrand] = useState('All');
@@ -210,7 +213,7 @@ export default function MarketplaceScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <SaleListingCard car={item} />}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: getNavBarClearance(insets.bottom) }]}
         ListHeaderComponent={
           <Text style={styles.resultsText}>{filteredCars.length} car{filteredCars.length !== 1 ? 's' : ''} for sale</Text>
         }

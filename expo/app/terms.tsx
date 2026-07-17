@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 const LAST_UPDATED = 'July 9, 2026';
 
@@ -102,8 +104,9 @@ const SECTIONS: Section[] = [
 ];
 
 export default function TermsOfServiceScreen() {
+  const insets = useSafeAreaInsets();
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
       <Text style={styles.title}>Terms of Service</Text>
       <Text style={styles.updated}>Last updated: {LAST_UPDATED}</Text>
 

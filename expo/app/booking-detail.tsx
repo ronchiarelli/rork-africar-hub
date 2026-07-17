@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -34,6 +35,7 @@ import { useBookingDetail, useOwnerAcceptsInAppPayment, useInitiateBookingPaymen
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { useBookingIssueReports } from '@/lib/queries/issueReports';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string; bg: string }> = {
   pending: { icon: <Clock3 size={18} color={Colors.warning} />, color: Colors.warning, label: 'Pending Approval', bg: Colors.warning + '15' },
@@ -52,6 +54,7 @@ const ISSUE_STATUS_CONFIG: Record<string, { color: string; label: string; bg: st
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: booking, isLoading } = useBookingDetail(id);
   const { data: issueReports = [] } = useBookingIssueReports(id);
   const { data: ownerAcceptsInAppPayment = false } = useOwnerAcceptsInAppPayment(booking?.car.ownerId ?? undefined);
@@ -118,7 +121,7 @@ export default function BookingDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.statusRow}>
           <View style={[styles.statusBanner, { backgroundColor: config.bg }]}>
             {config.icon}

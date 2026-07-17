@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   HelpCircle,
   ChevronDown,
@@ -24,6 +25,7 @@ import Colors from '@/constants/colors';
 import { useSendSupportEnquiry, useStartSupportConversation } from '@/lib/queries/chat';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 interface FAQItem {
   id: string;
@@ -93,6 +95,7 @@ function FAQAccordion({ item }: { item: FAQItem }) {
 
 export default function HelpSupportScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { currentUser } = useAuth();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -146,7 +149,7 @@ export default function HelpSupportScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.contactRow}>
           <Pressable style={[styles.contactBtn, { backgroundColor: Colors.orange.primary }]} onPress={handleChat} disabled={startSupportConversation.isPending} testID="support-chat-btn">
             <MessageCircle size={22} color={Colors.white} />

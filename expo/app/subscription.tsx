@@ -8,6 +8,7 @@ import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { useSubscription, useInitiateSubscriptionPayment } from '@/lib/queries/subscriptions';
 import { useSubscriptionRate } from '@/lib/queries/admin';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { getErrorMessage } from '@/lib/errors';
 
 const PLAN_FEATURES = [
@@ -45,7 +46,7 @@ export default function SubscriptionScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]} showsVerticalScrollIndicator={false}>
         <View style={styles.headerCard}>
           <Text style={styles.headerLabel}>{roleLabel} Plan</Text>
           <View style={styles.priceRow}>

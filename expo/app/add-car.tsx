@@ -11,6 +11,7 @@ import {
   Switch,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
 import { VEHICLE_CATEGORIES } from '@/constants/vehicleCategories';
@@ -21,6 +22,7 @@ import { useCarDetails } from '@/lib/queries/cars';
 import { getErrorMessage } from '@/lib/errors';
 import MultiImagePicker from '@/components/MultiImagePicker';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import type { Car } from '@/types/car';
 
 const CATEGORIES = VEHICLE_CATEGORIES;
@@ -66,6 +68,7 @@ function MultiChipRow({ options, selected, onToggle }: { options: string[]; sele
 
 export default function AddCarScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { currentUser } = useAuth();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEditing = !!id;
@@ -209,7 +212,7 @@ export default function AddCarScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
       <Stack.Screen options={{ title: isEditing ? 'Edit Car' : 'List a Car' }} />
       <Field label="Photos">
         <MultiImagePicker images={images} onChange={setImages} />

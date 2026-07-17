@@ -18,11 +18,13 @@ import {
   LogOut,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import { useHasPushToken, useEnablePushNotifications, useDisablePushNotifications } from '@/lib/queries/pushTokens';
 import { useSendSupportEnquiry } from '@/lib/queries/chat';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 interface SettingItem {
   id: string;
@@ -37,6 +39,7 @@ interface SettingItem {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { logout, currentUser } = useAuth();
   const { data: hasPushToken = false } = useHasPushToken(currentUser?.id);
   const enablePush = useEnablePushNotifications(currentUser?.id);
@@ -173,7 +176,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         {sections.map((section, sectionIdx) => (
           <View key={sectionIdx} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>

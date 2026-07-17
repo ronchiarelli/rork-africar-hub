@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Camera, MessageCircle } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -19,6 +20,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useUpdateProfile } from '@/lib/queries/profile';
 import { getErrorMessage } from '@/lib/errors';
 import { extensionFromBlob } from '@/lib/imageUpload';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import type { UserProfile } from '@/types/car';
 
 export default function EditProfileScreen() {
@@ -40,6 +42,7 @@ export default function EditProfileScreen() {
 
 function EditProfileForm({ currentUser }: { currentUser: UserProfile }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const updateProfile = useUpdateProfile(currentUser.id);
 
   const [name, setName] = useState<string>(currentUser.name ?? '');
@@ -106,7 +109,7 @@ function EditProfileForm({ currentUser }: { currentUser: UserProfile }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.avatarSection}>
           <Pressable style={styles.avatarWrap} onPress={handlePickAvatar} disabled={isUploadingAvatar} testID="edit-avatar-btn">
             <Image source={{ uri: avatar }} style={styles.avatar} contentFit="cover" />
