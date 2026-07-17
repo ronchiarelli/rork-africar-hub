@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Modal, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
@@ -30,6 +30,7 @@ const DOC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: strin
 
 export default function AdminUserDetailScreen() {
   const insets = useSafeAreaInsets();
+  const { width: winWidth, height: winHeight } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: user, isLoading } = useAdminUserDetail(id);
   const { data: docs = [] } = useUserKycDocuments(id);
@@ -239,9 +240,12 @@ export default function AdminUserDetailScreen() {
         {preview && (
           <>
             <Text style={styles.previewLabel}>{preview.label}</Text>
-            <View style={styles.previewImageWrap}>
-              <Image source={{ uri: preview.uri }} style={styles.previewImage} contentFit="contain" />
-            </View>
+            <Image
+              source={{ uri: preview.uri }}
+              style={{ width: winWidth * 0.9, height: winHeight * 0.65 }}
+              contentFit="contain"
+              testID="preview-image"
+            />
           </>
         )}
       </View>
@@ -351,13 +355,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700' as const,
     marginBottom: 16,
-  },
-  previewImageWrap: {
-    flex: 1,
-    width: '100%',
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
   },
 });

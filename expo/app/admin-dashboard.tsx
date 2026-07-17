@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -78,6 +79,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: winWidth, height: winHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
   const [kycPreview, setKycPreview] = useState<{ uri: string; label: string } | null>(null);
   const { data: pendingKyc = [] } = usePendingKycDocuments();
@@ -622,9 +624,12 @@ export default function AdminDashboardScreen() {
         {kycPreview && (
           <>
             <Text style={styles.previewLabel}>{kycPreview.label}</Text>
-            <View style={styles.previewImageWrap}>
-              <Image source={{ uri: kycPreview.uri }} style={styles.previewImage} contentFit="contain" />
-            </View>
+            <Image
+              source={{ uri: kycPreview.uri }}
+              style={{ width: winWidth * 0.9, height: winHeight * 0.65 }}
+              contentFit="contain"
+              testID="kyc-preview-image"
+            />
           </>
         )}
       </View>
@@ -1244,13 +1249,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700' as const,
     marginBottom: 16,
-  },
-  previewImageWrap: {
-    flex: 1,
-    width: '100%',
-  },
-  previewImage: {
-    width: '100%',
-    height: '100%',
   },
 });
