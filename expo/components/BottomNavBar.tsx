@@ -11,6 +11,16 @@ interface NavItem {
   icon: typeof Home;
 }
 
+// The nav bar now floats as an absolute overlay (see _layout.tsx) instead of
+// reserving its own layout space, so any screen with its own fixed bottom
+// action bar (car-details, booking, report-issue, review, ...) needs to
+// offset that bar upward by this much to sit above the pill instead of
+// being hidden underneath it.
+const NAV_PILL_HEIGHT = 68;
+export function getNavBarClearance(insetsBottom: number, gap = 16): number {
+  return Math.max(insetsBottom, 14) + NAV_PILL_HEIGHT + gap;
+}
+
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', route: '/dashboard', icon: LayoutDashboard },
   { label: 'Bookings', route: '/bookings', icon: CalendarDays },

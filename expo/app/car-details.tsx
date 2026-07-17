@@ -36,6 +36,7 @@ import { useFavorites } from '@/providers/FavoritesProvider';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PRODUCTION_WEB_URL = 'https://gocar-hub.vercel.app';
@@ -290,7 +291,7 @@ export default function CarDetailsScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
+      <View style={[styles.bottomBar, { bottom: getNavBarClearance(insets.bottom), paddingBottom: 10 }]}>
         <View style={styles.priceSection}>
           <Text style={styles.priceLabel}>Price</Text>
           <View style={styles.priceRow}>

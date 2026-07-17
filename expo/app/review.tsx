@@ -17,6 +17,7 @@ import Colors from '@/constants/colors';
 import { useBookingDetail } from '@/lib/queries/bookings';
 import { useSubmitReview } from '@/lib/queries/reviews';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 const QUICK_TAGS = ['Clean car', 'Great owner', 'Smooth ride', 'On time', 'Accurate listing'];
 
@@ -161,7 +162,7 @@ export default function ReviewScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
+      <View style={[styles.bottomBar, { bottom: getNavBarClearance(insets.bottom), paddingBottom: 10 }]}>
         <Pressable
           style={[styles.submitBtn, (rating === 0 || submitReview.isPending) && styles.submitBtnDisabled]}
           onPress={handleSubmit}

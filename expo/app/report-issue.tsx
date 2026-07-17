@@ -20,6 +20,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useBookingDetail } from '@/lib/queries/bookings';
 import { useSubmitIssueReport } from '@/lib/queries/issueReports';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 const CATEGORIES = ['Mechanical', 'Cleanliness', 'Damage', 'Safety', 'Other'];
 
@@ -197,7 +198,7 @@ export default function ReportIssueScreen() {
         )}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
+      <View style={[styles.bottomBar, { bottom: getNavBarClearance(insets.bottom), paddingBottom: 10 }]}>
         <Pressable
           style={[styles.submitBtn, (!category || !description.trim() || submitReport.isPending || isUploadingPhoto) && styles.submitBtnDisabled]}
           onPress={handleSubmit}

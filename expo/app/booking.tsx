@@ -20,6 +20,7 @@ import { useCarDetails } from '@/lib/queries/cars';
 import { useCreateBooking } from '@/lib/queries/bookings';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -227,7 +228,7 @@ export default function BookingScreen() {
         </View>
       </ScrollView>
 
-<View style={[styles.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
+<View style={[styles.bottomBar, { bottom: getNavBarClearance(insets.bottom), paddingBottom: 10 }]}>
         <View>
           <Text style={styles.bottomTotal}>Total</Text>
           <Text style={styles.bottomPrice}>GH₵{pricing.total.toLocaleString()}</Text>
