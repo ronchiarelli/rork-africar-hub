@@ -18,6 +18,7 @@ import {
   ShieldCheck,
 } from "lucide-react-native";
 import Colors from "@/constants/colors";
+import { getNavBarClearance } from "@/components/BottomNavBar";
 import { useAuth } from "@/providers/AuthProvider";
 import { useFavoriteIds } from "@/lib/queries/favorites";
 import { useWallet } from "@/lib/queries/wallet";
@@ -32,9 +33,10 @@ function CustomerDashboard() {
   const { currentUser } = useAuth();
   const { data: favoriteIds = [] } = useFavoriteIds(currentUser?.id);
   const { data: wallet } = useWallet();
+  const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={sd.content}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[sd.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
       <View style={csd.welcomeCard}>
         <Image source={{ uri: currentUser?.avatar ?? "" }} style={csd.avatar} contentFit="cover" />
         <View style={csd.welcomeInfo}>

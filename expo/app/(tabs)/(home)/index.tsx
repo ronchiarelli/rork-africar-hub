@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { LOCATIONS } from '@/constants/locations';
 import { useCars, useBrands, useSaleCars, useBookedCarIds } from '@/lib/queries/cars';
 import { useActiveBanner } from '@/lib/queries/banners';
@@ -118,7 +119,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: getNavBarClearance(insets.bottom) }}
       >
         <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
           <View style={styles.headerTop}>

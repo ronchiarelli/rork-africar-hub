@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CalendarDays, MapPin, Clock, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { useBookings } from '@/lib/queries/bookings';
 import { Booking } from '@/types/car';
 
@@ -104,7 +105,7 @@ export default function BookingsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}
       >
         {filteredBookings.length === 0 ? (
           <View style={styles.emptyWrap}>

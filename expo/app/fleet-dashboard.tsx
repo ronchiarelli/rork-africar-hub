@@ -9,10 +9,12 @@ import {
   Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, MessageCircle, Phone, Pencil, ShieldCheck } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { useMyFleetVehicles, usePendingOwnerBookings, type PendingBooking } from '@/lib/queries/fleet';
 import { useReviewBooking } from '@/lib/queries/bookings';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
@@ -34,6 +36,7 @@ const KYC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: strin
 
 export default function FleetDashboardScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: fleetVehicles = [] } = useMyFleetVehicles();
   const { data: pendingBookings = [] } = usePendingOwnerBookings();
   const reviewBooking = useReviewBooking();
@@ -84,7 +87,7 @@ export default function FleetDashboardScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.earningsCard}>
           <Text style={styles.earningsTitle}>Total Revenue</Text>
           <Text style={styles.earningsValue}>GH₵{earnings.totalRevenue.toLocaleString()}</Text>

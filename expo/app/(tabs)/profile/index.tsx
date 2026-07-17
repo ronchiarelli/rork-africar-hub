@@ -33,6 +33,7 @@ import { useRequestRoleUpgrade } from '@/lib/queries/profile';
 import { useUnreadConversationsCount } from '@/lib/queries/chat';
 import { useNotifications } from '@/lib/queries/notifications';
 import NotificationBadge from '@/components/NotificationBadge';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { UserRole } from '@/types/car';
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -134,7 +135,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.profileHeader}>
           <View style={styles.avatarWrap}>
             <Image source={{ uri: currentUser.avatar }} style={styles.avatar} contentFit="cover" />

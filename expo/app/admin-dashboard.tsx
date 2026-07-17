@@ -37,6 +37,7 @@ import {
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { usePendingKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
 import { usePendingRoleApplications, useReviewRoleApplication } from '@/lib/queries/roleApplications';
 import {
@@ -207,7 +208,7 @@ export default function AdminDashboardScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         {activeTab === 'Overview' && (
           <>
             <View style={styles.statsGrid}>

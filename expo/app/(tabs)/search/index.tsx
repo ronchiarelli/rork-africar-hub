@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Search, SlidersHorizontal, X, MapPin } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import { LOCATIONS } from '@/constants/locations';
 import { VEHICLE_CATEGORIES } from '@/constants/vehicleCategories';
 import { useCars, useBrands, useBookedCarIds } from '@/lib/queries/cars';
@@ -247,7 +248,7 @@ export default function SearchScreen() {
           </View>
         )}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: getNavBarClearance(insets.bottom) }]}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Search size={48} color={Colors.gray[300]} />

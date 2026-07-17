@@ -9,12 +9,14 @@ import {
   Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone, Pencil } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useMyDealerListings, useMyLeads } from '@/lib/queries/dealer';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { getErrorMessage } from '@/lib/errors';
+import { getNavBarClearance } from '@/components/BottomNavBar';
 import type { Lead } from '@/types/car';
 
 const LISTING_STATUS: Record<string, { bg: string; text: string }> = {
@@ -32,6 +34,7 @@ const LEAD_STATUS_ICON: Record<string, React.ReactNode> = {
 
 export default function DealerDashboardScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: listings = [] } = useMyDealerListings();
   const { data: leads = [] } = useMyLeads();
   const getOrCreateConversation = useGetOrCreateConversation();
@@ -57,7 +60,7 @@ export default function DealerDashboardScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Eye size={20} color={Colors.info} />
