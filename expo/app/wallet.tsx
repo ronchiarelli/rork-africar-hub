@@ -75,12 +75,19 @@ export default function WalletScreen() {
       return;
     }
     initiateTopUp.mutate(amount, {
-      onSuccess: async (data) => {
+      onSuccess: (data) => {
         setTopUpModalVisible(false);
         if (Platform.OS === 'web') {
           window.open(data.checkoutUrl, '_blank');
         } else {
-          await WebBrowser.openBrowserAsync(data.checkoutUrl);
+          // Presenting the in-app browser in the same tick as dismissing
+          // this RN Modal races iOS's own dismiss animation and can leave
+          // the app stuck ("Attempt to present view controller while a
+          // presentation is in progress") — wait for the close animation
+          // to finish first.
+          setTimeout(() => {
+            void WebBrowser.openBrowserAsync(data.checkoutUrl);
+          }, 500);
         }
       },
       onError: (err) => {
