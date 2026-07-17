@@ -29,7 +29,7 @@ export default function BottomNavBar() {
   }, [router]);
 
   return (
-    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 14) }]}>
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 14) }]} pointerEvents="box-none">
       <View style={styles.bar}>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.route;

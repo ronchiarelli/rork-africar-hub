@@ -139,7 +139,11 @@ function RootLayoutNav() {
           <Stack.Screen name="renter-kyc" options={{ title: "Requester's ID Documents", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
         </Stack>
       </View>
-      {showNavBar && <BottomNavBar />}
+      {showNavBar && (
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }} pointerEvents="box-none">
+          <BottomNavBar />
+        </View>
+      )}
     </View>
   );
 }
