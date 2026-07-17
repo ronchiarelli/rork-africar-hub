@@ -14,10 +14,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { Search, SlidersHorizontal, X, MapPin } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
+import { VEHICLE_CATEGORIES } from '@/constants/vehicleCategories';
 import { useCars, useBrands, useBookedCarIds } from '@/lib/queries/cars';
 import CarCard from '@/components/CarCard';
 
-const CATEGORIES = ['All', 'SUV', 'Sedan', 'Hatchback', 'Van'];
+const CATEGORIES = ['All', ...VEHICLE_CATEGORIES];
 const TRANSMISSIONS = ['All', 'Automatic', 'Manual'];
 const PRICE_RANGES = [
   { label: 'Any', min: 0, max: 99999 },

@@ -12,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
+import { VEHICLE_CATEGORIES } from '@/constants/vehicleCategories';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { useCreateSaleCar, useUpdateSaleCar } from '@/lib/queries/dealer';
@@ -21,7 +22,7 @@ import MultiImagePicker from '@/components/MultiImagePicker';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
 import type { SaleCar } from '@/types/car';
 
-const CATEGORIES = ['SUV', 'Sedan', 'Hatchback', 'Van'];
+const CATEGORIES = VEHICLE_CATEGORIES;
 const TRANSMISSIONS: SaleCar['transmission'][] = ['Automatic', 'Manual'];
 const FUEL_TYPES: SaleCar['fuelType'][] = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
 const CONDITIONS: SaleCar['condition'][] = ['New', 'Foreign Used', 'Locally Used'];

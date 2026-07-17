@@ -13,6 +13,7 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
+import { VEHICLE_CATEGORIES } from '@/constants/vehicleCategories';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { useCreateCar, useUpdateCar } from '@/lib/queries/fleet';
@@ -22,7 +23,7 @@ import MultiImagePicker from '@/components/MultiImagePicker';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
 import type { Car } from '@/types/car';
 
-const CATEGORIES = ['SUV', 'Sedan', 'Hatchback', 'Van'];
+const CATEGORIES = VEHICLE_CATEGORIES;
 const TRANSMISSIONS: Car['transmission'][] = ['Automatic', 'Manual'];
 const FUEL_TYPES: Car['fuelType'][] = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
 const FEATURE_OPTIONS = [
