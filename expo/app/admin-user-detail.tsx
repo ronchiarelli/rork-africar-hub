@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Phone, Mail, Calendar, ShieldCheck, ShieldX, UserX, UserCheck, X, MessageCircle, CreditCard } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import AnimatedApproveButton from '@/components/AnimatedApproveButton';
 import {
   useAdminUserDetail,
   useSetUserSuspended,
@@ -211,10 +212,10 @@ export default function AdminUserDetailScreen() {
               {!!doc.rejectionReason && <Text style={styles.docRejectionReason}>Reason: {doc.rejectionReason}</Text>}
               {doc.status === 'uploaded' && doc.docId && (
                 <View style={styles.docActionsRow}>
-                  <Pressable style={styles.docApproveBtn} onPress={() => handleReview(doc.docId as string, 'verified')} testID={`doc-approve-${doc.type}-${doc.side}`}>
+                  <AnimatedApproveButton style={styles.docApproveBtn} onPress={() => handleReview(doc.docId as string, 'verified')} testID={`doc-approve-${doc.type}-${doc.side}`}>
                     <ShieldCheck size={14} color={Colors.white} />
                     <Text style={styles.docActionText}>Approve</Text>
-                  </Pressable>
+                  </AnimatedApproveButton>
                   <Pressable style={styles.docRejectBtn} onPress={() => handleReview(doc.docId as string, 'rejected')} testID={`doc-reject-${doc.type}-${doc.side}`}>
                     <ShieldX size={14} color={Colors.white} />
                     <Text style={styles.docActionText}>Reject</Text>

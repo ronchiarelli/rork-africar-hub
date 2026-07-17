@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, MessageCircle, Phone, Pencil, ShieldCheck } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import AnimatedApproveButton from '@/components/AnimatedApproveButton';
 import { useMyFleetVehicles, usePendingOwnerBookings, type PendingBooking } from '@/lib/queries/fleet';
 import { useReviewBooking } from '@/lib/queries/bookings';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
@@ -152,14 +153,14 @@ export default function FleetDashboardScreen() {
                       <X size={14} color={Colors.error} />
                       <Text style={[styles.actionBtnText, { color: Colors.error }]}>Decline</Text>
                     </Pressable>
-                    <Pressable
+                    <AnimatedApproveButton
                       style={[styles.actionBtn, styles.approveBtn]}
                       onPress={() => handleReview(booking, 'approved')}
                       disabled={reviewBooking.isPending}
                     >
                       <Check size={14} color={Colors.white} />
                       <Text style={[styles.actionBtnText, { color: Colors.white }]}>Approve</Text>
-                    </Pressable>
+                    </AnimatedApproveButton>
                   </View>
                 </View>
               </View>

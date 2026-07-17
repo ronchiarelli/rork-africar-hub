@@ -36,6 +36,7 @@ import {
   Eye,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import AnimatedApproveButton from '@/components/AnimatedApproveButton';
 import { usePendingKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
 import { usePendingRoleApplications, useReviewRoleApplication } from '@/lib/queries/roleApplications';
 import {
@@ -332,14 +333,14 @@ export default function AdminDashboardScreen() {
                   </Text>
                 </Pressable>
                 <View style={styles.kycActions}>
-                  <Pressable
+                  <AnimatedApproveButton
                     style={styles.approveBtn}
                     onPress={() => handleKycDecision(doc.docId, 'verified')}
                     disabled={reviewKyc.isPending}
                   >
                     <UserCheck size={16} color={Colors.white} />
                     <Text style={styles.approveBtnText}>Approve</Text>
-                  </Pressable>
+                  </AnimatedApproveButton>
                   <Pressable
                     style={styles.rejectBtn}
                     onPress={() => handleKycDecision(doc.docId, 'rejected')}
@@ -373,14 +374,14 @@ export default function AdminDashboardScreen() {
                   </View>
                 </View>
                 <View style={styles.kycActions}>
-                  <Pressable
+                  <AnimatedApproveButton
                     style={styles.approveBtn}
                     onPress={() => handleRoleDecision(app.userId, 'approved')}
                     disabled={reviewRoleApp.isPending}
                   >
                     <UserCheck size={16} color={Colors.white} />
                     <Text style={styles.approveBtnText}>Approve</Text>
-                  </Pressable>
+                  </AnimatedApproveButton>
                   <Pressable
                     style={styles.rejectBtn}
                     onPress={() => handleRoleDecision(app.userId, 'rejected')}
