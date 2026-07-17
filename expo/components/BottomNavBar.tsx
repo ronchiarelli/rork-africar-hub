@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, CalendarDays, User, LayoutDashboard } from 'lucide-react-native';
@@ -28,69 +28,69 @@ export default function BottomNavBar() {
   }, [router]);
 
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-      {NAV_ITEMS.map((item) => {
-        const isActive = pathname === item.route;
-        const Icon = item.icon;
-        return (
-          <Pressable
-            key={item.route}
-            style={styles.item}
-            onPress={() => handlePress(item.route)}
-            testID={`nav-${item.label.toLowerCase()}`}
-          >
-            <View style={[styles.iconWrap, isActive && styles.iconWrapActive]}>
-              <Icon size={20} color={isActive ? Colors.orange.primary : Colors.gray[400]} strokeWidth={isActive ? 2.5 : 2} />
-            </View>
-            <Text style={[styles.label, isActive && styles.labelActive]}>
-              {item.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 14) }]}>
+      <View style={styles.bar}>
+        {NAV_ITEMS.map((item) => {
+          const isActive = pathname === item.route;
+          const Icon = item.icon;
+          return (
+            <Pressable
+              key={item.route}
+              style={styles.item}
+              onPress={() => handlePress(item.route)}
+              testID={`nav-${item.label.toLowerCase()}`}
+            >
+              {isActive ? (
+                <View style={styles.bubble}>
+                  <Icon size={22} color={Colors.orange.primary} strokeWidth={2.4} />
+                </View>
+              ) : (
+                <Icon size={21} color={Colors.gray[400]} strokeWidth={2} />
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrap: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  bar: {
     flexDirection: 'row' as const,
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderTopWidth: 1,
-    borderTopColor: Colors.gray[100],
-    paddingTop: 12,
-    paddingHorizontal: 8,
-    elevation: 20,
+    alignItems: 'center' as const,
+    height: 68,
+    backgroundColor: Colors.purple.deep,
+    borderRadius: 34,
+    paddingHorizontal: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 14,
   },
   item: {
     flex: 1,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 4,
-  },
-  iconWrap: {
-    width: 44,
-    height: 32,
-    borderRadius: 16,
+    height: '100%',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
-  iconWrapActive: {
-    backgroundColor: Colors.orange.faint,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: Colors.gray[400],
-  },
-  labelActive: {
-    color: Colors.orange.primary,
-    fontWeight: '700' as const,
+  bubble: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    marginTop: -22,
+    backgroundColor: Colors.white,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });
