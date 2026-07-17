@@ -81,18 +81,21 @@ Deno.serve(async (req: Request) => {
     const merchantAccountNumber = Deno.env.get('HUBTEL_MERCHANT_ACCOUNT_NUMBER')!;
     const basicAuth = btoa(`${hubtelClientId}:${hubtelClientSecret}`);
 
-    const appScheme = Deno.env.get('APP_SCHEME') ?? 'gocarhub';
-
     // Same trust model as initiate-wallet-topup: only honor a web Origin if
-    // it's on the allowlist, otherwise fall back to the native deep link —
-    // this endpoint can be called directly, so Origin is untrusted input.
+    // it's on the allowlist, otherwise fall back to the production web URL
+    // — Hubtel rejects non-http(s) ReturnUrl/CancellationUrl values
+    // outright (confirmed via a live 400 "Return URL is invalid"
+    // response), so the previous custom app-scheme deep link never
+    // actually worked here. This endpoint can be called directly, so
+    // Origin is untrusted input.
+    const PRODUCTION_WEB_URL = 'https://gocar-hub.vercel.app';
     const allowedWebOrigins = (Deno.env.get('ALLOWED_WEB_ORIGINS') ?? '')
       .split(',')
       .map((o) => o.trim())
       .filter(Boolean);
     const webOrigin = req.headers.get('origin');
     const isAllowedOrigin = !!webOrigin && allowedWebOrigins.includes(webOrigin);
-    const returnBase = isAllowedOrigin ? `${webOrigin}/subscription` : `${appScheme}://subscription`;
+    const returnBase = isAllowedOrigin ? `${webOrigin}/subscription` : `${PRODUCTION_WEB_URL}/subscription`;
 
     const hubtelResponse = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
       method: 'POST',

@@ -81,24 +81,27 @@ Deno.serve(async (req: Request) => {
     const merchantAccountNumber = Deno.env.get('HUBTEL_MERCHANT_ACCOUNT_NUMBER')!;
     const basicAuth = btoa(`${hubtelClientId}:${hubtelClientSecret}`);
 
-    const appScheme = Deno.env.get('APP_SCHEME') ?? 'gocarhub';
-
     // Browser-originated requests (web) carry an Origin header set by the
     // browser itself; React Native's fetch never sends one for native app
-    // calls. Use that to pick a redirect Hubtel can actually follow — a
-    // plain https:// URL for web, an app-scheme deep link for native —
-    // without needing to hardcode the web hosting domain. This endpoint can
-    // be called directly (not just from the app), so Origin is untrusted
-    // input: only honor it if it matches a known allowlist, otherwise fall
-    // back to the safe native deep link rather than letting a caller point
-    // Hubtel's redirect at an arbitrary domain.
+    // calls. Use that to pick which https:// URL Hubtel redirects to after
+    // payment — Hubtel's API validates ReturnUrl/CancellationUrl and
+    // rejects non-http(s) values outright (confirmed via a live 400
+    // "Return URL is invalid" response), so a custom app-scheme deep link
+    // (gocarhub://...) never worked here regardless of client-side deep
+    // link handling. The native app only opens this in a plain in-app
+    // browser (no custom-scheme interception), so falling back to the
+    // real hosted web page is both accepted by Hubtel and a valid outcome
+    // for the user. This endpoint can be called directly (not just from
+    // the app), so Origin is untrusted input: only honor it if it matches
+    // a known allowlist, otherwise fall back to the production web URL.
+    const PRODUCTION_WEB_URL = 'https://gocar-hub.vercel.app';
     const allowedWebOrigins = (Deno.env.get('ALLOWED_WEB_ORIGINS') ?? '')
       .split(',')
       .map((o) => o.trim())
       .filter(Boolean);
     const webOrigin = req.headers.get('origin');
     const isAllowedOrigin = !!webOrigin && allowedWebOrigins.includes(webOrigin);
-    const returnBase = isAllowedOrigin ? `${webOrigin}/wallet` : `${appScheme}://wallet`;
+    const returnBase = isAllowedOrigin ? `${webOrigin}/wallet` : `${PRODUCTION_WEB_URL}/wallet`;
 
     const hubtelResponse = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
       method: 'POST',
