@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, MessageCircle, Phone, Pencil, ShieldCheck, Eye, BarChart3 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
+import TrendLineChart from '@/components/TrendLineChart';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import { useMyFleetVehicles, usePendingOwnerBookings, useFleetMonthlyTrends, useFleetTopCars, type PendingBooking } from '@/lib/queries/fleet';
 import { useReviewBooking } from '@/lib/queries/bookings';
@@ -235,43 +236,45 @@ export default function FleetDashboardScreen() {
         )}
 
         <Text style={[styles.sectionTitle, styles.analyticsSectionTitle]}>Analytics (Last 6 Months)</Text>
-        {(['bookings', 'revenue'] as const).map((metric) => {
-          const labels: Record<typeof metric, string> = { bookings: 'Bookings', revenue: 'Revenue (GH₵)' };
-          const max = Math.max(1, ...monthlyTrends.map((t) => t[metric]));
+        <View style={styles.chartCard}>
+          <Text style={styles.chartTitle}>Bookings &amp; Revenue Trend</Text>
+          <TrendLineChart
+            xLabels={monthlyTrends.map((t) => new Date(t.monthStart).toLocaleDateString('en-US', { month: 'short' }))}
+            series={[
+              { label: 'Bookings', color: Colors.orange.primary, values: monthlyTrends.map((t) => t.bookings) },
+              { label: 'Revenue (GH₵)', color: Colors.info, values: monthlyTrends.map((t) => t.revenue) },
+            ]}
+          />
+        </View>
+
+        <Text style={styles.sectionTitle}>Top Cars</Text>
+        {topCars.map((car, idx) => {
+          const maxBookings = Math.max(1, ...topCars.map((c) => c.bookingCount));
+          const maxViews = Math.max(1, ...topCars.map((c) => c.views));
           return (
-            <View key={metric} style={styles.chartCard}>
-              <Text style={styles.chartTitle}>{labels[metric]}</Text>
-              <View style={styles.chartBars}>
-                {monthlyTrends.map((t) => (
-                  <View key={t.monthStart} style={styles.chartBarCol}>
-                    <View style={styles.chartBarTrack}>
-                      <View style={[styles.chartBarFill, { height: `${Math.max(4, (t[metric] / max) * 100)}%` }]} />
-                    </View>
-                    <Text style={styles.chartBarLabel}>{new Date(t.monthStart).toLocaleDateString('en-US', { month: 'short' })}</Text>
-                    <Text style={styles.chartBarValue}>{Math.round(t[metric])}</Text>
+            <View key={car.carId} style={styles.topCarCard}>
+              <Text style={styles.topCarRank}>#{idx + 1}</Text>
+              <Image source={{ uri: car.image }} style={styles.topCarImage} contentFit="cover" />
+              <View style={styles.topCarInfo}>
+                <Text style={styles.topCarName}>{car.brand} {car.model}</Text>
+                <View style={styles.topCarBarRow}>
+                  <Text style={styles.topCarBarLabel}>Bookings</Text>
+                  <View style={styles.topCarBarTrack}>
+                    <View style={[styles.topCarBarFill, { width: `${Math.max(4, (car.bookingCount / maxBookings) * 100)}%`, backgroundColor: Colors.orange.primary }]} />
                   </View>
-                ))}
+                  <Text style={styles.topCarBarValue}>{car.bookingCount}</Text>
+                </View>
+                <View style={styles.topCarBarRow}>
+                  <Text style={styles.topCarBarLabel}>Views</Text>
+                  <View style={styles.topCarBarTrack}>
+                    <View style={[styles.topCarBarFill, { width: `${Math.max(4, (car.views / maxViews) * 100)}%`, backgroundColor: Colors.info }]} />
+                  </View>
+                  <Text style={styles.topCarBarValue}>{car.views}</Text>
+                </View>
               </View>
             </View>
           );
         })}
-
-        <Text style={styles.sectionTitle}>Top Cars by Bookings</Text>
-        {topCars.map((car, idx) => (
-          <View key={car.carId} style={styles.topCarCard}>
-            <Text style={styles.topCarRank}>#{idx + 1}</Text>
-            <Image source={{ uri: car.image }} style={styles.topCarImage} contentFit="cover" />
-            <View style={styles.topCarInfo}>
-              <Text style={styles.topCarName}>{car.brand} {car.model}</Text>
-              <View style={styles.topCarStatsRow}>
-                <Text style={styles.topCarCount}>{car.bookingCount} booking{car.bookingCount === 1 ? '' : 's'}</Text>
-                <Text style={styles.topCarDot}>·</Text>
-                <Eye size={11} color={Colors.gray[400]} />
-                <Text style={styles.topCarCount}>{car.views}</Text>
-              </View>
-            </View>
-          </View>
-        ))}
         {topCars.length === 0 && (
           <View style={styles.emptyWrap}>
             <BarChart3 size={40} color={Colors.gray[300]} />
@@ -582,29 +585,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  chartTitle: { fontSize: 14, fontWeight: '700' as const, color: Colors.gray[900], marginBottom: 14 },
-  chartBars: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'flex-end' as const,
-    height: 120,
-  },
-  chartBarCol: { flex: 1, alignItems: 'center' as const, gap: 4 },
-  chartBarTrack: {
-    width: 18,
-    height: 80,
-    backgroundColor: Colors.gray[100],
-    borderRadius: 6,
-    justifyContent: 'flex-end' as const,
-    overflow: 'hidden' as const,
-  },
-  chartBarFill: {
-    width: '100%',
-    backgroundColor: Colors.orange.primary,
-    borderRadius: 6,
-  },
-  chartBarLabel: { fontSize: 10, color: Colors.gray[500], marginTop: 2 },
-  chartBarValue: { fontSize: 11, fontWeight: '700' as const, color: Colors.gray[900] },
+  chartTitle: { fontSize: 14, fontWeight: '700' as const, color: Colors.gray[900], marginBottom: 4 },
   topCarCard: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -622,13 +603,35 @@ const styles = StyleSheet.create({
   topCarRank: { fontSize: 16, fontWeight: '800' as const, color: Colors.gray[400], width: 28 },
   topCarImage: { width: 50, height: 50, borderRadius: 10 },
   topCarInfo: { flex: 1 },
-  topCarName: { fontSize: 14, fontWeight: '700' as const, color: Colors.gray[900] },
-  topCarStatsRow: {
+  topCarName: { fontSize: 14, fontWeight: '700' as const, color: Colors.gray[900], marginBottom: 6 },
+  topCarBarRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: 4,
-    marginTop: 2,
+    gap: 8,
+    marginTop: 4,
   },
-  topCarCount: { fontSize: 12, color: Colors.gray[500] },
-  topCarDot: { fontSize: 12, color: Colors.gray[400] },
+  topCarBarLabel: {
+    fontSize: 10,
+    color: Colors.gray[500],
+    fontWeight: '600' as const,
+    width: 48,
+  },
+  topCarBarTrack: {
+    flex: 1,
+    height: 6,
+    backgroundColor: Colors.gray[100],
+    borderRadius: 3,
+    overflow: 'hidden' as const,
+  },
+  topCarBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  topCarBarValue: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+    width: 24,
+    textAlign: 'right' as const,
+  },
 });
