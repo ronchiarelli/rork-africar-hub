@@ -83,7 +83,7 @@ export default function BookingScreen() {
       { carId: car.id, pickupDate, returnDate, pickupLocation },
       {
         onSuccess: (booking) => {
-          const needsKyc = currentUser?.verificationStatus !== 'approved';
+          const needsKyc = currentUser?.verificationStatus !== 'approved' && currentUser?.verificationStatus !== 'restricted';
           Alert.alert(
             'Booking Requested',
             needsKyc

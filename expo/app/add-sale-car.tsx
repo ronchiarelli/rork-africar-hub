@@ -116,7 +116,7 @@ export default function AddSaleCarScreen() {
   const handleSubmit = useCallback(async () => {
     if (!currentUser) return;
     const isAdmin = currentUser.role === 'admin';
-    if (!isAdmin && currentUser.verificationStatus !== 'pending' && currentUser.verificationStatus !== 'approved') {
+    if (!isAdmin && currentUser.verificationStatus !== 'pending' && currentUser.verificationStatus !== 'restricted' && currentUser.verificationStatus !== 'approved') {
       Alert.alert('Verification Required', 'Please complete KYC verification before listing a car.', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Verify Now', onPress: () => router.push('/kyc-verification') },

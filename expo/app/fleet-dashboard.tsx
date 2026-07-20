@@ -31,6 +31,7 @@ const VEHICLE_STATUS_CONFIG: Record<string, { bg: string; text: string; label: s
 const KYC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   none: { bg: Colors.gray[200], text: Colors.gray[600], label: 'KYC Not Started' },
   pending: { bg: Colors.warning + '20', text: Colors.warning, label: 'KYC Pending Review' },
+  restricted: { bg: Colors.info + '20', text: Colors.info, label: 'ID Verified (Restricted)' },
   approved: { bg: Colors.success + '20', text: Colors.success, label: 'KYC Verified' },
   rejected: { bg: Colors.error + '20', text: Colors.error, label: 'KYC Rejected' },
 };
@@ -70,7 +71,7 @@ export default function FleetDashboardScreen() {
   }, []);
 
   const handleReview = (booking: PendingBooking, decision: 'approved' | 'cancelled') => {
-    if (decision === 'approved' && booking.customerVerificationStatus !== 'approved') {
+    if (decision === 'approved' && booking.customerVerificationStatus !== 'approved' && booking.customerVerificationStatus !== 'restricted') {
       Alert.alert(
         'KYC Not Verified',
         `${booking.customerName} hasn't completed KYC verification yet. You can approve this booking once an admin has verified their ID documents.`,

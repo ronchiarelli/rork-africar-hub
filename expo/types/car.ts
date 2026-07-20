@@ -67,7 +67,7 @@ export interface UserProfile {
   whatsapp: string;
   avatar: string;
   isVerified: boolean;
-  verificationStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  verificationStatus: 'none' | 'pending' | 'restricted' | 'approved' | 'rejected';
   isSuspended: boolean;
   totalBookings: number;
   memberSince: string;

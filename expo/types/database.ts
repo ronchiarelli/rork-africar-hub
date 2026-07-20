@@ -3,7 +3,7 @@
 // version: `npx supabase gen types typescript --linked > types/database.ts`.
 
 export type UserRoleDb = 'customer' | 'fleet_owner' | 'dealership' | 'admin';
-export type VerificationStatusDb = 'none' | 'pending' | 'approved' | 'rejected';
+export type VerificationStatusDb = 'none' | 'pending' | 'restricted' | 'approved' | 'rejected';
 export type BookingStatusDb = 'pending' | 'approved' | 'active' | 'completed' | 'cancelled';
 export type FleetStatusDb = 'active' | 'maintenance' | 'rented' | 'inactive';
 export type SubscriptionStatusDb = 'trialing' | 'active' | 'past_due' | 'cancelled';

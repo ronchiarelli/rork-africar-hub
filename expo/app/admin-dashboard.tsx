@@ -76,6 +76,7 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
   active: { bg: Colors.success + '20', text: Colors.success, label: 'Active' },
   suspended: { bg: Colors.error + '20', text: Colors.error, label: 'Suspended' },
   pending_kyc: { bg: Colors.warning + '20', text: Colors.warning, label: 'Pending KYC' },
+  restricted_kyc: { bg: Colors.info + '20', text: Colors.info, label: 'Restricted KYC' },
 };
 
 export default function AdminDashboardScreen() {
@@ -277,7 +278,9 @@ export default function AdminDashboardScreen() {
                 ? STATUS_CONFIG.suspended
                 : user.verificationStatus === 'pending'
                   ? STATUS_CONFIG.pending_kyc
-                  : STATUS_CONFIG.active;
+                  : user.verificationStatus === 'restricted'
+                    ? STATUS_CONFIG.restricted_kyc
+                    : STATUS_CONFIG.active;
               return (
                 <Pressable
                   key={user.id}
