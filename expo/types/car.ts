@@ -44,6 +44,10 @@ export interface Booking {
   status: 'pending' | 'approved' | 'active' | 'completed' | 'cancelled';
   paymentStatus: 'unpaid' | 'paid';
   createdAt: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string;
+  customerVerificationStatus: 'none' | 'pending' | 'restricted' | 'approved' | 'rejected';
 }
 
 export interface CarIssueReport {

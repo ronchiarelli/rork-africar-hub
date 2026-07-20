@@ -29,13 +29,18 @@ import {
   AlertTriangle,
   ChevronRight,
   CreditCard,
+  ShieldCheck,
+  Check,
+  X,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useBookingDetail, useOwnerAcceptsInAppPayment, useInitiateBookingPayment } from '@/lib/queries/bookings';
+import { useBookingDetail, useOwnerAcceptsInAppPayment, useInitiateBookingPayment, useReviewBooking } from '@/lib/queries/bookings';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { useBookingIssueReports } from '@/lib/queries/issueReports';
+import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
+import AnimatedApproveButton from '@/components/AnimatedApproveButton';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string; bg: string }> = {
   pending: { icon: <Clock3 size={18} color={Colors.warning} />, color: Colors.warning, label: 'Pending Approval', bg: Colors.warning + '15' },
@@ -51,17 +56,51 @@ const ISSUE_STATUS_CONFIG: Record<string, { color: string; label: string; bg: st
   resolved: { color: Colors.success, label: 'Resolved', bg: Colors.success + '15' },
 };
 
+const KYC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+  none: { bg: Colors.gray[200], text: Colors.gray[600], label: 'KYC Not Started' },
+  pending: { bg: Colors.warning + '20', text: Colors.warning, label: 'KYC Pending Review' },
+  restricted: { bg: Colors.info + '20', text: Colors.info, label: 'ID Verified (Restricted)' },
+  approved: { bg: Colors.success + '20', text: Colors.success, label: 'KYC Verified' },
+  rejected: { bg: Colors.error + '20', text: Colors.error, label: 'KYC Rejected' },
+};
+
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { currentUser } = useAuth();
   const { data: booking, isLoading } = useBookingDetail(id);
   const { data: issueReports = [] } = useBookingIssueReports(id);
   const { data: ownerAcceptsInAppPayment = false } = useOwnerAcceptsInAppPayment(booking?.car.ownerId ?? undefined);
   const initiatePayment = useInitiateBookingPayment();
   const getOrCreateConversation = useGetOrCreateConversation();
+  const reviewBooking = useReviewBooking();
 
   const config = booking ? STATUS_CONFIG[booking.status] : null;
+  const isOwner = !!booking && !!currentUser && booking.car.ownerId === currentUser.id;
+  const canReviewBooking = isOwner && booking?.status === 'pending';
+  const kycConfig = booking ? KYC_STATUS_CONFIG[booking.customerVerificationStatus] ?? KYC_STATUS_CONFIG.none : KYC_STATUS_CONFIG.none;
+
+  const handleReview = (decision: 'approved' | 'cancelled') => {
+    if (!booking) return;
+    if (decision === 'approved' && booking.customerVerificationStatus !== 'approved' && booking.customerVerificationStatus !== 'restricted') {
+      Alert.alert(
+        'KYC Not Verified',
+        `${booking.customerName} hasn't completed KYC verification yet. You can approve this booking once an admin has verified their ID documents.`,
+        [
+          { text: 'OK', style: 'cancel' },
+          { text: 'View ID Documents', onPress: () => router.push({ pathname: '/renter-kyc', params: { userId: booking.customerId, name: booking.customerName } }) },
+        ]
+      );
+      return;
+    }
+    reviewBooking.mutate(
+      { bookingId: booking.id, decision },
+      {
+        onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update this booking.')),
+      }
+    );
+  };
 
   const handleMessage = () => {
     if (!booking || !booking.car.ownerId) return;
@@ -146,6 +185,43 @@ export default function BookingDetailScreen() {
             </View>
           </View>
         </View>
+
+        {canReviewBooking && (
+          <>
+            <Text style={styles.sectionTitle}>Booking Request</Text>
+            <View style={styles.ownerReviewCard}>
+              <Text style={styles.ownerReviewCustomer}>{booking.customerName}</Text>
+              <Pressable
+                style={[styles.kycBadge, { backgroundColor: kycConfig.bg }]}
+                onPress={() => router.push({ pathname: '/renter-kyc', params: { userId: booking.customerId, name: booking.customerName } })}
+                testID="booking-detail-verify-kyc-btn"
+              >
+                <ShieldCheck size={13} color={kycConfig.text} />
+                <Text style={[styles.kycBadgeText, { color: kycConfig.text }]}>{kycConfig.label}</Text>
+              </Pressable>
+              <View style={styles.ownerReviewActions}>
+                <Pressable
+                  style={[styles.reviewActionBtn, styles.declineBtn]}
+                  onPress={() => handleReview('cancelled')}
+                  disabled={reviewBooking.isPending}
+                  testID="booking-detail-decline-btn"
+                >
+                  <X size={15} color={Colors.error} />
+                  <Text style={[styles.reviewActionText, { color: Colors.error }]}>Decline</Text>
+                </Pressable>
+                <AnimatedApproveButton
+                  style={[styles.reviewActionBtn, styles.approveBtn]}
+                  onPress={() => handleReview('approved')}
+                  disabled={reviewBooking.isPending}
+                  testID="booking-detail-approve-btn"
+                >
+                  <Check size={15} color={Colors.white} />
+                  <Text style={[styles.reviewActionText, { color: Colors.white }]}>Approve</Text>
+                </AnimatedApproveButton>
+              </View>
+            </View>
+          </>
+        )}
 
         <Text style={styles.sectionTitle}>Trip Details</Text>
         <View style={styles.detailsCard}>
@@ -407,6 +483,60 @@ const styles = StyleSheet.create({
     color: Colors.gray[900],
     marginBottom: 12,
     marginTop: 4,
+  },
+  ownerReviewCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  ownerReviewCustomer: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+  },
+  kycBadge: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'flex-start' as const,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  kycBadgeText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+  },
+  ownerReviewActions: {
+    flexDirection: 'row' as const,
+    gap: 10,
+    marginTop: 14,
+  },
+  reviewActionBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flex: 1,
+  },
+  approveBtn: {
+    backgroundColor: Colors.success,
+  },
+  declineBtn: {
+    backgroundColor: Colors.error + '15',
+  },
+  reviewActionText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
   },
   detailsCard: {
     backgroundColor: Colors.white,

@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { mapCar } from '@/lib/queries/cars';
 import { getErrorMessage } from '@/lib/errors';
-import type { BookingRow, CarRow } from '@/types/database';
+import type { BookingRow, CarRow, VerificationStatusDb } from '@/types/database';
 import type { Booking } from '@/types/car';
 
-type BookingWithCar = BookingRow & { car: CarRow };
+type BookingCustomer = { name: string; phone: string | null; verification_status: VerificationStatusDb } | null;
+type BookingWithCar = BookingRow & { car: CarRow; customer: BookingCustomer };
 
 function mapBooking(row: BookingWithCar): Booking {
   return {
@@ -20,8 +21,14 @@ function mapBooking(row: BookingWithCar): Booking {
     status: row.status,
     paymentStatus: row.payment_status,
     createdAt: row.created_at,
+    customerId: row.customer_id,
+    customerName: row.customer?.name ?? 'Customer',
+    customerPhone: row.customer?.phone ?? '',
+    customerVerificationStatus: row.customer?.verification_status ?? 'none',
   };
 }
+
+const BOOKING_SELECT = '*, car:cars(*), customer:profiles!customer_id(name, phone, verification_status)';
 
 export function useBookings() {
   return useQuery({
@@ -29,7 +36,7 @@ export function useBookings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*, car:cars(*)')
+        .select(BOOKING_SELECT)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data as unknown as BookingWithCar[]).map(mapBooking);
@@ -43,7 +50,7 @@ export function useBookingDetail(id: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*, car:cars(*)')
+        .select(BOOKING_SELECT)
         .eq('id', id as string)
         .single();
       if (error) throw error;
