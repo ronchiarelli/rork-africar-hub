@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -90,6 +91,7 @@ function DocCard({
 export default function KYCVerificationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: winWidth, height: winHeight } = useWindowDimensions();
   const { data: documents = [] } = useKycDocuments();
   const markKycNotificationsRead = useMarkNotificationsReadByType('kyc');
   const [preview, setPreview] = useState<{ uri: string; label: string } | null>(null);
@@ -192,7 +194,12 @@ export default function KYCVerificationScreen() {
           {preview && (
             <>
               <Text style={styles.previewLabel}>{preview.label}</Text>
-              <Image source={{ uri: preview.uri }} style={styles.previewImage} contentFit="contain" />
+              <Image
+                source={{ uri: preview.uri }}
+                style={{ width: winWidth * 0.9, height: winHeight * 0.65 }}
+                contentFit="contain"
+                testID="kyc-verification-preview-image"
+              />
             </>
           )}
         </View>
@@ -394,9 +401,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700' as const,
     marginBottom: 16,
-  },
-  previewImage: {
-    width: '100%',
-    height: '75%',
   },
 });
