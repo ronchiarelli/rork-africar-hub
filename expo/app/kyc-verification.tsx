@@ -133,9 +133,11 @@ export default function KYCVerificationScreen() {
     return worstStatus(licenseFront.status, licenseBack.status);
   }, [licenseFront, licenseBack]);
 
-  const requiredGroupStatuses = [identityStatus, licenseStatus, selfie?.status ?? 'not_uploaded'];
-  const completedCount = requiredGroupStatuses.filter((s) => s === 'verified').length;
-  const progress = documents.length === 0 ? 0 : (completedCount / requiredGroupStatuses.length) * 100;
+  // Any ONE of National ID, Passport, or Driver's License verified is
+  // enough to fully verify a user — they don't all need to clear together.
+  const isVerified = identityStatus === 'verified' || licenseStatus === 'verified';
+  const hasAnyUpload = documents.some((d) => d.status !== 'not_uploaded');
+  const progress = isVerified ? 100 : hasAnyUpload ? 35 : 0;
 
   return (
     <View style={styles.container}>
@@ -148,7 +150,9 @@ export default function KYCVerificationScreen() {
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
-          <Text style={styles.progressText}>{completedCount} of {requiredGroupStatuses.length} requirements verified</Text>
+          <Text style={styles.progressText}>
+            {isVerified ? 'Verified — you can now book or list vehicles' : 'Verify your National ID, Passport, or Driver’s License — any one is enough'}
+          </Text>
         </View>
 
         <Text style={styles.sectionTitle}>Identity Document</Text>
