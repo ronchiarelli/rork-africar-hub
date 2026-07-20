@@ -79,6 +79,58 @@ export function usePendingOwnerBookings() {
   });
 }
 
+export interface FleetMonthlyTrend {
+  monthStart: string;
+  bookings: number;
+  revenue: number;
+}
+
+export function useFleetMonthlyTrends() {
+  const { currentUser } = useAuth();
+  return useQuery({
+    queryKey: ['fleet-owner-monthly-trends', currentUser?.id],
+    queryFn: async (): Promise<FleetMonthlyTrend[]> => {
+      const { data, error } = await supabase.rpc('fleet_owner_monthly_trends');
+      if (error) throw error;
+      return data.map((row) => ({
+        monthStart: row.month_start,
+        bookings: row.bookings,
+        revenue: row.revenue,
+      }));
+    },
+    enabled: !!currentUser?.id,
+  });
+}
+
+export interface FleetTopCar {
+  carId: string;
+  brand: string;
+  model: string;
+  image: string;
+  views: number;
+  bookingCount: number;
+}
+
+export function useFleetTopCars() {
+  const { currentUser } = useAuth();
+  return useQuery({
+    queryKey: ['fleet-owner-top-cars', currentUser?.id],
+    queryFn: async (): Promise<FleetTopCar[]> => {
+      const { data, error } = await supabase.rpc('fleet_owner_top_cars');
+      if (error) throw error;
+      return data.map((row) => ({
+        carId: row.car_id,
+        brand: row.brand,
+        model: row.model,
+        image: row.image,
+        views: row.views,
+        bookingCount: row.booking_count,
+      }));
+    },
+    enabled: !!currentUser?.id,
+  });
+}
+
 export interface NewCarInput {
   brand: string;
   model: string;

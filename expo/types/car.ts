@@ -22,6 +22,7 @@ export interface Car {
   ownerId: string | null;
   ownerName: string;
   ownerPhone: string;
+  views: number;
 }
 
 export interface Brand {

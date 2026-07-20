@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -31,7 +31,7 @@ import {
   Expand,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useCarDetails } from '@/lib/queries/cars';
+import { useCarDetails, useIncrementCarViews } from '@/lib/queries/cars';
 import { useFavorites } from '@/providers/FavoritesProvider';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { useAuth } from '@/providers/AuthProvider';
@@ -52,6 +52,12 @@ export default function CarDetailsScreen() {
 
   const { data: car, isLoading } = useCarDetails(id);
   const getOrCreateConversation = useGetOrCreateConversation();
+  const incrementCarViews = useIncrementCarViews();
+
+  useEffect(() => {
+    if (id) incrementCarViews.mutate(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const handleMessage = useCallback(() => {
     if (!car) return;

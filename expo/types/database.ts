@@ -70,6 +70,7 @@ export type CarRow = {
   features: string[];
   owner_name: string | null;
   owner_phone: string | null;
+  views: number;
   created_at: string;
   updated_at: string;
 }
@@ -450,6 +451,29 @@ export type Database = {
           brand: string;
           model: string;
           image: string;
+          booking_count: number;
+        }[];
+      };
+      increment_car_views: {
+        Args: { p_car_id: string };
+        Returns: void;
+      };
+      fleet_owner_monthly_trends: {
+        Args: Record<string, never>;
+        Returns: {
+          month_start: string;
+          bookings: number;
+          revenue: number;
+        }[];
+      };
+      fleet_owner_top_cars: {
+        Args: Record<string, never>;
+        Returns: {
+          car_id: string;
+          brand: string;
+          model: string;
+          image: string;
+          views: number;
           booking_count: number;
         }[];
       };

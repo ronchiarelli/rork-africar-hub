@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { CarRow, SaleCarRow, BrandRow } from '@/types/database';
 import type { Car, SaleCar, Brand } from '@/types/car';
@@ -28,6 +28,7 @@ export function mapCar(row: CarRow): Car {
     ownerId: row.owner_id,
     ownerName: row.owner_name ?? '',
     ownerPhone: row.owner_phone ?? '',
+    views: row.views,
   };
 }
 
@@ -98,6 +99,18 @@ export function useCarDetails(id: string | undefined) {
     },
     enabled: !!id,
     staleTime: 60_000,
+  });
+}
+
+// Fire-and-forget view counter, fed to the fleet dashboard's analytics.
+// Silently ignores failure — a missed view increment isn't worth surfacing
+// an error to someone just browsing a car.
+export function useIncrementCarViews() {
+  return useMutation({
+    mutationFn: async (carId: string) => {
+      const { error } = await supabase.rpc('increment_car_views', { p_car_id: carId });
+      if (error) throw error;
+    },
   });
 }
 
