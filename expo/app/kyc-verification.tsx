@@ -16,6 +16,7 @@ import { ShieldCheck, Upload, CheckCircle2, Clock, XCircle, Camera, ScanFace, X 
 import Colors from '@/constants/colors';
 import { useKycDocuments, pickKycLibraryPhoto } from '@/lib/queries/kyc';
 import { getNavBarClearance } from '@/components/BottomNavBar';
+import TipBanner from '@/components/TipBanner';
 import { useMarkNotificationsReadByType } from '@/lib/queries/notifications';
 import { getErrorMessage } from '@/lib/errors';
 import type { KycDocTypeDb, KycDocSideDb } from '@/types/database';
@@ -142,6 +143,12 @@ export default function KYCVerificationScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
+        <TipBanner
+          id="kyc-howto"
+          text="Take clear, well-lit photos with all four corners of the document visible — this helps admins verify you faster."
+          testID="kyc-tip-banner"
+        />
+
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <ShieldCheck size={24} color={Colors.orange.primary} />

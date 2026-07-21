@@ -16,6 +16,7 @@ import Colors from '@/constants/colors';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
 import TrendLineChart from '@/components/TrendLineChart';
 import { getNavBarClearance } from '@/components/BottomNavBar';
+import TipBanner from '@/components/TipBanner';
 import { useMyFleetVehicles, usePendingOwnerBookings, useFleetMonthlyTrends, useFleetTopCars, type PendingBooking } from '@/lib/queries/fleet';
 import { useReviewBooking } from '@/lib/queries/bookings';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
@@ -93,6 +94,12 @@ export default function FleetDashboardScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
+        <TipBanner
+          id="fleet-dashboard-howto"
+          text="Review a renter's KYC status before approving a booking request. Tap 'Add Car' to list a new vehicle for rent."
+          testID="fleet-dashboard-tip-banner"
+        />
+
         <View style={styles.earningsCard}>
           <Text style={styles.earningsTitle}>Total Revenue</Text>
           <Text style={styles.earningsValue}>GH₵{earnings.totalRevenue.toLocaleString()}</Text>

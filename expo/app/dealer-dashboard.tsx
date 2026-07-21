@@ -17,6 +17,7 @@ import { useMyDealerListings, useMyLeads } from '@/lib/queries/dealer';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
+import TipBanner from '@/components/TipBanner';
 import type { Lead } from '@/types/car';
 
 const LISTING_STATUS: Record<string, { bg: string; text: string }> = {
@@ -61,6 +62,12 @@ export default function DealerDashboardScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
+        <TipBanner
+          id="dealer-dashboard-howto"
+          text="List a car for sale to start getting leads. When a buyer reaches out, use Message or Call to follow up directly."
+          testID="dealer-dashboard-tip-banner"
+        />
+
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Eye size={20} color={Colors.info} />

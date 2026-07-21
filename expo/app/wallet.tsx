@@ -26,6 +26,7 @@ import { useWallet, useInitiateWalletTopUp } from '@/lib/queries/wallet';
 import { useSubscription } from '@/lib/queries/subscriptions';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
+import TipBanner from '@/components/TipBanner';
 import { WalletTransaction } from '@/types/car';
 
 function TransactionRow({ tx }: { tx: WalletTransaction }) {
@@ -106,6 +107,12 @@ export default function WalletScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
+        <TipBanner
+          id="wallet-howto"
+          text="Tap Top Up to add funds via Mobile Money or card. Your balance is used to cover your monthly subscription automatically."
+          testID="wallet-tip-banner"
+        />
+
         <View style={styles.balanceCard}>
           <View style={styles.balanceHeader}>
             <View style={styles.balanceIconWrap}>

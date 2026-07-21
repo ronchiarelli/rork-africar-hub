@@ -21,6 +21,7 @@ import { useCreateBooking } from '@/lib/queries/bookings';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
+import TipBanner from '@/components/TipBanner';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -134,6 +135,12 @@ export default function BookingScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <TipBanner
+          id="booking-howto"
+          text="Submit your request with your pickup/return dates. The owner reviews and approves it, then you'll connect directly to arrange payment and pickup."
+          testID="booking-tip-banner"
+        />
+
         <View style={styles.carSummary}>
           <Image source={{ uri: car.image }} style={styles.carImage} contentFit="cover" />
           <View style={styles.carInfo}>
