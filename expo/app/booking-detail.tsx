@@ -32,11 +32,14 @@ import {
   ShieldCheck,
   Check,
   X,
+  Smartphone,
+  Landmark,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useBookingDetail, useOwnerAcceptsInAppPayment, useInitiateBookingPayment, useReviewBooking } from '@/lib/queries/bookings';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { useBookingIssueReports } from '@/lib/queries/issueReports';
+import { useOwnerPaymentDetails } from '@/lib/queries/profile';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
@@ -56,6 +59,12 @@ const ISSUE_STATUS_CONFIG: Record<string, { color: string; label: string; bg: st
   resolved: { color: Colors.success, label: 'Resolved', bg: Colors.success + '15' },
 };
 
+const MOMO_PROVIDER_LABELS: Record<string, string> = {
+  mtn: 'MTN',
+  vodafone: 'Vodafone',
+  airteltigo: 'AirtelTigo',
+};
+
 const KYC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   none: { bg: Colors.gray[200], text: Colors.gray[600], label: 'KYC Not Started' },
   pending: { bg: Colors.warning + '20', text: Colors.warning, label: 'KYC Pending Review' },
@@ -72,6 +81,7 @@ export default function BookingDetailScreen() {
   const { data: booking, isLoading } = useBookingDetail(id);
   const { data: issueReports = [] } = useBookingIssueReports(id);
   const { data: ownerAcceptsInAppPayment = false } = useOwnerAcceptsInAppPayment(booking?.car.ownerId ?? undefined);
+  const { data: ownerPaymentDetails } = useOwnerPaymentDetails(booking?.car.ownerId ?? undefined);
   const initiatePayment = useInitiateBookingPayment();
   const getOrCreateConversation = useGetOrCreateConversation();
   const reviewBooking = useReviewBooking();
@@ -138,6 +148,8 @@ export default function BookingDetailScreen() {
   const canReportIssue = booking?.status === 'approved' || booking?.status === 'active' || booking?.status === 'completed';
   const canPayNow = booking?.status === 'approved' && ownerAcceptsInAppPayment && booking?.paymentStatus !== 'paid';
   const isPaid = booking?.paymentStatus === 'paid';
+  const hasDirectPaymentDetails = !!ownerPaymentDetails && (!!ownerPaymentDetails.momoNumber || !!ownerPaymentDetails.bankAccountNumber);
+  const showDirectPaymentDetails = booking?.status === 'approved' && !ownerAcceptsInAppPayment && !isPaid && hasDirectPaymentDetails;
 
   if (isLoading) {
     return (
@@ -298,6 +310,39 @@ export default function BookingDetailScreen() {
                 <ChevronRight size={18} color={Colors.gray[400]} />
               )}
             </Pressable>
+          </>
+        )}
+
+        {showDirectPaymentDetails && ownerPaymentDetails && (
+          <>
+            <Text style={styles.sectionTitle}>How to Pay</Text>
+            <View style={styles.directPaymentCard}>
+              <Text style={styles.directPaymentAmount}>GH₵{booking.totalPrice.toLocaleString()}</Text>
+              <Text style={styles.directPaymentHint}>Pay the owner directly using one of the details below.</Text>
+              {!!ownerPaymentDetails.momoNumber && (
+                <View style={styles.directPaymentRow}>
+                  <Smartphone size={16} color={Colors.purple.medium} />
+                  <View>
+                    <Text style={styles.directPaymentLabel}>
+                      {ownerPaymentDetails.momoProvider ? MOMO_PROVIDER_LABELS[ownerPaymentDetails.momoProvider] : ''} Mobile Money
+                    </Text>
+                    <Text style={styles.directPaymentValue}>{ownerPaymentDetails.momoNumber}</Text>
+                  </View>
+                </View>
+              )}
+              {!!ownerPaymentDetails.bankAccountNumber && (
+                <View style={styles.directPaymentRow}>
+                  <Landmark size={16} color={Colors.purple.medium} />
+                  <View>
+                    <Text style={styles.directPaymentLabel}>{ownerPaymentDetails.bankName || 'Bank Account'}</Text>
+                    <Text style={styles.directPaymentValue}>{ownerPaymentDetails.bankAccountNumber}</Text>
+                    {!!ownerPaymentDetails.bankAccountName && (
+                      <Text style={styles.directPaymentSubValue}>{ownerPaymentDetails.bankAccountName}</Text>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
           </>
         )}
 
@@ -723,6 +768,49 @@ const styles = StyleSheet.create({
     fontWeight: '800' as const,
     color: Colors.gray[900],
     marginTop: 2,
+  },
+  directPaymentCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 24,
+    gap: 14,
+  },
+  directPaymentAmount: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: Colors.gray[900],
+  },
+  directPaymentHint: {
+    fontSize: 12,
+    color: Colors.gray[500],
+    marginTop: -8,
+  },
+  directPaymentRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: 10,
+  },
+  directPaymentLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.gray[500],
+  },
+  directPaymentValue: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+    marginTop: 2,
+  },
+  directPaymentSubValue: {
+    fontSize: 13,
+    color: Colors.gray[600],
+    marginTop: 1,
   },
   issueCard: {
     backgroundColor: Colors.white,

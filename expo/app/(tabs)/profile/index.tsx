@@ -26,6 +26,7 @@ import {
   Users,
   Wallet,
   Pencil,
+  Banknote,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
@@ -122,6 +123,9 @@ export default function ProfileScreen() {
       { icon: <HelpCircle size={20} color={Colors.gray[600]} />, label: 'Help & Support', route: '/help-support' },
       ...(currentRole === 'fleet_owner' || currentRole === 'dealership' ? [{
         icon: <Wallet size={20} color={Colors.gray[600]} />, label: 'My Wallet', route: '/wallet',
+      }] : []),
+      ...(currentRole === 'fleet_owner' || currentRole === 'dealership' ? [{
+        icon: <Banknote size={20} color={Colors.gray[600]} />, label: 'Payment Details', route: '/payment-details',
       }] : []),
     ],
     [

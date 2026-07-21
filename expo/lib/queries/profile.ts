@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { ProfileRow } from '@/types/database';
-import type { UserProfile, UserRole } from '@/types/car';
+import type { UserProfile, UserRole, OwnerPaymentDetails } from '@/types/car';
 
 function mapProfile(row: ProfileRow): UserProfile {
   return {
@@ -17,6 +17,11 @@ function mapProfile(row: ProfileRow): UserProfile {
     totalBookings: row.total_bookings,
     memberSince: row.member_since,
     role: row.role,
+    momoProvider: row.momo_provider,
+    momoNumber: row.momo_number ?? '',
+    bankName: row.bank_name ?? '',
+    bankAccountName: row.bank_account_name ?? '',
+    bankAccountNumber: row.bank_account_number ?? '',
   };
 }
 
@@ -49,6 +54,51 @@ export function useUpdateProfile(userId: string | undefined) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['profile', userId] });
     },
+  });
+}
+
+export function useUpdatePaymentDetails(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (updates: Pick<UserProfile, 'momoProvider' | 'momoNumber' | 'bankName' | 'bankAccountName' | 'bankAccountNumber'>) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          momo_provider: updates.momoProvider,
+          momo_number: updates.momoNumber || null,
+          bank_name: updates.bankName || null,
+          bank_account_name: updates.bankAccountName || null,
+          bank_account_number: updates.bankAccountNumber || null,
+        })
+        .eq('id', userId as string);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['profile', userId] });
+    },
+  });
+}
+
+// A customer's read of another user's payment details — gated server-side
+// (owner_payment_details returns zero rows unless the caller is the owner,
+// an admin, or has an actual booking/lead relationship with them).
+export function useOwnerPaymentDetails(ownerId: string | undefined) {
+  return useQuery({
+    queryKey: ['owner-payment-details', ownerId],
+    queryFn: async (): Promise<OwnerPaymentDetails | null> => {
+      const { data, error } = await supabase.rpc('owner_payment_details', { p_owner_id: ownerId as string });
+      if (error) throw error;
+      const row = data?.[0];
+      if (!row) return null;
+      return {
+        momoProvider: row.momo_provider,
+        momoNumber: row.momo_number ?? '',
+        bankName: row.bank_name ?? '',
+        bankAccountName: row.bank_account_name ?? '',
+        bankAccountNumber: row.bank_account_number ?? '',
+      };
+    },
+    enabled: !!ownerId,
   });
 }
 

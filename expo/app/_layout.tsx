@@ -135,6 +135,7 @@ function RootLayoutNav() {
           <Stack.Screen name="admin-user-detail" options={{ title: "User Details", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="subscription" options={{ title: "Subscription", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="edit-profile" options={{ title: "Edit Profile", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
+          <Stack.Screen name="payment-details" options={{ title: "Payment Details", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="change-password" options={{ title: "Change Password", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
           <Stack.Screen name="renter-kyc" options={{ title: "Requester's ID Documents", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />
         </Stack>

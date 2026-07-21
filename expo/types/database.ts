@@ -4,6 +4,7 @@
 
 export type UserRoleDb = 'customer' | 'fleet_owner' | 'dealership' | 'admin';
 export type VerificationStatusDb = 'none' | 'pending' | 'restricted' | 'approved' | 'rejected';
+export type MomoProviderDb = 'mtn' | 'vodafone' | 'airteltigo';
 export type BookingStatusDb = 'pending' | 'approved' | 'active' | 'completed' | 'cancelled';
 export type FleetStatusDb = 'active' | 'maintenance' | 'rented' | 'inactive';
 export type SubscriptionStatusDb = 'trialing' | 'active' | 'past_due' | 'cancelled';
@@ -33,6 +34,11 @@ export type ProfileRow = {
   verification_status: VerificationStatusDb;
   is_suspended: boolean;
   accepts_inapp_payment: boolean;
+  momo_provider: MomoProviderDb | null;
+  momo_number: string | null;
+  bank_name: string | null;
+  bank_account_name: string | null;
+  bank_account_number: string | null;
   total_bookings: number;
   member_since: string;
   created_at: string;
@@ -402,6 +408,16 @@ export type Database = {
       owner_accepts_inapp_payment: {
         Args: { p_owner_id: string };
         Returns: boolean;
+      };
+      owner_payment_details: {
+        Args: { p_owner_id: string };
+        Returns: {
+          momo_provider: MomoProviderDb | null;
+          momo_number: string | null;
+          bank_name: string | null;
+          bank_account_name: string | null;
+          bank_account_number: string | null;
+        }[];
       };
       admin_revoke_role: {
         Args: { p_user_id: string };

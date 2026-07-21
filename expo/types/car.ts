@@ -76,6 +76,19 @@ export interface UserProfile {
   totalBookings: number;
   memberSince: string;
   role: UserRole;
+  momoProvider: 'mtn' | 'vodafone' | 'airteltigo' | null;
+  momoNumber: string;
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+}
+
+export interface OwnerPaymentDetails {
+  momoProvider: 'mtn' | 'vodafone' | 'airteltigo' | null;
+  momoNumber: string;
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
 }
 
 export interface FleetVehicle {
