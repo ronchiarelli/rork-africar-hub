@@ -6,16 +6,40 @@ import {
   FlatList,
   TextInput,
   Pressable,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Send } from 'lucide-react-native';
+import { Send, Banknote } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useConversations, useMessages, useSendMessage, useMarkConversationRead, type ChatMessage } from '@/lib/queries/chat';
+import { useAuth } from '@/providers/AuthProvider';
 import { getNavBarClearance } from '@/components/BottomNavBar';
+import type { UserProfile } from '@/types/car';
+
+const GENERIC_QUICK_REPLIES = ['Is this still available?', 'What time works for pickup?', 'Thank you!'];
+
+const MOMO_PROVIDER_LABELS: Record<string, string> = {
+  mtn: 'MTN',
+  vodafone: 'Vodafone',
+  airteltigo: 'AirtelTigo',
+};
+
+function buildPaymentDetailsMessage(user: UserProfile): string | null {
+  const lines: string[] = [];
+  if (user.momoNumber) {
+    const provider = user.momoProvider ? MOMO_PROVIDER_LABELS[user.momoProvider] : '';
+    lines.push(`${provider ? `${provider} ` : ''}Mobile Money: ${user.momoNumber}`);
+  }
+  if (user.bankAccountNumber) {
+    lines.push(`${user.bankName || 'Bank'}: ${user.bankAccountNumber}${user.bankAccountName ? ` (${user.bankAccountName})` : ''}`);
+  }
+  if (lines.length === 0) return null;
+  return `Here are my payment details:\n${lines.join('\n')}`;
+}
 
 function formatTime(timestamp: string): string {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -34,7 +58,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { currentUser } = useAuth();
   const [draft, setDraft] = useState('');
   const listRef = useRef<FlatList>(null);
 
@@ -43,6 +69,21 @@ export default function ChatScreen() {
   const { data: messages = [], isLoading } = useMessages(id);
   const sendMessage = useSendMessage(id);
   const markRead = useMarkConversationRead(id);
+
+  const canSharePaymentDetails = currentUser?.role === 'fleet_owner' || currentUser?.role === 'dealership';
+  const paymentDetailsMessage = currentUser ? buildPaymentDetailsMessage(currentUser) : null;
+
+  const handleQuickReply = useCallback((text: string) => {
+    setDraft(text);
+  }, []);
+
+  const handleSharePaymentDetails = useCallback(() => {
+    if (paymentDetailsMessage) {
+      setDraft(paymentDetailsMessage);
+    } else {
+      router.push('/payment-details');
+    }
+  }, [paymentDetailsMessage, router]);
 
   useEffect(() => {
     if (id) markRead.mutate();
@@ -91,6 +132,25 @@ export default function ChatScreen() {
             }
           />
         )}
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.quickReplyScroll}
+          contentContainerStyle={styles.quickReplyRow}
+        >
+          {GENERIC_QUICK_REPLIES.map((text) => (
+            <Pressable key={text} style={styles.quickReplyPill} onPress={() => handleQuickReply(text)} testID={`quick-reply-${text}`}>
+              <Text style={styles.quickReplyText}>{text}</Text>
+            </Pressable>
+          ))}
+          {canSharePaymentDetails && (
+            <Pressable style={[styles.quickReplyPill, styles.paymentPill]} onPress={handleSharePaymentDetails} testID="quick-reply-payment-details">
+              <Banknote size={13} color={Colors.purple.deep} />
+              <Text style={[styles.quickReplyText, styles.paymentPillText]}>Share Payment Details</Text>
+            </Pressable>
+          )}
+        </ScrollView>
 
         <View style={[styles.inputRow, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
           <TextInput
@@ -201,14 +261,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.gray[500],
   },
+  quickReplyScroll: {
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray[100],
+  },
+  quickReplyRow: {
+    flexDirection: 'row' as const,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 2,
+  },
+  quickReplyPill: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: Colors.gray[100],
+  },
+  quickReplyText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.gray[700],
+  },
+  paymentPill: {
+    backgroundColor: Colors.purple.faint,
+  },
+  paymentPillText: {
+    color: Colors.purple.deep,
+  },
   inputRow: {
     flexDirection: 'row' as const,
     alignItems: 'flex-end' as const,
     gap: 10,
     padding: 12,
     backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.gray[100],
   },
   input: {
     flex: 1,
