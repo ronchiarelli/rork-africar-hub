@@ -19,6 +19,13 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6790835195",
+        "ascApiKeyPath": "/Users/mac/Downloads/AuthKey_5DLBG88FVJ.p8",
+        "ascApiKeyId": "5DLBG88FVJ",
+        "ascApiKeyIssuerId": "597f8c36-b7c8-4557-8626-61830d35afd8"
+      }
+    }
   }
 }
