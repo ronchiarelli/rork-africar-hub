@@ -39,8 +39,8 @@ export default function RegisterScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRegister = useCallback(async () => {
-    if (!name || !email || !phone || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!name || !email || !password) {
+      Alert.alert('Error', 'Please fill in your name, email, and password');
       return;
     }
     setIsSubmitting(true);
@@ -48,7 +48,7 @@ export default function RegisterScreen() {
       const { needsEmailConfirmation } = await register(
         name,
         email,
-        phone,
+        phone.trim() || undefined,
         password,
         accountType !== 'customer' ? accountType : undefined
       );
@@ -149,7 +149,7 @@ export default function RegisterScreen() {
               <Phone size={18} color={Colors.gray[400]} />
               <TextInput
                 style={styles.input}
-                placeholder="Phone (e.g. +233241234567)"
+                placeholder="Phone (optional)"
                 placeholderTextColor={Colors.gray[400]}
                 value={phone}
                 onChangeText={setPhone}

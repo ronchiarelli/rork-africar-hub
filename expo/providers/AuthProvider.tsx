@@ -26,11 +26,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     if (error) throw error;
   }, []);
 
-  const register = useCallback(async (name: string, email: string, phone: string, password: string, requestedRole?: 'fleet_owner' | 'dealership') => {
+  const register = useCallback(async (name: string, email: string, phone: string | undefined, password: string, requestedRole?: 'fleet_owner' | 'dealership') => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name, phone, requested_role: requestedRole } },
+      options: { data: { name, phone: phone ?? null, requested_role: requestedRole } },
     });
     if (error) throw error;
     return { needsEmailConfirmation: !data.session, userId: data.user?.id };
