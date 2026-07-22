@@ -7,6 +7,7 @@ import {
   Pressable,
   FlatList,
   Animated,
+  Easing,
   TextInput,
   Platform,
   Linking,
@@ -21,7 +22,7 @@ import Colors from '@/constants/colors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import { LOCATIONS } from '@/constants/locations';
 import { useCars, useBrands, useSaleCars, useBookedCarIds } from '@/lib/queries/cars';
-import { useActiveBanner } from '@/lib/queries/banners';
+import { useActiveBanner, type PromoBanner } from '@/lib/queries/banners';
 import type { BannerCtaTypeDb } from '@/types/database';
 import { useUnreadConversationsCount } from '@/lib/queries/chat';
 import { useNotifications } from '@/lib/queries/notifications';
@@ -79,6 +80,49 @@ function SaleCarCard({ car }: { car: SaleCar }) {
         </View>
       </Pressable>
     </Animated.View>
+  );
+}
+
+function PromoBannerContent({ banner, onCtaPress }: { banner: PromoBanner; onCtaPress: () => void }) {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const floatLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.06, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ])
+    );
+    floatLoop.start();
+    pulseLoop.start();
+    return () => {
+      floatLoop.stop();
+      pulseLoop.stop();
+    };
+  }, [floatAnim, pulseAnim]);
+
+  const translateY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -4] });
+
+  return (
+    <View style={styles.promoContent}>
+      <Animated.View style={{ transform: [{ translateY }] }}>
+        <Text style={styles.promoTag}>{banner.tag}</Text>
+        <Text style={styles.promoTitle}>{banner.title}</Text>
+        <Text style={styles.promoSub}>{banner.subtitle}</Text>
+      </Animated.View>
+      <Animated.View style={[styles.promoBtnWrap, { transform: [{ scale: pulseAnim }] }]}>
+        <Pressable style={styles.promoBtn} onPress={onCtaPress}>
+          <Text style={styles.promoBtnText}>{banner.ctaLabel}</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -218,14 +262,7 @@ export default function HomeScreen() {
 
         {banner && (
           <View style={styles.promoBanner}>
-            <View style={styles.promoContent}>
-              <Text style={styles.promoTag}>{banner.tag}</Text>
-              <Text style={styles.promoTitle}>{banner.title}</Text>
-              <Text style={styles.promoSub}>{banner.subtitle}</Text>
-              <Pressable style={styles.promoBtn} onPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)}>
-                <Text style={styles.promoBtnText}>{banner.ctaLabel}</Text>
-              </Pressable>
-            </View>
+            <PromoBannerContent banner={banner} onCtaPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)} />
             <Image
               source={{ uri: thumbnailUrl(banner.imageUrl, 140) }}
               style={styles.promoImage}
@@ -561,13 +598,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+  promoBtnWrap: {
+    alignSelf: 'flex-start' as const,
+    marginTop: 10,
+  },
   promoBtn: {
     backgroundColor: Colors.orange.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 10,
-    alignSelf: 'flex-start' as const,
-    marginTop: 10,
   },
   promoBtnText: {
     color: Colors.white,
