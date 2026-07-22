@@ -1,8 +1,8 @@
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Platform } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Clock3, AlertCircle, Zap } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
@@ -10,6 +10,7 @@ import { useSubscription, useInitiateSubscriptionPayment } from '@/lib/queries/s
 import { useSubscriptionRate } from '@/lib/queries/admin';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import { getErrorMessage } from '@/lib/errors';
+import InAppCheckoutModal from '@/components/InAppCheckoutModal';
 
 const PLAN_FEATURES = [
   'List unlimited cars for rent or sale',
@@ -21,26 +22,29 @@ const PLAN_FEATURES = [
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { currentRole } = useAuth();
   const { data: sub, isLoading } = useSubscription();
   const { data: platformRate } = useSubscriptionRate();
   const displayRate = sub?.row?.amount ?? platformRate ?? 250;
   const initiatePayment = useInitiateSubscriptionPayment();
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   const handleSubscribe = useCallback(() => {
     initiatePayment.mutate(undefined, {
-      onSuccess: async (data) => {
-        if (Platform.OS === 'web') {
-          window.open(data.checkoutUrl, '_blank');
-        } else {
-          await WebBrowser.openBrowserAsync(data.checkoutUrl);
-        }
+      onSuccess: (data) => {
+        setCheckoutUrl(data.checkoutUrl);
       },
       onError: (err) => {
         Alert.alert('Could not start payment', getErrorMessage(err, 'Something went wrong. Please try again.'));
       },
     });
   }, [initiatePayment]);
+
+  const handleCheckoutClose = useCallback(() => {
+    setCheckoutUrl(null);
+    void queryClient.invalidateQueries({ queryKey: ['subscription'] });
+  }, [queryClient]);
 
   const roleLabel = currentRole === 'dealership' ? 'Dealership' : 'Fleet Owner';
 
@@ -99,6 +103,13 @@ export default function SubscriptionScreen() {
           <Text style={styles.backBtnText}>Go Back</Text>
         </Pressable>
       </ScrollView>
+
+      <InAppCheckoutModal
+        visible={!!checkoutUrl}
+        checkoutUrl={checkoutUrl}
+        returnUrlMarker="/subscription"
+        onClose={handleCheckoutClose}
+      />
     </View>
   );
 }

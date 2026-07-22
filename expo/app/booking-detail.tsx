@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,11 @@ import {
   Linking,
   ActivityIndicator,
   Alert,
-  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
   MapPin,
@@ -44,6 +43,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
+import InAppCheckoutModal from '@/components/InAppCheckoutModal';
 
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string; bg: string }> = {
   pending: { icon: <Clock3 size={18} color={Colors.warning} />, color: Colors.warning, label: 'Pending Approval', bg: Colors.warning + '15' },
@@ -77,6 +77,7 @@ export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const { currentUser } = useAuth();
   const { data: booking, isLoading } = useBookingDetail(id);
   const { data: issueReports = [] } = useBookingIssueReports(id);
@@ -84,6 +85,7 @@ export default function BookingDetailScreen() {
   const { data: ownerPaymentDetails } = useOwnerPaymentDetails(booking?.car.ownerId ?? undefined);
   const initiatePayment = useInitiateBookingPayment();
   const getOrCreateConversation = useGetOrCreateConversation();
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const reviewBooking = useReviewBooking();
 
   const config = booking ? STATUS_CONFIG[booking.status] : null;
@@ -131,17 +133,18 @@ export default function BookingDetailScreen() {
   const handlePayNow = () => {
     if (!booking) return;
     initiatePayment.mutate(booking.id, {
-      onSuccess: async (data) => {
-        if (Platform.OS === 'web') {
-          window.open(data.checkoutUrl, '_blank');
-        } else {
-          await WebBrowser.openBrowserAsync(data.checkoutUrl);
-        }
+      onSuccess: (data) => {
+        setCheckoutUrl(data.checkoutUrl);
       },
       onError: (err) => {
         Alert.alert('Could not start payment', getErrorMessage(err, 'Something went wrong. Please try again.'));
       },
     });
+  };
+
+  const handleCheckoutClose = () => {
+    setCheckoutUrl(null);
+    void queryClient.invalidateQueries({ queryKey: ['bookings'] });
   };
 
   const canReview = booking?.status === 'completed';
@@ -426,6 +429,13 @@ export default function BookingDetailScreen() {
           </>
         )}
       </ScrollView>
+
+      <InAppCheckoutModal
+        visible={!!checkoutUrl}
+        checkoutUrl={checkoutUrl}
+        returnUrlMarker="/booking-detail"
+        onClose={handleCheckoutClose}
+      />
     </View>
   );
 }

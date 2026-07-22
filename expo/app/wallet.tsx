@@ -8,11 +8,10 @@ import {
   Alert,
   Modal,
   TextInput,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as WebBrowser from 'expo-web-browser';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Wallet as WalletIcon,
   ArrowUpRight,
@@ -27,6 +26,7 @@ import { useSubscription } from '@/lib/queries/subscriptions';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import TipBanner from '@/components/TipBanner';
+import InAppCheckoutModal from '@/components/InAppCheckoutModal';
 import { WalletTransaction } from '@/types/car';
 
 function TransactionRow({ tx }: { tx: WalletTransaction }) {
@@ -61,15 +61,23 @@ function TransactionRow({ tx }: { tx: WalletTransaction }) {
 export default function WalletScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const { data: wallet } = useWallet();
   const { data: subscription } = useSubscription();
   const initiateTopUp = useInitiateWalletTopUp();
   const [topUpModalVisible, setTopUpModalVisible] = useState<boolean>(false);
   const [topUpAmount, setTopUpAmount] = useState<string>('');
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   const handleTopUp = () => {
     setTopUpAmount('');
     setTopUpModalVisible(true);
+  };
+
+  const handleCheckoutClose = () => {
+    setCheckoutUrl(null);
+    void queryClient.invalidateQueries({ queryKey: ['wallet'] });
+    void queryClient.invalidateQueries({ queryKey: ['wallet_transactions'] });
   };
 
   const handleConfirmTopUp = () => {
@@ -81,18 +89,7 @@ export default function WalletScreen() {
     initiateTopUp.mutate(amount, {
       onSuccess: (data) => {
         setTopUpModalVisible(false);
-        if (Platform.OS === 'web') {
-          window.open(data.checkoutUrl, '_blank');
-        } else {
-          // Presenting the in-app browser in the same tick as dismissing
-          // this RN Modal races iOS's own dismiss animation and can leave
-          // the app stuck ("Attempt to present view controller while a
-          // presentation is in progress") — wait for the close animation
-          // to finish first.
-          setTimeout(() => {
-            void WebBrowser.openBrowserAsync(data.checkoutUrl);
-          }, 500);
-        }
+        setCheckoutUrl(data.checkoutUrl);
       },
       onError: (err) => {
         Alert.alert('Could not start top-up', getErrorMessage(err, 'Something went wrong. Please try again.'));
@@ -214,6 +211,13 @@ export default function WalletScreen() {
           </View>
         </View>
       </Modal>
+
+      <InAppCheckoutModal
+        visible={!!checkoutUrl}
+        checkoutUrl={checkoutUrl}
+        returnUrlMarker="/wallet"
+        onClose={handleCheckoutClose}
+      />
     </View>
   );
 }
