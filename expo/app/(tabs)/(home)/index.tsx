@@ -29,6 +29,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import CarCard from '@/components/CarCard';
 import BrandCard from '@/components/BrandCard';
 import { Brand, SaleCar } from '@/types/car';
+import { thumbnailUrl } from '@/lib/imageResize';
 
 function SaleCarCard({ car }: { car: SaleCar }) {
   const router = useRouter();
@@ -50,7 +51,7 @@ function SaleCarCard({ car }: { car: SaleCar }) {
         onPress={() => router.push('/marketplace')}
       >
         <View style={saleStyles.imageWrap}>
-          <Image source={{ uri: car.image }} style={saleStyles.image} contentFit="cover" />
+          <Image source={{ uri: thumbnailUrl(car.image, 200) }} style={saleStyles.image} contentFit="cover" />
           {car.isFeatured && (
             <View style={saleStyles.featuredBadge}>
               <Sparkles size={10} color={Colors.white} />
@@ -207,7 +208,7 @@ export default function HomeScreen() {
               </Pressable>
             </View>
             <Image
-              source={{ uri: banner.imageUrl }}
+              source={{ uri: thumbnailUrl(banner.imageUrl, 140) }}
               style={styles.promoImage}
               contentFit="cover"
               contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}

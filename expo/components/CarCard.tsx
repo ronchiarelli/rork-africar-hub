@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { Car } from '@/types/car';
 import { useFavorites } from '@/providers/FavoritesProvider';
+import { thumbnailUrl } from '@/lib/imageResize';
 
 interface CarCardProps {
   car: Car;
@@ -56,7 +57,7 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
       <Animated.View style={[styles.horizontalCard, { transform: [{ scale: scaleAnim }] }]}>
         <Pressable style={styles.horizontalCardRow} onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
           <View style={styles.horizontalImageWrap}>
-            <Image source={{ uri: car.image }} style={styles.horizontalImage} contentFit="cover" />
+            <Image source={{ uri: thumbnailUrl(car.image, 130) }} style={styles.horizontalImage} contentFit="cover" />
             <Pressable onPress={handleFavorite} style={styles.heartBtn} testID={`fav-btn-${car.id}`}>
               <Heart
                 size={18}
@@ -92,7 +93,7 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
     <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
       <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
         <View style={styles.imageWrap}>
-          <Image source={{ uri: car.image }} style={styles.image} contentFit="cover" />
+          <Image source={{ uri: thumbnailUrl(car.image, 220) }} style={styles.image} contentFit="cover" />
           <Pressable onPress={handleFavorite} style={styles.heartBtn} testID={`fav-btn-${car.id}`}>
             <Heart
               size={18}
