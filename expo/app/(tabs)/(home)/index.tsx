@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
   Linking,
   Modal,
+  Alert,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +31,7 @@ import CarCard from '@/components/CarCard';
 import BrandCard from '@/components/BrandCard';
 import { Brand, SaleCar } from '@/types/car';
 import { thumbnailUrl } from '@/lib/imageResize';
+import WelcomeFeaturesModal from '@/components/WelcomeFeaturesModal';
 
 function SaleCarCard({ car }: { car: SaleCar }) {
   const router = useRouter();
@@ -83,9 +85,26 @@ function SaleCarCard({ car }: { car: SaleCar }) {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, justRegisteredRole, clearJustRegistered } = useAuth();
   const [searchText, setSearchText] = useState('');
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    if (justRegisteredRole) setShowWelcome(true);
+  }, [justRegisteredRole]);
+
+  const handleWelcomeDismiss = useCallback(() => {
+    setShowWelcome(false);
+    const role = justRegisteredRole;
+    clearJustRegistered();
+    if (role && role !== 'customer') {
+      Alert.alert(
+        'Account Created',
+        `Your ${role === 'fleet_owner' ? 'Fleet Manager' : 'Car Dealer / Garage'} application has been submitted for admin review — you'll be upgraded once approved. Head to your Profile to verify your identity whenever you're ready.`
+      );
+    }
+  }, [justRegisteredRole, clearJustRegistered]);
   const { data: brands = [] } = useBrands();
   const { data: cars = [] } = useCars({ onlyAvailable: true });
   const { data: bookedCarIds } = useBookedCarIds();
@@ -284,6 +303,8 @@ export default function HomeScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <WelcomeFeaturesModal visible={showWelcome} onDismiss={handleWelcomeDismiss} />
     </View>
   );
 }

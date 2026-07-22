@@ -30,7 +30,7 @@ const ACCOUNT_TYPES: { value: AccountType; label: string; icon: React.ReactNode 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { register, login } = useAuth();
+  const { register, login, markJustRegistered } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -64,20 +64,18 @@ export default function RegisterScreen() {
         return;
       }
       await login(email, password);
+      // The root layout's auth guard redirects a newly-logged-in user off
+      // this screen to Home the instant the session updates — any
+      // navigation or modal-visibility state set here would be unmounted
+      // before it could show. Home reads this flag instead.
+      markJustRegistered(accountType);
       router.dismissAll();
-      if (accountType !== 'customer') {
-        Alert.alert(
-          'Account Created',
-          `Your account is ready. Your ${accountType === 'fleet_owner' ? 'Fleet Manager' : 'Car Dealer / Garage'} application has been submitted for admin review — you'll be upgraded once approved. Next, let's verify your identity.`
-        );
-      }
-      router.replace('/kyc-verification');
     } catch (e) {
       Alert.alert('Registration Failed', getErrorMessage(e, 'Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
-  }, [name, email, phone, password, accountType, register, login, router]);
+  }, [name, email, phone, password, accountType, register, login, markJustRegistered, router]);
 
   return (
     <View style={styles.container}>
