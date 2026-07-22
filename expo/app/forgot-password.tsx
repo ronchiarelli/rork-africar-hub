@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Mail, Car } from 'lucide-react-native';
+import { ArrowLeft, Mail } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { getErrorMessage } from '@/lib/errors';
+import AppLogo from '@/components/AppLogo';
 
 const PRODUCTION_WEB_URL = 'https://gocar-hub.vercel.app';
 
@@ -63,8 +64,7 @@ export default function ForgotPasswordScreen() {
 
         <View style={styles.content}>
           <View style={styles.logoWrap}>
-            <Car size={28} color={Colors.orange.primary} />
-            <Text style={styles.logoText}>GoCar Hub</Text>
+            <AppLogo size={40} />
           </View>
 
           {sent ? (
@@ -147,11 +147,6 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     gap: 8,
     marginBottom: 24,
-  },
-  logoText: {
-    fontSize: 20,
-    fontWeight: '800' as const,
-    color: Colors.white,
   },
   title: {
     fontSize: 28,

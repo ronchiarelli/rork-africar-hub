@@ -9,8 +9,9 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Car, ChevronRight } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import AppLogo from '@/components/AppLogo';
 
 
 
@@ -37,10 +38,7 @@ export default function WelcomeScreen() {
       <View style={styles.overlay} />
 
       <Animated.View style={[styles.content, { paddingTop: insets.top + 40, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-        <View style={styles.logoWrap}>
-          <Car size={32} color={Colors.orange.primary} />
-          <Text style={styles.logoText}>GoCar Hub</Text>
-        </View>
+        <AppLogo size={56} />
 
         <View style={styles.heroText}>
           <Text style={styles.title}>Premium Car{'\n'}Rental in Ghana</Text>
@@ -86,17 +84,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: 'space-between' as const,
-  },
-  logoWrap: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 10,
-  },
-  logoText: {
-    fontSize: 24,
-    fontWeight: '800' as const,
-    color: Colors.white,
-    letterSpacing: -0.5,
   },
   heroText: {
     marginBottom: 40,

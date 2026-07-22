@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Lock, Eye, EyeOff, Car } from 'lucide-react-native';
+import { Lock, Eye, EyeOff } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { getErrorMessage } from '@/lib/errors';
+import AppLogo from '@/components/AppLogo';
 
 export default function ResetPasswordScreen() {
   const insets = useSafeAreaInsets();
@@ -94,8 +95,7 @@ export default function ResetPasswordScreen() {
       <View style={styles.container}>
         <View style={[styles.content, styles.centered]}>
           <View style={styles.logoWrap}>
-            <Car size={28} color={Colors.orange.primary} />
-            <Text style={styles.logoText}>GoCar Hub</Text>
+            <AppLogo size={40} />
           </View>
           <Text style={styles.title}>Link Expired</Text>
           <Text style={styles.subtitle}>This password reset link is invalid or has expired. Please request a new one.</Text>
@@ -115,8 +115,7 @@ export default function ResetPasswordScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
         <View style={styles.content}>
           <View style={[styles.logoWrap, { marginTop: insets.top + 20 }]}>
-            <Car size={28} color={Colors.orange.primary} />
-            <Text style={styles.logoText}>GoCar Hub</Text>
+            <AppLogo size={40} />
           </View>
           <Text style={styles.title}>Set New Password</Text>
           <Text style={styles.subtitle}>Choose a new password for your account.</Text>
@@ -188,11 +187,6 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     gap: 8,
     marginBottom: 24,
-  },
-  logoText: {
-    fontSize: 20,
-    fontWeight: '800' as const,
-    color: Colors.white,
   },
   title: {
     fontSize: 28,
