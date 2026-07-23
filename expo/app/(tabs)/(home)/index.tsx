@@ -574,11 +574,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden' as const,
     flexDirection: 'row' as const,
-    height: 150,
+    minHeight: 150,
   },
   promoContent: {
     flex: 1,
     padding: 18,
+    paddingRight: 8,
     justifyContent: 'center' as const,
   },
   promoTag: {

@@ -43,6 +43,7 @@ export default function BottomNavBar() {
       <View style={styles.bar}>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.route;
+          const isHome = item.route === '/';
           const Icon = item.icon;
           return (
             <Pressable
@@ -51,7 +52,11 @@ export default function BottomNavBar() {
               onPress={() => handlePress(item.route)}
               testID={`nav-${item.label.toLowerCase()}`}
             >
-              {isActive ? (
+              {isHome ? (
+                <View style={[styles.homeBubble, isActive && styles.homeBubbleActive]}>
+                  <Icon size={24} color={Colors.white} strokeWidth={2.4} />
+                </View>
+              ) : isActive ? (
                 <View style={styles.bubble}>
                   <Icon size={22} color={Colors.orange.primary} strokeWidth={2.4} />
                 </View>
@@ -103,5 +108,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 8,
     elevation: 8,
+  },
+  homeBubble: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginTop: -26,
+    backgroundColor: Colors.orange.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 4,
+    borderColor: Colors.purple.deep,
+    shadowColor: Colors.orange.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  homeBubbleActive: {
+    backgroundColor: Colors.orange.bright,
   },
 });

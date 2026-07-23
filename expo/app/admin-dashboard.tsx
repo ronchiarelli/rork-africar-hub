@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   Users,
   CalendarDays,
@@ -83,7 +83,13 @@ export default function AdminDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: winWidth, height: winHeight } = useWindowDimensions();
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
+  useEffect(() => {
+    if (tabParam && (TABS as readonly string[]).includes(tabParam)) {
+      setActiveTab(tabParam as Tab);
+    }
+  }, [tabParam]);
   const [kycPreview, setKycPreview] = useState<{ uri: string; label: string } | null>(null);
   const { data: pendingKyc = [] } = usePendingKycDocuments();
   const reviewKyc = useReviewKycDocument();
