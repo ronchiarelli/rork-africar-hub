@@ -7,8 +7,8 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Avatar from '@/components/Avatar';
 import { useRouter } from 'expo-router';
 import {
   Shield,
@@ -142,7 +142,7 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.profileHeader}>
           <View style={styles.avatarWrap}>
-            <Image source={{ uri: currentUser.avatar }} style={styles.avatar} contentFit="cover" />
+            <Avatar uri={currentUser.avatar} name={currentUser.name} size={80} style={styles.avatar} />
             <View style={styles.verifiedBadge}>
               <Shield size={12} color={Colors.white} />
             </View>

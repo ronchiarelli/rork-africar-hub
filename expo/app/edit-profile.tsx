@@ -9,7 +9,6 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,6 +20,7 @@ import { useUpdateProfile } from '@/lib/queries/profile';
 import { getErrorMessage } from '@/lib/errors';
 import { extensionFromBlob } from '@/lib/imageUpload';
 import { getNavBarClearance } from '@/components/BottomNavBar';
+import Avatar from '@/components/Avatar';
 import type { UserProfile } from '@/types/car';
 
 export default function EditProfileScreen() {
@@ -112,7 +112,7 @@ function EditProfileForm({ currentUser }: { currentUser: UserProfile }) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         <View style={styles.avatarSection}>
           <Pressable style={styles.avatarWrap} onPress={handlePickAvatar} disabled={isUploadingAvatar} testID="edit-avatar-btn">
-            <Image source={{ uri: avatar }} style={styles.avatar} contentFit="cover" />
+            <Avatar uri={avatar} name={name} size={96} style={styles.avatar} />
             <View style={styles.avatarOverlay}>
               {isUploadingAvatar ? <ActivityIndicator color={Colors.white} size="small" /> : <Camera size={20} color={Colors.white} />}
             </View>

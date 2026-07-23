@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Modal, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
+import Avatar from '@/components/Avatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { Phone, Mail, Calendar, ShieldCheck, ShieldX, UserX, UserCheck, X, MessageCircle, CreditCard } from 'lucide-react-native';
@@ -131,7 +132,7 @@ export default function AdminUserDetailScreen() {
     <>
     <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
       <View style={styles.profileCard}>
-        <Image source={{ uri: user.avatar }} style={styles.avatar} contentFit="cover" />
+        <Avatar uri={user.avatar} name={user.name} size={72} style={styles.avatar} />
         <Text style={styles.name}>{user.name}</Text>
         <View style={styles.metaRow}>
           <Mail size={14} color={Colors.gray[500]} />

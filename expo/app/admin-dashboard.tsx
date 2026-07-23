@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import Avatar from '@/components/Avatar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   Users,
@@ -294,7 +295,7 @@ export default function AdminDashboardScreen() {
                   onPress={() => router.push({ pathname: '/admin-user-detail', params: { id: user.id } } as never)}
                   testID={`user-row-${user.id}`}
                 >
-                  <Image source={{ uri: user.avatar }} style={styles.userAvatar} contentFit="cover" />
+                  <Avatar uri={user.avatar} name={user.name} size={48} style={styles.userAvatar} />
                   <View style={styles.userInfo}>
                     <Text style={styles.userName}>{user.name}</Text>
                     <Text style={styles.userEmail}>{user.email}</Text>

@@ -6,8 +6,8 @@ import {
   ScrollView,
   Pressable,
 } from "react-native";
-import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Avatar from "@/components/Avatar";
 import { useRouter } from "expo-router";
 import {
   Car,
@@ -38,7 +38,7 @@ function CustomerDashboard() {
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[sd.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
       <View style={csd.welcomeCard}>
-        <Image source={{ uri: currentUser?.avatar ?? "" }} style={csd.avatar} contentFit="cover" />
+        <Avatar uri={currentUser?.avatar} name={currentUser?.name} size={56} style={csd.avatar} />
         <View style={csd.welcomeInfo}>
           <Text style={csd.welcomeGreeting}>Welcome back,</Text>
           <Text style={csd.welcomeName}>{currentUser?.name?.split(" ")[0] ?? "Guest"}</Text>
