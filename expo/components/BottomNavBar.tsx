@@ -1,13 +1,14 @@
 import React, { useCallback } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, CalendarDays, User, LayoutDashboard, Search } from 'lucide-react-native';
+import { Home, CalendarDays, User, LayoutDashboard, MessageSquare } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { useUnreadConversationsCount } from '@/lib/queries/chat';
 
 interface NavItem {
   label: string;
-  route: '/' | '/dashboard' | '/bookings' | '/profile' | '/search';
+  route: '/' | '/dashboard' | '/bookings' | '/profile' | '/messages';
   icon: typeof Home;
 }
 
@@ -25,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', route: '/dashboard', icon: LayoutDashboard },
   { label: 'Bookings', route: '/bookings', icon: CalendarDays },
   { label: 'Home', route: '/', icon: Home },
-  { label: 'Search', route: '/search', icon: Search },
+  { label: 'Messages', route: '/messages', icon: MessageSquare },
   { label: 'Profile', route: '/profile', icon: User },
 ];
 
@@ -33,6 +34,7 @@ export default function BottomNavBar() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const unreadMessages = useUnreadConversationsCount();
 
   const handlePress = useCallback((route: NavItem['route']) => {
     router.push(route);
@@ -44,6 +46,7 @@ export default function BottomNavBar() {
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.route;
           const isHome = item.route === '/';
+          const isMessages = item.route === '/messages';
           const Icon = item.icon;
           return (
             <Pressable
@@ -56,12 +59,21 @@ export default function BottomNavBar() {
                 <View style={[styles.homeBubble, isActive && styles.homeBubbleActive]}>
                   <Icon size={24} color={Colors.white} strokeWidth={2.4} />
                 </View>
-              ) : isActive ? (
-                <View style={styles.bubble}>
-                  <Icon size={22} color={Colors.orange.primary} strokeWidth={2.4} />
-                </View>
               ) : (
-                <Icon size={21} color={Colors.gray[400]} strokeWidth={2} />
+                <View>
+                  {isActive ? (
+                    <View style={styles.bubble}>
+                      <Icon size={22} color={Colors.orange.primary} strokeWidth={2.4} />
+                    </View>
+                  ) : (
+                    <Icon size={21} color={Colors.gray[400]} strokeWidth={2} />
+                  )}
+                  {isMessages && unreadMessages > 0 && (
+                    <View style={styles.badge} testID="nav-messages-badge">
+                      <Text style={styles.badgeText}>{unreadMessages > 9 ? '9+' : unreadMessages}</Text>
+                    </View>
+                  )}
+                </View>
               )}
             </Pressable>
           );
@@ -127,5 +139,24 @@ const styles = StyleSheet.create({
   },
   homeBubbleActive: {
     backgroundColor: Colors.orange.bright,
+  },
+  badge: {
+    position: 'absolute' as const,
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: Colors.error,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 1.5,
+    borderColor: Colors.purple.deep,
+  },
+  badgeText: {
+    color: Colors.white,
+    fontSize: 9,
+    fontWeight: '700' as const,
   },
 });
