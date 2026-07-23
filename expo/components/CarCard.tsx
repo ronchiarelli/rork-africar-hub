@@ -263,6 +263,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
   },
   horizontalCardRow: {
+    flex: 1,
     flexDirection: 'row' as const,
   },
   horizontalImageWrap: {
