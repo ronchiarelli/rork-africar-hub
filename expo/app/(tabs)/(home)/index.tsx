@@ -331,6 +331,11 @@ export default function HomeScreen() {
               </Pressable>
             </View>
           </View>
+          {!currentUser && (
+            <Pressable style={styles.guestGetStartedBtn} onPress={() => router.push('/register')} testID="home-get-started-btn">
+              <Text style={styles.guestGetStartedText}>Get Started</Text>
+            </Pressable>
+          )}
           <Text style={styles.greeting}>Hello, {currentUser?.name?.split(' ')[0] ?? 'Guest'}</Text>
           <Text style={styles.subtitle}>Find your perfect ride today</Text>
 
@@ -719,6 +724,19 @@ const styles = StyleSheet.create({
     position: 'absolute' as const,
     top: -4,
     right: -4,
+  },
+  guestGetStartedBtn: {
+    alignSelf: 'flex-end' as const,
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  guestGetStartedText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '700' as const,
   },
   greeting: {
     color: Colors.white,
