@@ -190,6 +190,7 @@ export function useCreateCar() {
       void queryClient.invalidateQueries({ queryKey: ['my-cars', ownerId] });
       void queryClient.invalidateQueries({ queryKey: ['my-fleet-vehicles', ownerId] });
       void queryClient.invalidateQueries({ queryKey: ['cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-cars'] });
     },
   });
 }
@@ -227,6 +228,7 @@ export function useUpdateCar() {
       void queryClient.invalidateQueries({ queryKey: ['my-fleet-vehicles', ownerId] });
       void queryClient.invalidateQueries({ queryKey: ['cars'] });
       void queryClient.invalidateQueries({ queryKey: ['cars', carId] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-cars'] });
     },
   });
 }

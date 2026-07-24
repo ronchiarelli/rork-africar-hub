@@ -183,6 +183,7 @@ export function useCreateSaleCar() {
       void queryClient.invalidateQueries({ queryKey: ['my-sale-cars', dealerId] });
       void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings', dealerId] });
       void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-sale-cars'] });
     },
   });
 }
@@ -218,6 +219,7 @@ export function useUpdateSaleCar() {
       void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings', dealerId] });
       void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
       void queryClient.invalidateQueries({ queryKey: ['sale_cars', saleCarId] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-sale-cars'] });
     },
   });
 }
