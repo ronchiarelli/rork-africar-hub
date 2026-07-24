@@ -30,6 +30,7 @@ import {
   Trash2,
   Megaphone,
   ChevronRight,
+  ChevronLeft,
   CreditCard,
   BarChart3,
   MessageSquare,
@@ -37,6 +38,7 @@ import {
   X,
   Eye,
   Search,
+  LayoutGrid,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
@@ -64,6 +66,20 @@ import { getErrorMessage } from '@/lib/errors';
 
 const TABS = ['Overview', 'Users', 'KYC', 'Roles', 'Inventory', 'Banners', 'Subscriptions', 'Analytics', 'Support'] as const;
 type Tab = typeof TABS[number];
+
+// Every section reachable from the Overview page's own nav grid, instead of
+// a separate always-visible tab-switcher bar — Overview navigates by tapping
+// a tile, other sections navigate back the same way via a single back row.
+const SECTION_META: { key: Exclude<Tab, 'Overview'>; label: string; icon: typeof Users }[] = [
+  { key: 'Users', label: 'Users', icon: Users },
+  { key: 'KYC', label: 'KYC Review', icon: ShieldCheck },
+  { key: 'Roles', label: 'Role Requests', icon: UserCheck },
+  { key: 'Inventory', label: 'Inventory', icon: Car },
+  { key: 'Banners', label: 'Banners', icon: Megaphone },
+  { key: 'Subscriptions', label: 'Subscriptions', icon: CreditCard },
+  { key: 'Analytics', label: 'Analytics', icon: BarChart3 },
+  { key: 'Support', label: 'Support', icon: MessageSquare },
+];
 
 const SUB_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   trialing: { bg: Colors.info + '20', text: Colors.info, label: 'Trialing' },
@@ -267,17 +283,15 @@ export default function AdminDashboardScreen() {
   return (
     <>
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow} contentContainerStyle={styles.tabsRowContent}>
-        {TABS.map((tab) => (
-          <Pressable
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+      {activeTab !== 'Overview' && (
+        <View style={styles.sectionNavHeader}>
+          <Pressable style={styles.backToOverviewBtn} onPress={() => setActiveTab('Overview')} testID="admin-back-to-overview">
+            <ChevronLeft size={22} color={Colors.gray[700]} />
+            <Text style={styles.backToOverviewText}>Dashboard</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+          <Text style={styles.sectionNavTitle}>{activeTab}</Text>
+        </View>
+      )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
         {activeTab === 'Overview' && (
@@ -324,6 +338,34 @@ export default function AdminDashboardScreen() {
                 <Text style={styles.alertTitle}>{pendingKyc.length} Pending KYC Reviews</Text>
                 <Text style={styles.alertText}>Users waiting for identity verification</Text>
               </View>
+            </View>
+
+            <View style={styles.manageHeaderRow}>
+              <LayoutGrid size={16} color={Colors.gray[700]} />
+              <Text style={[styles.sectionTitle, styles.manageHeaderText]}>Manage</Text>
+            </View>
+            <View style={styles.sectionGrid}>
+              {SECTION_META.map(({ key, label, icon: Icon }) => {
+                const badge = key === 'KYC' ? pendingKyc.length : key === 'Roles' ? pendingRoleApps.length : 0;
+                return (
+                  <Pressable
+                    key={key}
+                    style={styles.sectionGridItem}
+                    onPress={() => setActiveTab(key)}
+                    testID={`nav-section-${key.toLowerCase()}`}
+                  >
+                    <View style={styles.sectionGridIconWrap}>
+                      <Icon size={20} color={Colors.orange.primary} />
+                      {badge > 0 && (
+                        <View style={styles.sectionGridBadge}>
+                          <Text style={styles.sectionGridBadgeText}>{badge > 9 ? '9+' : badge}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.sectionGridLabel}>{label}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -499,15 +541,22 @@ export default function AdminDashboardScreen() {
             ) : (
               filteredAdminCars.map((car) => (
                 <View key={car.id} style={styles.inventoryCard}>
-                  <Image source={{ uri: car.image }} style={styles.inventoryImage} contentFit="cover" />
-                  <View style={styles.inventoryInfo}>
-                    <Text style={styles.inventoryBrand}>{car.brand}</Text>
-                    <Text style={styles.inventoryModel} numberOfLines={1}>{car.model}</Text>
-                    <Text style={styles.inventoryOwner} numberOfLines={1}>
-                      {car.ownerName || 'No owner (catalog)'}
-                    </Text>
-                    <Text style={styles.inventoryPrice}>GH₵{car.pricePerDay}/day</Text>
-                  </View>
+                  <Pressable
+                    style={styles.inventoryCardMain}
+                    onPress={() => router.push({ pathname: '/add-car', params: { id: car.id } })}
+                    testID={`admin-edit-car-${car.id}`}
+                  >
+                    <Image source={{ uri: car.image }} style={styles.inventoryImage} contentFit="cover" />
+                    <View style={styles.inventoryInfo}>
+                      <Text style={styles.inventoryBrand}>{car.brand}</Text>
+                      <Text style={styles.inventoryModel} numberOfLines={1}>{car.model}</Text>
+                      <Text style={styles.inventoryOwner} numberOfLines={1}>
+                        {car.ownerName || 'No owner (catalog)'}
+                      </Text>
+                      <Text style={styles.inventoryPrice}>GH₵{car.pricePerDay}/day</Text>
+                    </View>
+                    <Pencil size={14} color={Colors.gray[400]} />
+                  </Pressable>
                   <View style={styles.inventoryActions}>
                     <Switch
                       value={car.isAvailable}
@@ -537,15 +586,22 @@ export default function AdminDashboardScreen() {
             ) : (
               filteredAdminSaleCars.map((car) => (
                 <View key={car.id} style={styles.inventoryCard}>
-                  <Image source={{ uri: car.image }} style={styles.inventoryImage} contentFit="cover" />
-                  <View style={styles.inventoryInfo}>
-                    <Text style={styles.inventoryBrand}>{car.brand}</Text>
-                    <Text style={styles.inventoryModel} numberOfLines={1}>{car.model}</Text>
-                    <Text style={styles.inventoryOwner} numberOfLines={1}>
-                      {car.dealerName || 'No dealer (catalog)'}
-                    </Text>
-                    <Text style={styles.inventoryPrice}>GH₵{car.salePrice.toLocaleString()}</Text>
-                  </View>
+                  <Pressable
+                    style={styles.inventoryCardMain}
+                    onPress={() => router.push({ pathname: '/add-sale-car', params: { id: car.id } })}
+                    testID={`admin-edit-sale-car-${car.id}`}
+                  >
+                    <Image source={{ uri: car.image }} style={styles.inventoryImage} contentFit="cover" />
+                    <View style={styles.inventoryInfo}>
+                      <Text style={styles.inventoryBrand}>{car.brand}</Text>
+                      <Text style={styles.inventoryModel} numberOfLines={1}>{car.model}</Text>
+                      <Text style={styles.inventoryOwner} numberOfLines={1}>
+                        {car.dealerName || 'No dealer (catalog)'}
+                      </Text>
+                      <Text style={styles.inventoryPrice}>GH₵{car.salePrice.toLocaleString()}</Text>
+                    </View>
+                    <Pencil size={14} color={Colors.gray[400]} />
+                  </Pressable>
                   <View style={styles.inventoryActions}>
                     <Pressable
                       style={styles.inventoryDeleteBtn}
@@ -803,34 +859,93 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.gray[50],
   },
-  tabsRow: {
-    flexGrow: 0,
+  sectionNavHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     backgroundColor: Colors.white,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.gray[100],
   },
-  tabsRowContent: {
+  backToOverviewBtn: {
     flexDirection: 'row' as const,
-    paddingHorizontal: 20,
-    gap: 8,
+    alignItems: 'center' as const,
   },
-  tab: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.gray[100],
-  },
-  tabActive: {
-    backgroundColor: Colors.orange.primary,
-  },
-  tabText: {
-    fontSize: 13,
+  backToOverviewText: {
+    fontSize: 15,
     fontWeight: '600' as const,
-    color: Colors.gray[600],
+    color: Colors.gray[700],
   },
-  tabTextActive: {
+  sectionNavTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+  },
+  manageHeaderRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    marginTop: 4,
+  },
+  manageHeaderText: {
+    marginBottom: 0,
+  },
+  sectionGrid: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 24,
+  },
+  sectionGridItem: {
+    width: '22%' as const,
+    minWidth: 72,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sectionGridIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.orange.faint,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: 6,
+  },
+  sectionGridBadge: {
+    position: 'absolute' as const,
+    top: -4,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: Colors.error,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
+  },
+  sectionGridBadgeText: {
     color: Colors.white,
+    fontSize: 9,
+    fontWeight: '700' as const,
+  },
+  sectionGridLabel: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: Colors.gray[700],
+    textAlign: 'center' as const,
   },
   content: {
     padding: 20,
@@ -1030,6 +1145,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  inventoryCardMain: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
   },
   inventoryImage: {
     width: 64,
