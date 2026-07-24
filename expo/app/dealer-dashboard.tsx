@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,15 @@ import {
   Pressable,
   Linking,
   Alert,
+  TextInput,
+  Switch,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone, Pencil } from 'lucide-react-native';
+import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone, Pencil, Search, Trash2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useMyDealerListings, useMyLeads } from '@/lib/queries/dealer';
+import { useMyDealerListings, useMyLeads, useSetListingSold, useDeleteSaleCar } from '@/lib/queries/dealer';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
@@ -39,10 +41,47 @@ export default function DealerDashboardScreen() {
   const { data: listings = [] } = useMyDealerListings();
   const { data: leads = [] } = useMyLeads();
   const getOrCreateConversation = useGetOrCreateConversation();
+  const setListingSold = useSetListingSold();
+  const deleteSaleCar = useDeleteSaleCar();
+  const [inventoryQuery, setInventoryQuery] = useState('');
 
   const totalViews = listings.reduce((acc, l) => acc + l.views, 0);
   const totalLeads = listings.reduce((acc, l) => acc + l.leads, 0);
   const activeListings = listings.filter(l => l.status === 'active').length;
+
+  const filteredListings = useMemo(() => {
+    const q = inventoryQuery.trim().toLowerCase();
+    if (!q) return listings;
+    return listings.filter(
+      (l) => l.car.brand.toLowerCase().includes(q) || l.car.model.toLowerCase().includes(q)
+    );
+  }, [listings, inventoryQuery]);
+
+  const handleToggleSold = useCallback((listingId: string, isSold: boolean) => {
+    setListingSold.mutate(
+      { listingId, isSold },
+      { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
+    );
+  }, [setListingSold]);
+
+  const handleDeleteListing = useCallback((saleCarId: string, label: string, leadCount: number) => {
+    const message =
+      leadCount > 0
+        ? `Remove ${label}? This listing has ${leadCount} lead${leadCount === 1 ? '' : 's'} — deleting it removes that inquiry history too. This can't be undone.`
+        : `Remove ${label} from your listings? This can't be undone.`;
+    Alert.alert('Delete Listing', message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteSaleCar.mutate(saleCarId, {
+            onError: (err) => Alert.alert('Could not delete', getErrorMessage(err, 'Please try again.')),
+          });
+        },
+      },
+    ]);
+  }, [deleteSaleCar]);
 
   const handleLeadMessage = useCallback((lead: Lead) => {
     if (!lead.customerId) return;
@@ -94,54 +133,95 @@ export default function DealerDashboardScreen() {
           </Pressable>
         </View>
 
+        {listings.length > 0 && (
+          <View style={styles.inventorySearchWrap}>
+            <Search size={16} color={Colors.gray[400]} />
+            <TextInput
+              style={styles.inventorySearchInput}
+              placeholder="Search your listings by brand or model..."
+              placeholderTextColor={Colors.gray[400]}
+              value={inventoryQuery}
+              onChangeText={setInventoryQuery}
+              testID="dealer-inventory-search"
+            />
+          </View>
+        )}
+
         {listings.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Car size={40} color={Colors.gray[300]} />
             <Text style={styles.emptyText}>You haven&apos;t listed any cars for sale yet</Text>
           </View>
+        ) : filteredListings.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Search size={40} color={Colors.gray[300]} />
+            <Text style={styles.emptyText}>No listings match &quot;{inventoryQuery}&quot;</Text>
+          </View>
         ) : (
-          listings.map((listing) => {
+          filteredListings.map((listing) => {
             const statusConfig = LISTING_STATUS[listing.status] ?? LISTING_STATUS.active;
+            const isSold = listing.status === 'sold';
             return (
-              <Pressable
-                key={listing.id}
-                style={styles.listingCard}
-                onPress={() => router.push({ pathname: '/add-sale-car', params: { id: listing.car.id } })}
-                testID={`edit-listing-${listing.car.id}`}
-              >
-                <Image source={{ uri: listing.car.image }} style={styles.listingImage} contentFit="cover" />
-                <View style={styles.listingInfo}>
-                  <View style={styles.listingHeader}>
-                    <View style={styles.listingNameWrap}>
-                      <Text style={styles.listingBrand}>{listing.car.brand}</Text>
-                      <Text style={styles.listingModel} numberOfLines={1}>{listing.car.model}</Text>
-                    </View>
-                    <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-                      <Text style={[styles.statusText, { color: statusConfig.text }]}>{listing.status}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.askingPrice}>GH₵{listing.askingPrice.toLocaleString()}</Text>
-                  <View style={styles.listingStats}>
-                    <View style={styles.listingStatItem}>
-                      <Eye size={12} color={Colors.gray[500]} />
-                      <Text style={styles.listingStatText}>{listing.views}</Text>
-                    </View>
-                    <View style={styles.listingStatItem}>
-                      <Users size={12} color={Colors.gray[500]} />
-                      <Text style={styles.listingStatText}>{listing.leads} leads</Text>
-                    </View>
-                    {listing.listingType === 'featured' && (
-                      <View style={styles.featuredTag}>
-                        <TrendingUp size={10} color={Colors.orange.primary} />
-                        <Text style={styles.featuredTagText}>Featured</Text>
+              <View key={listing.id} style={styles.listingCard}>
+                <Pressable
+                  style={styles.listingCardMain}
+                  onPress={() => router.push({ pathname: '/add-sale-car', params: { id: listing.car.id } })}
+                  testID={`edit-listing-${listing.car.id}`}
+                >
+                  <Image source={{ uri: listing.car.image }} style={styles.listingImage} contentFit="cover" />
+                  <View style={styles.listingInfo}>
+                    <View style={styles.listingHeader}>
+                      <View style={styles.listingNameWrap}>
+                        <Text style={styles.listingBrand}>{listing.car.brand}</Text>
+                        <Text style={styles.listingModel} numberOfLines={1}>{listing.car.model}</Text>
                       </View>
-                    )}
+                      <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
+                        <Text style={[styles.statusText, { color: statusConfig.text }]}>{listing.status}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.askingPrice}>GH₵{listing.askingPrice.toLocaleString()}</Text>
+                    <View style={styles.listingStats}>
+                      <View style={styles.listingStatItem}>
+                        <Eye size={12} color={Colors.gray[500]} />
+                        <Text style={styles.listingStatText}>{listing.views}</Text>
+                      </View>
+                      <View style={styles.listingStatItem}>
+                        <Users size={12} color={Colors.gray[500]} />
+                        <Text style={styles.listingStatText}>{listing.leads} leads</Text>
+                      </View>
+                      {listing.listingType === 'featured' && (
+                        <View style={styles.featuredTag}>
+                          <TrendingUp size={10} color={Colors.orange.primary} />
+                          <Text style={styles.featuredTagText}>Featured</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
+                  <View style={styles.editIconWrap}>
+                    <Pencil size={14} color={Colors.gray[400]} />
+                  </View>
+                </Pressable>
+                <View style={styles.listingActionsRow}>
+                  <View style={styles.availabilityToggle}>
+                    <Text style={styles.availabilityLabel}>{isSold ? 'Sold' : 'Mark as sold'}</Text>
+                    <Switch
+                      value={isSold}
+                      onValueChange={(next) => handleToggleSold(listing.id, next)}
+                      trackColor={{ false: Colors.gray[300], true: Colors.gray[500] }}
+                      thumbColor={isSold ? Colors.gray[700] : Colors.gray[100]}
+                      testID={`sold-switch-${listing.id}`}
+                    />
+                  </View>
+                  <Pressable
+                    style={styles.deleteVehicleBtn}
+                    onPress={() => handleDeleteListing(listing.car.id, `${listing.car.brand} ${listing.car.model}`, listing.leads)}
+                    testID={`delete-listing-${listing.car.id}`}
+                  >
+                    <Trash2 size={14} color={Colors.error} />
+                    <Text style={styles.deleteVehicleText}>Delete</Text>
+                  </Pressable>
                 </View>
-                <View style={styles.editIconWrap}>
-                  <Pencil size={14} color={Colors.gray[400]} />
-                </View>
-              </Pressable>
+              </View>
             );
           })
         )}
@@ -261,8 +341,6 @@ const styles = StyleSheet.create({
     color: Colors.gray[500],
   },
   listingCard: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
     backgroundColor: Colors.white,
     borderRadius: 16,
     marginBottom: 12,
@@ -272,6 +350,60 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
+  },
+  listingCardMain: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  listingActionsRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray[100],
+  },
+  availabilityToggle: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  availabilityLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.gray[600],
+  },
+  deleteVehicleBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.error + '10',
+  },
+  deleteVehicleText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: Colors.error,
+  },
+  inventorySearchWrap: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+  },
+  inventorySearchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.gray[900],
   },
   editIconWrap: {
     paddingHorizontal: 14,

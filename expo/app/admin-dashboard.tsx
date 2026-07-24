@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Switch,
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,6 +36,7 @@ import {
   Car,
   X,
   Eye,
+  Search,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
@@ -51,12 +53,16 @@ import {
   useSetSubscriptionRate,
   useMonthlyTrends,
   useTopCars,
+  useAdminAllCars,
+  useAdminAllSaleCars,
 } from '@/lib/queries/admin';
+import { useSetCarAvailability, useDeleteCar } from '@/lib/queries/fleet';
+import { useDeleteSaleCar } from '@/lib/queries/dealer';
 import { useAllBanners, useSetBannerActive, useDeleteBanner } from '@/lib/queries/banners';
 import { useSupportConversations } from '@/lib/queries/chat';
 import { getErrorMessage } from '@/lib/errors';
 
-const TABS = ['Overview', 'Users', 'KYC', 'Roles', 'Banners', 'Subscriptions', 'Analytics', 'Support'] as const;
+const TABS = ['Overview', 'Users', 'KYC', 'Roles', 'Inventory', 'Banners', 'Subscriptions', 'Analytics', 'Support'] as const;
 type Tab = typeof TABS[number];
 
 const SUB_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
@@ -98,6 +104,12 @@ export default function AdminDashboardScreen() {
   const reviewRoleApp = useReviewRoleApplication();
   const { data: stats } = usePlatformStats();
   const { data: allUsers = [] } = useAllUsers();
+  const { data: adminCars = [] } = useAdminAllCars();
+  const { data: adminSaleCars = [] } = useAdminAllSaleCars();
+  const setCarAvailability = useSetCarAvailability();
+  const deleteCar = useDeleteCar();
+  const deleteSaleCar = useDeleteSaleCar();
+  const [inventoryQuery, setInventoryQuery] = useState('');
   const { data: banners = [] } = useAllBanners();
   const setBannerActive = useSetBannerActive();
   const deleteBanner = useDeleteBanner();
@@ -195,6 +207,57 @@ export default function AdminDashboardScreen() {
         onPress: () => {
           deleteBanner.mutate(bannerId, {
             onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not delete this banner.')),
+          });
+        },
+      },
+    ]);
+  };
+
+  const inventoryQueryLower = inventoryQuery.trim().toLowerCase();
+  const filteredAdminCars = useMemo(() => {
+    if (!inventoryQueryLower) return adminCars;
+    return adminCars.filter(
+      (c) => c.brand.toLowerCase().includes(inventoryQueryLower) || c.model.toLowerCase().includes(inventoryQueryLower) || c.ownerName.toLowerCase().includes(inventoryQueryLower)
+    );
+  }, [adminCars, inventoryQueryLower]);
+  const filteredAdminSaleCars = useMemo(() => {
+    if (!inventoryQueryLower) return adminSaleCars;
+    return adminSaleCars.filter(
+      (c) => c.brand.toLowerCase().includes(inventoryQueryLower) || c.model.toLowerCase().includes(inventoryQueryLower) || c.dealerName.toLowerCase().includes(inventoryQueryLower)
+    );
+  }, [adminSaleCars, inventoryQueryLower]);
+
+  const handleToggleCarAvailability = (carId: string, next: boolean) => {
+    setCarAvailability.mutate(
+      { carId, isAvailable: next },
+      { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
+    );
+  };
+
+  const handleDeleteInventoryCar = (carId: string, label: string) => {
+    Alert.alert('Delete Vehicle', `Remove ${label}? This can't be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteCar.mutate(carId, {
+            onError: (err) => Alert.alert('Could not delete', getErrorMessage(err, 'This vehicle likely has booking history — it can only be marked unavailable.')),
+          });
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteInventorySaleCar = (saleCarId: string, label: string) => {
+    Alert.alert('Delete Listing', `Remove ${label}? This can't be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteSaleCar.mutate(saleCarId, {
+            onError: (err) => Alert.alert('Could not delete', getErrorMessage(err, 'Please try again.')),
           });
         },
       },
@@ -409,6 +472,91 @@ export default function AdminDashboardScreen() {
                 <Clock size={40} color={Colors.gray[300]} />
                 <Text style={styles.emptyText}>No pending role requests</Text>
               </View>
+            )}
+          </>
+        )}
+
+        {activeTab === 'Inventory' && (
+          <>
+            <View style={styles.inventorySearchWrap}>
+              <Search size={16} color={Colors.gray[400]} />
+              <TextInput
+                style={styles.inventorySearchInput}
+                placeholder="Search by brand, model, or owner..."
+                placeholderTextColor={Colors.gray[400]}
+                value={inventoryQuery}
+                onChangeText={setInventoryQuery}
+                testID="admin-inventory-search"
+              />
+            </View>
+
+            <Text style={styles.sectionTitle}>Rentals ({filteredAdminCars.length})</Text>
+            {filteredAdminCars.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Car size={40} color={Colors.gray[300]} />
+                <Text style={styles.emptyText}>No rental vehicles found</Text>
+              </View>
+            ) : (
+              filteredAdminCars.map((car) => (
+                <View key={car.id} style={styles.inventoryCard}>
+                  <Image source={{ uri: car.image }} style={styles.inventoryImage} contentFit="cover" />
+                  <View style={styles.inventoryInfo}>
+                    <Text style={styles.inventoryBrand}>{car.brand}</Text>
+                    <Text style={styles.inventoryModel} numberOfLines={1}>{car.model}</Text>
+                    <Text style={styles.inventoryOwner} numberOfLines={1}>
+                      {car.ownerName || 'No owner (catalog)'}
+                    </Text>
+                    <Text style={styles.inventoryPrice}>GH₵{car.pricePerDay}/day</Text>
+                  </View>
+                  <View style={styles.inventoryActions}>
+                    <Switch
+                      value={car.isAvailable}
+                      onValueChange={(next) => handleToggleCarAvailability(car.id, next)}
+                      trackColor={{ false: Colors.gray[300], true: Colors.success + '80' }}
+                      thumbColor={car.isAvailable ? Colors.success : Colors.gray[100]}
+                      testID={`admin-availability-switch-${car.id}`}
+                    />
+                    <Pressable
+                      style={styles.inventoryDeleteBtn}
+                      onPress={() => handleDeleteInventoryCar(car.id, `${car.brand} ${car.model}`)}
+                      testID={`admin-delete-car-${car.id}`}
+                    >
+                      <Trash2 size={16} color={Colors.error} />
+                    </Pressable>
+                  </View>
+                </View>
+              ))
+            )}
+
+            <Text style={[styles.sectionTitle, styles.analyticsSectionTitle]}>For Sale ({filteredAdminSaleCars.length})</Text>
+            {filteredAdminSaleCars.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Tag size={40} color={Colors.gray[300]} />
+                <Text style={styles.emptyText}>No sale listings found</Text>
+              </View>
+            ) : (
+              filteredAdminSaleCars.map((car) => (
+                <View key={car.id} style={styles.inventoryCard}>
+                  <Image source={{ uri: car.image }} style={styles.inventoryImage} contentFit="cover" />
+                  <View style={styles.inventoryInfo}>
+                    <Text style={styles.inventoryBrand}>{car.brand}</Text>
+                    <Text style={styles.inventoryModel} numberOfLines={1}>{car.model}</Text>
+                    <Text style={styles.inventoryOwner} numberOfLines={1}>
+                      {car.dealerName || 'No dealer (catalog)'}
+                    </Text>
+                    <Text style={styles.inventoryPrice}>GH₵{car.salePrice.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.inventoryActions}>
+                    <Pressable
+                      style={styles.inventoryDeleteBtn}
+                      onPress={() => handleDeleteInventorySaleCar(car.id, `${car.brand} ${car.model}`)}
+                      testID={`admin-delete-sale-car-${car.id}`}
+                    >
+                      <Trash2 size={16} color={Colors.error} />
+                    </Pressable>
+                  </View>
+                </View>
+              ))
             )}
           </>
         )}
@@ -849,6 +997,81 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     gap: 6,
     marginTop: 6,
+  },
+  analyticsSectionTitle: {
+    marginTop: 20,
+  },
+  inventorySearchWrap: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+  },
+  inventorySearchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.gray[900],
+  },
+  inventoryCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  inventoryImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+  },
+  inventoryInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  inventoryBrand: {
+    fontSize: 11,
+    color: Colors.gray[500],
+    fontWeight: '500' as const,
+  },
+  inventoryModel: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+  },
+  inventoryOwner: {
+    fontSize: 12,
+    color: Colors.gray[500],
+    marginTop: 2,
+  },
+  inventoryPrice: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: Colors.orange.primary,
+    marginTop: 2,
+  },
+  inventoryActions: {
+    alignItems: 'center' as const,
+    gap: 10,
+  },
+  inventoryDeleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: Colors.error + '10',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   roleBadge: {
     paddingHorizontal: 8,

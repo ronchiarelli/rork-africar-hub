@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,19 @@ import {
   Pressable,
   Alert,
   Linking,
+  TextInput,
+  Switch,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, MessageCircle, Phone, Pencil, ShieldCheck, Eye, BarChart3 } from 'lucide-react-native';
+import { Car, Wrench, CalendarCheck, AlertTriangle, Plus, Check, X, MapPin, MessageCircle, Phone, Pencil, ShieldCheck, Eye, BarChart3, Search, Trash2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
 import TrendLineChart from '@/components/TrendLineChart';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import TipBanner from '@/components/TipBanner';
-import { useMyFleetVehicles, usePendingOwnerBookings, useFleetMonthlyTrends, useFleetTopCars, type PendingBooking } from '@/lib/queries/fleet';
+import { useMyFleetVehicles, usePendingOwnerBookings, useFleetMonthlyTrends, useFleetTopCars, useSetCarAvailability, useDeleteCar, type PendingBooking } from '@/lib/queries/fleet';
 import { useReviewBooking } from '@/lib/queries/bookings';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
 import { getErrorMessage } from '@/lib/errors';
@@ -46,6 +48,39 @@ export default function FleetDashboardScreen() {
   const { data: topCars = [] } = useFleetTopCars();
   const reviewBooking = useReviewBooking();
   const getOrCreateConversation = useGetOrCreateConversation();
+  const setCarAvailability = useSetCarAvailability();
+  const deleteCar = useDeleteCar();
+  const [inventoryQuery, setInventoryQuery] = useState('');
+
+  const filteredFleetVehicles = useMemo(() => {
+    const q = inventoryQuery.trim().toLowerCase();
+    if (!q) return fleetVehicles;
+    return fleetVehicles.filter(
+      (v) => v.car.brand.toLowerCase().includes(q) || v.car.model.toLowerCase().includes(q)
+    );
+  }, [fleetVehicles, inventoryQuery]);
+
+  const handleToggleAvailability = useCallback((carId: string, next: boolean) => {
+    setCarAvailability.mutate(
+      { carId, isAvailable: next },
+      { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
+    );
+  }, [setCarAvailability]);
+
+  const handleDeleteVehicle = useCallback((carId: string, label: string) => {
+    Alert.alert('Delete Vehicle', `Remove ${label} from your fleet? This can't be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteCar.mutate(carId, {
+            onError: (err) => Alert.alert('Could not delete', getErrorMessage(err, 'Please try again.')),
+          });
+        },
+      },
+    ]);
+  }, [deleteCar]);
 
   const earnings = useMemo(() => {
     const totalRevenue = fleetVehicles.reduce((s, v) => s + v.totalEarnings, 0);
@@ -197,48 +232,90 @@ export default function FleetDashboardScreen() {
           </Pressable>
         </View>
 
+        {fleetVehicles.length > 0 && (
+          <View style={styles.inventorySearchWrap}>
+            <Search size={16} color={Colors.gray[400]} />
+            <TextInput
+              style={styles.inventorySearchInput}
+              placeholder="Search your fleet by brand or model..."
+              placeholderTextColor={Colors.gray[400]}
+              value={inventoryQuery}
+              onChangeText={setInventoryQuery}
+              testID="fleet-inventory-search"
+            />
+          </View>
+        )}
+
         {fleetVehicles.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Car size={40} color={Colors.gray[300]} />
             <Text style={styles.emptyText}>You haven&apos;t listed any cars yet</Text>
           </View>
+        ) : filteredFleetVehicles.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Search size={40} color={Colors.gray[300]} />
+            <Text style={styles.emptyText}>No vehicles match &quot;{inventoryQuery}&quot;</Text>
+          </View>
         ) : (
-          fleetVehicles.map((vehicle) => {
+          filteredFleetVehicles.map((vehicle) => {
             const statusConfig = VEHICLE_STATUS_CONFIG[vehicle.status] ?? VEHICLE_STATUS_CONFIG.active;
             return (
-              <Pressable
-                key={vehicle.id}
-                style={styles.vehicleCard}
-                onPress={() => router.push({ pathname: '/add-car', params: { id: vehicle.carId } })}
-                testID={`edit-vehicle-${vehicle.carId}`}
-              >
-                <Image source={{ uri: vehicle.car.image }} style={styles.vehicleImage} contentFit="cover" />
-                <View style={styles.vehicleInfo}>
-                  <View style={styles.vehicleHeader}>
-                    <View style={styles.vehicleNameWrap}>
-                      <Text style={styles.vehicleBrand}>{vehicle.car.brand}</Text>
-                      <Text style={styles.vehicleModel} numberOfLines={1}>{vehicle.car.model}</Text>
+              <View key={vehicle.id} style={styles.vehicleCard}>
+                <Pressable
+                  style={styles.vehicleCardMain}
+                  onPress={() => router.push({ pathname: '/add-car', params: { id: vehicle.carId } })}
+                  testID={`edit-vehicle-${vehicle.carId}`}
+                >
+                  <Image source={{ uri: vehicle.car.image }} style={styles.vehicleImage} contentFit="cover" />
+                  <View style={styles.vehicleInfo}>
+                    <View style={styles.vehicleHeader}>
+                      <View style={styles.vehicleNameWrap}>
+                        <Text style={styles.vehicleBrand}>{vehicle.car.brand}</Text>
+                        <Text style={styles.vehicleModel} numberOfLines={1}>{vehicle.car.model}</Text>
+                      </View>
+                      <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
+                        <Text style={[styles.statusText, { color: statusConfig.text }]}>{statusConfig.label}</Text>
+                      </View>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-                      <Text style={[styles.statusText, { color: statusConfig.text }]}>{statusConfig.label}</Text>
+                    <View style={styles.vehicleStats}>
+                      <Text style={styles.vehicleStat}>{vehicle.totalTrips} trips</Text>
+                      <Text style={styles.vehicleDot}>·</Text>
+                      <Text style={styles.vehicleStat}>GH₵{vehicle.totalEarnings.toLocaleString()}</Text>
                     </View>
+                    {vehicle.status === 'maintenance' && vehicle.nextMaintenance ? (
+                      <View style={styles.maintenanceAlert}>
+                        <AlertTriangle size={12} color={Colors.warning} />
+                        <Text style={styles.maintenanceText}>Due: {vehicle.nextMaintenance}</Text>
+                      </View>
+                    ) : null}
                   </View>
-                  <View style={styles.vehicleStats}>
-                    <Text style={styles.vehicleStat}>{vehicle.totalTrips} trips</Text>
-                    <Text style={styles.vehicleDot}>·</Text>
-                    <Text style={styles.vehicleStat}>GH₵{vehicle.totalEarnings.toLocaleString()}</Text>
+                  <View style={styles.editIconWrap}>
+                    <Pencil size={14} color={Colors.gray[400]} />
                   </View>
-                  {vehicle.status === 'maintenance' && vehicle.nextMaintenance ? (
-                    <View style={styles.maintenanceAlert}>
-                      <AlertTriangle size={12} color={Colors.warning} />
-                      <Text style={styles.maintenanceText}>Due: {vehicle.nextMaintenance}</Text>
-                    </View>
-                  ) : null}
+                </Pressable>
+                <View style={styles.vehicleActionsRow}>
+                  <View style={styles.availabilityToggle}>
+                    <Text style={styles.availabilityLabel}>
+                      {vehicle.car.isAvailable ? 'Available for booking' : 'Unavailable'}
+                    </Text>
+                    <Switch
+                      value={vehicle.car.isAvailable}
+                      onValueChange={(next) => handleToggleAvailability(vehicle.carId, next)}
+                      trackColor={{ false: Colors.gray[300], true: Colors.success + '80' }}
+                      thumbColor={vehicle.car.isAvailable ? Colors.success : Colors.gray[100]}
+                      testID={`availability-switch-${vehicle.carId}`}
+                    />
+                  </View>
+                  <Pressable
+                    style={styles.deleteVehicleBtn}
+                    onPress={() => handleDeleteVehicle(vehicle.carId, `${vehicle.car.brand} ${vehicle.car.model}`)}
+                    testID={`delete-vehicle-${vehicle.carId}`}
+                  >
+                    <Trash2 size={14} color={Colors.error} />
+                    <Text style={styles.deleteVehicleText}>Delete</Text>
+                  </Pressable>
                 </View>
-                <View style={styles.editIconWrap}>
-                  <Pencil size={14} color={Colors.gray[400]} />
-                </View>
-              </Pressable>
+              </View>
             );
           })
         )}
@@ -498,8 +575,6 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
   },
   vehicleCard: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
     backgroundColor: Colors.white,
     borderRadius: 16,
     marginBottom: 12,
@@ -509,6 +584,60 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
+  },
+  vehicleCardMain: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  vehicleActionsRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray[100],
+  },
+  availabilityToggle: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  availabilityLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: Colors.gray[600],
+  },
+  deleteVehicleBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.error + '10',
+  },
+  deleteVehicleText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: Colors.error,
+  },
+  inventorySearchWrap: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.gray[200],
+  },
+  inventorySearchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.gray[900],
   },
   editIconWrap: {
     paddingHorizontal: 14,

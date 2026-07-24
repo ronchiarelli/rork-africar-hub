@@ -372,6 +372,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { cars_booked_today: string }[];
       };
+      delete_car: {
+        Args: { p_car_id: string };
+        Returns: void;
+      };
       fleet_owner_review_booking: {
         Args: { p_booking_id: string; p_decision: 'approved' | 'cancelled' };
         Returns: BookingRow;

@@ -230,3 +230,44 @@ export function useUpdateCar() {
     },
   });
 }
+
+// Quick availability toggle for the inventory list — separate from
+// useUpdateCar since that always resubmits the entire edit form's fields;
+// this is a single-column update fired straight from a list-row switch.
+export function useSetCarAvailability() {
+  const { currentUser } = useAuth();
+  const ownerId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ carId, isAvailable }: { carId: string; isAvailable: boolean }) => {
+      const { error } = await supabase.from('cars').update({ is_available: isAvailable }).eq('id', carId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, { carId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['my-fleet-vehicles', ownerId] });
+      void queryClient.invalidateQueries({ queryKey: ['cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['cars', carId] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-cars'] });
+    },
+  });
+}
+
+// Cars with booking or review history can't be deleted (delete_car
+// translates the underlying FK violation into this message) — the owner
+// is expected to mark them unavailable instead.
+export function useDeleteCar() {
+  const { currentUser } = useAuth();
+  const ownerId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (carId: string) => {
+      const { error } = await supabase.rpc('delete_car', { p_car_id: carId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['my-fleet-vehicles', ownerId] });
+      void queryClient.invalidateQueries({ queryKey: ['cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-cars'] });
+    },
+  });
+}

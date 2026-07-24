@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { ProfileRow, SubscriptionRow, SubscriptionStatusDb } from '@/types/database';
+import { mapCar, mapSaleCar } from '@/lib/queries/cars';
+import type { ProfileRow, SubscriptionRow, SubscriptionStatusDb, CarRow, SaleCarRow } from '@/types/database';
+import type { Car, SaleCar } from '@/types/car';
 
 export interface PlatformStats {
   totalUsers: number;
@@ -282,6 +284,31 @@ export function useTopCars() {
         image: row.image,
         bookingCount: row.booking_count,
       }));
+    },
+  });
+}
+
+// Platform-wide inventory oversight: every car/sale car regardless of owner.
+// ownerName/dealerName are already denormalized onto each row at creation
+// time (see useCreateCar/useCreateSaleCar), so no profiles join is needed.
+export function useAdminAllCars() {
+  return useQuery({
+    queryKey: ['admin-all-cars'],
+    queryFn: async (): Promise<Car[]> => {
+      const { data, error } = await supabase.from('cars').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as CarRow[]).map(mapCar);
+    },
+  });
+}
+
+export function useAdminAllSaleCars() {
+  return useQuery({
+    queryKey: ['admin-all-sale-cars'],
+    queryFn: async (): Promise<SaleCar[]> => {
+      const { data, error } = await supabase.from('sale_cars').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as SaleCarRow[]).map(mapSaleCar);
     },
   });
 }

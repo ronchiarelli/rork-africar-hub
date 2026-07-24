@@ -32,7 +32,7 @@ export function mapCar(row: CarRow): Car {
   };
 }
 
-function mapSaleCar(row: SaleCarRow): SaleCar {
+export function mapSaleCar(row: SaleCarRow): SaleCar {
   return {
     id: row.id,
     brand: row.brand,

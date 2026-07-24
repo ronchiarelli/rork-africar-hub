@@ -221,3 +221,46 @@ export function useUpdateSaleCar() {
     },
   });
 }
+
+// Quick sold/active toggle for the inventory list — dealer_listings.status
+// already carries this ('active' | 'sold' | 'draft', with existing badge
+// UI), so this is a single-column update on that row rather than a new
+// concept on sale_cars.
+export function useSetListingSold() {
+  const { currentUser } = useAuth();
+  const dealerId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ listingId, isSold }: { listingId: string; isSold: boolean }) => {
+      const { error } = await supabase
+        .from('dealer_listings')
+        .update({ status: isSold ? 'sold' : 'active' })
+        .eq('id', listingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings', dealerId] });
+    },
+  });
+}
+
+// Unlike cars, sale_cars' dependents (dealer_listings -> leads) cascade
+// on delete — there's no FK backstop, so the caller should warn the user
+// first if the listing has leads (DealerListing.leads > 0), since this
+// silently takes that inquiry history with it.
+export function useDeleteSaleCar() {
+  const { currentUser } = useAuth();
+  const dealerId = currentUser?.id;
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (saleCarId: string) => {
+      const { error } = await supabase.from('sale_cars').delete().eq('id', saleCarId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings', dealerId] });
+      void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-sale-cars'] });
+    },
+  });
+}
