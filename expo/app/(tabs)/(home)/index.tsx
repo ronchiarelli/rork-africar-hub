@@ -83,6 +83,33 @@ function SaleCarCard({ car }: { car: SaleCar }) {
   );
 }
 
+// Advances a horizontal FlatList one card at a time on a timer, looping back
+// to the start once it runs off the end. Paused while the user is actively
+// dragging so it never fights a manual swipe.
+function useAutoScrollCarousel(itemWidth: number, itemCount: number) {
+  const listRef = useRef<FlatList<any>>(null);
+  const indexRef = useRef(0);
+  const pausedRef = useRef(false);
+
+  useEffect(() => {
+    indexRef.current = 0;
+    if (itemCount <= 1) return;
+    const interval = setInterval(() => {
+      if (pausedRef.current) return;
+      const nextIndex = indexRef.current + 1;
+      const atEnd = nextIndex >= itemCount;
+      indexRef.current = atEnd ? 0 : nextIndex;
+      listRef.current?.scrollToOffset({ offset: indexRef.current * itemWidth, animated: true });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [itemWidth, itemCount]);
+
+  const pause = useCallback(() => { pausedRef.current = true; }, []);
+  const resume = useCallback(() => { pausedRef.current = false; }, []);
+
+  return { listRef, pause, resume };
+}
+
 function PromoBannerContent({ banner, onCtaPress }: { banner: PromoBanner; onCtaPress: () => void }) {
   const floatAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -178,6 +205,9 @@ export default function HomeScreen() {
   }, [router]);
 
   const featuredSaleCars = saleCars.filter(c => c.isFeatured);
+  const trendingCars = cars.filter(c => c.isAvailable);
+  const trendingScroll = useAutoScrollCarousel(236, trendingCars.length);
+  const saleScroll = useAutoScrollCarousel(214, featuredSaleCars.length);
 
   return (
     <View style={styles.container}>
@@ -251,12 +281,15 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           <FlatList
+            ref={trendingScroll.listRef}
             horizontal
-            data={cars.filter(c => c.isAvailable)}
+            data={trendingCars}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => <CarCard car={item} isBooked={bookedCarIds?.has(item.id)} />}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.carList}
+            onScrollBeginDrag={trendingScroll.pause}
+            onScrollEndDrag={trendingScroll.resume}
           />
         </View>
 
@@ -283,12 +316,15 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           <FlatList
+            ref={saleScroll.listRef}
             horizontal
             data={featuredSaleCars}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => <SaleCarCard car={item} />}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.carList}
+            onScrollBeginDrag={saleScroll.pause}
+            onScrollEndDrag={saleScroll.resume}
           />
         </View>
 
