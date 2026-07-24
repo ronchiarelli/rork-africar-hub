@@ -62,6 +62,14 @@ export default function WelcomeScreen() {
           >
             <Text style={styles.secondaryBtnText}>I already have an account</Text>
           </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.guestBtn, pressed && styles.btnPressed]}
+            onPress={() => router.replace('/(tabs)/(home)')}
+            testID="browse-as-guest-btn"
+          >
+            <Text style={styles.guestBtnText}>Browse as Guest</Text>
+          </Pressable>
         </View>
       </Animated.View>
     </View>
@@ -129,5 +137,15 @@ const styles = StyleSheet.create({
     color: Colors.gray[400],
     fontSize: 15,
     fontWeight: '500' as const,
+  },
+  guestBtn: {
+    alignItems: 'center' as const,
+    paddingVertical: 12,
+  },
+  guestBtnText: {
+    color: Colors.gray[500],
+    fontSize: 14,
+    fontWeight: '500' as const,
+    textDecorationLine: 'underline' as const,
   },
 });
