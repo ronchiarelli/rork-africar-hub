@@ -17,7 +17,7 @@ const queryClient = new QueryClient();
 
 const AUTH_GROUP = ['welcome', 'login', 'register'];
 const FULLSCREEN_MODAL_ROUTES = ['selfie-camera', 'crop-image', 'image-gallery'];
-const PUBLIC_STACK_ROUTES = ['car-details', 'image-gallery', 'terms', 'privacy', 'forgot-password', 'reset-password', 'help-support'];
+const PUBLIC_STACK_ROUTES = ['car-details', 'marketplace', 'image-gallery', 'terms', 'privacy', 'forgot-password', 'reset-password', 'help-support'];
 const PUBLIC_TAB_SEGMENTS = ['(home)', 'search'];
 const ROLE_GUARDED: Record<string, UserRole[]> = {
   'fleet-dashboard': ['fleet_owner'],
