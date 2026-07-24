@@ -18,10 +18,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Camera, UploadCloud, Link2, Phone, Navigation, Move, RotateCcw } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { supabase } from '@/lib/supabase';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import { useBanner, useCreateBanner, useUpdateBanner } from '@/lib/queries/banners';
 import { getErrorMessage } from '@/lib/errors';
+import { uploadImageAsync, extensionFromUri } from '@/lib/imageUpload';
 import IndeterminateProgressBar from '@/components/IndeterminateProgressBar';
 import type { BannerCtaTypeDb } from '@/types/database';
 
@@ -234,18 +234,8 @@ export default function AddBannerScreen() {
     try {
       let finalImageUrl = imageUri;
       if (imageUri.startsWith('file:') || imageUri.startsWith('data:') || imageUri.startsWith('blob:')) {
-        const response = await fetch(imageUri);
-        const blob = await response.blob();
-        const fileExt = imageUri.split('.').pop()?.split('?')[0] || 'jpg';
-        const path = `${Date.now()}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage.from('banner-images').upload(path, blob, {
-          contentType: blob.type || 'image/jpeg',
-        });
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrlData } = supabase.storage.from('banner-images').getPublicUrl(path);
-        finalImageUrl = publicUrlData.publicUrl;
+        const path = `${Date.now()}.${extensionFromUri(imageUri)}`;
+        finalImageUrl = await uploadImageAsync('banner-images', path, imageUri);
       }
 
       const input = {

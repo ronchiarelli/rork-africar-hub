@@ -15,8 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
 import { VEHICLE_CATEGORIES } from '@/constants/vehicleCategories';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
+import { uploadImageAsync, extensionFromUri } from '@/lib/imageUpload';
 import { useCreateCar, useUpdateCar } from '@/lib/queries/fleet';
 import { useCarDetails } from '@/lib/queries/cars';
 import { getErrorMessage } from '@/lib/errors';
@@ -145,18 +145,9 @@ export default function AddCarScreen() {
           finalUrls.push(uri);
           continue;
         }
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        const fileExt = uri.split('.').pop()?.split('?')[0] || 'jpg';
-        const path = `${currentUser.id}/${Date.now()}-${finalUrls.length}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage.from('car-images').upload(path, blob, {
-          contentType: blob.type || 'image/jpeg',
-        });
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrlData } = supabase.storage.from('car-images').getPublicUrl(path);
-        finalUrls.push(publicUrlData.publicUrl);
+        const path = `${currentUser.id}/${Date.now()}-${finalUrls.length}.${extensionFromUri(uri)}`;
+        const publicUrl = await uploadImageAsync('car-images', path, uri);
+        finalUrls.push(publicUrl);
         setUploadProgress((prev) => ({ done: prev.done + 1, total: prev.total }));
       }
 
