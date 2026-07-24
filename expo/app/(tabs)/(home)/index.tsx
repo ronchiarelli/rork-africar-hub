@@ -17,14 +17,15 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles, X } from 'lucide-react-native';
+import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles, X, MessageCircle } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import { LOCATIONS } from '@/constants/locations';
 import { useCars, useBrands, useSaleCars, useBookedCarIds } from '@/lib/queries/cars';
-import { useActiveBanner, type PromoBanner } from '@/lib/queries/banners';
+import { useActiveBanners, type PromoBanner } from '@/lib/queries/banners';
 import type { BannerCtaTypeDb } from '@/types/database';
-import { useUnreadConversationsCount } from '@/lib/queries/chat';
+import { useUnreadConversationsCount, useGetOrCreateConversation } from '@/lib/queries/chat';
+import { useCreateLead } from '@/lib/queries/dealer';
 import { useNotifications } from '@/lib/queries/notifications';
 import NotificationBadge from '@/components/NotificationBadge';
 import { useAuth } from '@/providers/AuthProvider';
@@ -32,6 +33,7 @@ import CarCard from '@/components/CarCard';
 import BrandCard from '@/components/BrandCard';
 import { Brand, SaleCar } from '@/types/car';
 import { thumbnailUrl } from '@/lib/imageResize';
+import { getErrorMessage } from '@/lib/errors';
 import WelcomeFeaturesModal from '@/components/WelcomeFeaturesModal';
 
 function SaleCarCard({ car }: { car: SaleCar }) {
@@ -83,6 +85,69 @@ function SaleCarCard({ car }: { car: SaleCar }) {
   );
 }
 
+// Horizontal "Near You" row for a marketplace listing — mirrors the
+// message-dealer + lead-recording flow from marketplace.tsx's
+// SaleListingCard, since this is the same "contact the seller" action,
+// just surfaced with an explicit CTA label instead of icon-only buttons.
+function NearYouSaleCard({ car }: { car: SaleCar }) {
+  const router = useRouter();
+  const { currentUser } = useAuth();
+  const createLead = useCreateLead();
+  const getOrCreateConversation = useGetOrCreateConversation();
+
+  const handleContactSeller = useCallback(() => {
+    if (!currentUser) {
+      router.push('/login');
+      return;
+    }
+    if (!car.dealerId) return;
+    const msg = `Hi, I'm interested in the ${car.brand} ${car.model} (${car.year}) listed for GH₵${car.salePrice.toLocaleString()} on GoCar Hub.`;
+    createLead.mutate({
+      saleCarId: car.id,
+      customerId: currentUser.id,
+      customerName: currentUser.name,
+      customerPhone: currentUser.phone,
+      carModel: `${car.brand} ${car.model}`,
+      message: msg,
+    });
+    getOrCreateConversation.mutate(
+      { otherUserId: car.dealerId, contextType: 'sale_car', contextId: car.id, contextLabel: `${car.brand} ${car.model}` },
+      {
+        onSuccess: (conv) => router.push({ pathname: '/chat', params: { id: conv.id } }),
+        onError: (err) => Alert.alert('Could not start chat', getErrorMessage(err, 'Please try again.')),
+      }
+    );
+  }, [car, currentUser, createLead, getOrCreateConversation, router]);
+
+  return (
+    <View style={nearYouStyles.horizontalCard}>
+      <Pressable style={nearYouStyles.horizontalCardRow} onPress={() => router.push('/marketplace')} testID={`near-you-sale-${car.id}`}>
+        <View style={nearYouStyles.imageWrap}>
+          <Image source={{ uri: thumbnailUrl(car.image, 130) }} style={nearYouStyles.image} contentFit="cover" />
+        </View>
+        <View style={nearYouStyles.info}>
+          <Text style={nearYouStyles.brand}>{car.brand}</Text>
+          <Text style={nearYouStyles.model} numberOfLines={1}>{car.model}</Text>
+          <View style={nearYouStyles.locationRow}>
+            <Sparkles size={12} color={Colors.gray[500]} />
+            <Text style={nearYouStyles.locationText}>{car.condition}</Text>
+          </View>
+          <View style={nearYouStyles.bottomRow}>
+            <View style={nearYouStyles.priceRow}>
+              <Text style={nearYouStyles.currency}>GH₵</Text>
+              <Text style={nearYouStyles.price}>{car.salePrice.toLocaleString()}</Text>
+            </View>
+            <Pressable style={nearYouStyles.ctaBtn} onPress={handleContactSeller} testID={`contact-seller-${car.id}`}>
+              <MessageCircle size={13} color={Colors.white} />
+              <Text style={nearYouStyles.ctaBtnText}>Contact Seller</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
 // Advances a horizontal FlatList one card at a time on a timer, looping back
 // to the start once it runs off the end. Paused while the user is actively
 // dragging so it never fights a manual swipe.
@@ -108,6 +173,28 @@ function useAutoScrollCarousel(itemWidth: number, itemCount: number) {
   const resume = useCallback(() => { pausedRef.current = false; }, []);
 
   return { listRef, pause, resume };
+}
+
+// Rotates through a list of banners every 5s, fading out the current one
+// before swapping content and fading the next one in.
+function usePromoBannerRotation(count: number) {
+  const [index, setIndex] = useState(0);
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    setIndex(0);
+    opacity.setValue(1);
+    if (count <= 1) return;
+    const interval = setInterval(() => {
+      Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
+        setIndex((prev) => (prev + 1) % count);
+        Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [count, opacity]);
+
+  return { index, opacity };
 }
 
 function PromoBannerContent({ banner, onCtaPress }: { banner: PromoBanner; onCtaPress: () => void }) {
@@ -180,7 +267,9 @@ export default function HomeScreen() {
   const { data: cars = [] } = useCars({ onlyAvailable: true });
   const { data: bookedCarIds } = useBookedCarIds();
   const { data: saleCars = [] } = useSaleCars();
-  const { data: banner } = useActiveBanner();
+  const { data: banners = [] } = useActiveBanners();
+  const bannerRotation = usePromoBannerRotation(banners.length);
+  const banner = banners[bannerRotation.index];
   const unreadMessages = useUnreadConversationsCount();
   const { data: notifications = [] } = useNotifications();
   const unreadNotifications = notifications.filter((n) => !n.isRead).length;
@@ -208,6 +297,8 @@ export default function HomeScreen() {
   const trendingCars = cars.filter(c => c.isAvailable);
   const trendingScroll = useAutoScrollCarousel(236, trendingCars.length);
   const saleScroll = useAutoScrollCarousel(214, featuredSaleCars.length);
+  const nearYouRentals = cars.filter(c => c.isAvailable).slice(0, 3);
+  const nearYouSaleCars = saleCars.slice(0, 2);
 
   return (
     <View style={styles.container}>
@@ -294,7 +385,7 @@ export default function HomeScreen() {
         </View>
 
         {banner && (
-          <View style={styles.promoBanner}>
+          <Animated.View style={[styles.promoBanner, { opacity: bannerRotation.opacity }]}>
             <PromoBannerContent banner={banner} onCtaPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)} />
             <Image
               source={{ uri: thumbnailUrl(banner.imageUrl, 140) }}
@@ -302,7 +393,7 @@ export default function HomeScreen() {
               contentFit="cover"
               contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
             />
-          </View>
+          </Animated.View>
         )}
 
         <View style={styles.section}>
@@ -332,8 +423,11 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Near <Text style={styles.highlight}>You</Text></Text>
           </View>
-          {cars.filter(c => c.isAvailable).slice(0, 3).map((car) => (
-            <CarCard key={car.id} car={car} variant="horizontal" isBooked={bookedCarIds?.has(car.id)} />
+          {nearYouRentals.map((car) => (
+            <CarCard key={car.id} car={car} variant="horizontal" isBooked={bookedCarIds?.has(car.id)} ctaLabel="Rent" />
+          ))}
+          {nearYouSaleCars.map((car) => (
+            <NearYouSaleCard key={car.id} car={car} />
           ))}
         </View>
       </ScrollView>
@@ -482,6 +576,92 @@ const saleStyles = StyleSheet.create({
     fontWeight: '800' as const,
     color: Colors.gray[900],
     marginLeft: 2,
+  },
+});
+
+const nearYouStyles = StyleSheet.create({
+  horizontalCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden' as const,
+  },
+  horizontalCardRow: {
+    flexDirection: 'row' as const,
+  },
+  imageWrap: {
+    width: 130,
+    height: 120,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  info: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'center' as const,
+  },
+  brand: {
+    fontSize: 13,
+    color: Colors.gray[500],
+    fontWeight: '500' as const,
+  },
+  model: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: Colors.gray[900],
+    marginTop: 2,
+  },
+  locationRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    marginTop: 4,
+  },
+  locationText: {
+    fontSize: 12,
+    color: Colors.gray[500],
+  },
+  bottomRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginTop: 8,
+  },
+  priceRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'baseline' as const,
+  },
+  currency: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.orange.primary,
+  },
+  price: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: Colors.gray[900],
+    marginLeft: 2,
+  },
+  ctaBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 5,
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  ctaBtnText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '700' as const,
   },
 });
 

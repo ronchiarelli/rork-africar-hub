@@ -18,9 +18,10 @@ interface CarCardProps {
   car: Car;
   variant?: 'horizontal' | 'vertical';
   isBooked?: boolean;
+  ctaLabel?: string;
 }
 
-export default React.memo(function CarCard({ car, variant = 'vertical', isBooked = false }: CarCardProps) {
+export default React.memo(function CarCard({ car, variant = 'vertical', isBooked = false, ctaLabel }: CarCardProps) {
   const router = useRouter();
   const { isFavorite, toggleFavorite } = useFavorites();
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -78,10 +79,17 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
               <MapPin size={12} color={Colors.gray[500]} />
               <Text style={styles.locationText}>{car.location}</Text>
             </View>
-            <View style={styles.priceRow}>
-              <Text style={styles.currency}>GH₵</Text>
-              <Text style={styles.price}>{car.pricePerDay}</Text>
-              <Text style={styles.perDay}>/day</Text>
+            <View style={styles.horizontalBottomRow}>
+              <View style={styles.priceRow}>
+                <Text style={styles.currency}>GH₵</Text>
+                <Text style={styles.price}>{car.pricePerDay}</Text>
+                <Text style={styles.perDay}>/day</Text>
+              </View>
+              {ctaLabel && (
+                <Pressable style={styles.ctaBtn} onPress={handlePress} testID={`car-cta-${car.id}`}>
+                  <Text style={styles.ctaBtnText}>{ctaLabel}</Text>
+                </Pressable>
+              )}
             </View>
           </View>
         </Pressable>
@@ -289,5 +297,22 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 12,
     color: Colors.gray[500],
+  },
+  horizontalBottomRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginTop: 8,
+  },
+  ctaBtn: {
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  ctaBtnText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '700' as const,
   },
 });

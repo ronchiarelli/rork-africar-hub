@@ -34,20 +34,20 @@ function mapBanner(row: PromoBannerRow): PromoBanner {
   };
 }
 
-export function useActiveBanner() {
+// All active banners, ordered for display — the home screen rotates
+// through the full set instead of only ever showing the top one.
+export function useActiveBanners() {
   return useQuery({
-    queryKey: ['active-promo-banner'],
+    queryKey: ['active-promo-banners'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('promo_banners')
         .select('*')
         .eq('is_active', true)
         .order('display_order', { ascending: true })
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
       if (error) throw error;
-      return data ? mapBanner(data as PromoBannerRow) : null;
+      return (data as PromoBannerRow[]).map(mapBanner);
     },
     staleTime: 60_000,
   });
@@ -99,7 +99,7 @@ export interface BannerInput {
 }
 
 function invalidateBannerQueries(queryClient: ReturnType<typeof useQueryClient>) {
-  void queryClient.invalidateQueries({ queryKey: ['active-promo-banner'] });
+  void queryClient.invalidateQueries({ queryKey: ['active-promo-banners'] });
   void queryClient.invalidateQueries({ queryKey: ['all-promo-banners'] });
 }
 
