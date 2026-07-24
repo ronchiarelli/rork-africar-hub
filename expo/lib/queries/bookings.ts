@@ -122,7 +122,7 @@ export function useOwnerAcceptsInAppPayment(ownerId: string | undefined) {
 export function useInitiateBookingPayment() {
   return useMutation({
     mutationFn: async (bookingId: string) => {
-      const { data, error } = await supabase.functions.invoke<{ checkoutUrl: string; clientReference: string }>(
+      const { data, error } = await supabase.functions.invoke<{ checkoutUrl: string; clientReference: string; returnUrl: string }>(
         'initiate-booking-payment',
         { body: { bookingId } }
       );

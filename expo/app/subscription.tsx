@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 import { CheckCircle2, Clock3, AlertCircle, Zap } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -21,26 +22,43 @@ const PLAN_FEATURES = [
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { currentRole } = useAuth();
   const { data: sub, isLoading } = useSubscription();
   const { data: platformRate } = useSubscriptionRate();
   const displayRate = sub?.row?.amount ?? platformRate ?? 250;
   const initiatePayment = useInitiateSubscriptionPayment();
 
+  const refreshSubscription = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['subscription'] });
+  }, [queryClient]);
+
+  // openAuthSessionAsync (unlike plain openBrowserAsync) detects Hubtel's
+  // redirect back to our returnUrl and resolves as soon as it happens, so
+  // the app finds out payment finished instead of leaving the subscription
+  // status stuck stale until the user happens to pull to refresh.
   const handleSubscribe = useCallback(() => {
     initiatePayment.mutate(undefined, {
       onSuccess: async (data) => {
         if (Platform.OS === 'web') {
           window.open(data.checkoutUrl, '_blank');
-        } else {
-          await WebBrowser.openBrowserAsync(data.checkoutUrl);
+          return;
+        }
+        const result = await WebBrowser.openAuthSessionAsync(data.checkoutUrl, data.returnUrl);
+        if (result.type === 'success') {
+          const cancelled = result.url.includes('sub=cancelled');
+          refreshSubscription();
+          setTimeout(refreshSubscription, 2500);
+          if (!cancelled) {
+            Alert.alert('Payment received', 'Your subscription payment is being confirmed and will reflect shortly.');
+          }
         }
       },
       onError: (err) => {
         Alert.alert('Could not start payment', getErrorMessage(err, 'Something went wrong. Please try again.'));
       },
     });
-  }, [initiatePayment]);
+  }, [initiatePayment, refreshSubscription]);
 
   const roleLabel = currentRole === 'dealership' ? 'Dealership' : 'Fleet Owner';
 

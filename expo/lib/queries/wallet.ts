@@ -64,7 +64,7 @@ export function useInitiateWalletTopUp() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (amount: number) => {
-      const { data, error } = await supabase.functions.invoke<{ checkoutUrl: string; clientReference: string }>(
+      const { data, error } = await supabase.functions.invoke<{ checkoutUrl: string; clientReference: string; returnUrl: string }>(
         'initiate-wallet-topup',
         { body: { amount } }
       );

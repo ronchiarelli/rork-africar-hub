@@ -138,7 +138,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: hubtelData.message ?? 'Hubtel could not start this payment', debug: { status: hubtelResponse.status, hubtelData } }, 502);
     }
 
-    return json({ checkoutUrl: hubtelData.data.checkoutUrl, clientReference });
+    return json({ checkoutUrl: hubtelData.data.checkoutUrl, clientReference, returnUrl: returnBase });
   } catch (err) {
     console.error(err);
     if (clientReference) {

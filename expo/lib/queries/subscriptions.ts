@@ -47,7 +47,7 @@ export function useInitiateSubscriptionPayment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke<{ checkoutUrl: string; clientReference: string }>(
+      const { data, error } = await supabase.functions.invoke<{ checkoutUrl: string; clientReference: string; returnUrl: string }>(
         'initiate-subscription-payment'
       );
       if (error) {

@@ -13,6 +13,7 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 import {
   CalendarDays,
@@ -76,6 +77,7 @@ const KYC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: strin
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { currentUser } = useAuth();
   const { data: booking, isLoading } = useBookingDetail(id);
@@ -128,14 +130,30 @@ export default function BookingDetailScreen() {
     void Linking.openURL(`tel:${booking.car.ownerPhone}`);
   };
 
+  // openAuthSessionAsync (unlike plain openBrowserAsync) detects Hubtel's
+  // redirect back to our returnUrl and resolves as soon as it happens, so
+  // the booking's payment status refreshes automatically instead of
+  // staying stuck on "unpaid" until the customer manually reopens the screen.
+  const refreshBooking = () => {
+    void queryClient.invalidateQueries({ queryKey: ['bookings'] });
+  };
+
   const handlePayNow = () => {
     if (!booking) return;
     initiatePayment.mutate(booking.id, {
       onSuccess: async (data) => {
         if (Platform.OS === 'web') {
           window.open(data.checkoutUrl, '_blank');
-        } else {
-          await WebBrowser.openBrowserAsync(data.checkoutUrl);
+          return;
+        }
+        const result = await WebBrowser.openAuthSessionAsync(data.checkoutUrl, data.returnUrl);
+        if (result.type === 'success') {
+          const cancelled = result.url.includes('payment=cancelled');
+          refreshBooking();
+          setTimeout(refreshBooking, 2500);
+          if (!cancelled) {
+            Alert.alert('Payment received', 'Your payment is being confirmed and will reflect shortly.');
+          }
         }
       },
       onError: (err) => {

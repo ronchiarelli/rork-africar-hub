@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -61,6 +62,7 @@ function TransactionRow({ tx }: { tx: WalletTransaction }) {
 export default function WalletScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const { data: wallet } = useWallet();
   const { data: subscription } = useSubscription();
   const initiateTopUp = useInitiateWalletTopUp();
@@ -70,6 +72,33 @@ export default function WalletScreen() {
   const handleTopUp = () => {
     setTopUpAmount('');
     setTopUpModalVisible(true);
+  };
+
+  const refreshWallet = () => {
+    void queryClient.invalidateQueries({ queryKey: ['wallet'] });
+    void queryClient.invalidateQueries({ queryKey: ['wallet_transactions'] });
+  };
+
+  // openBrowserAsync just opens a page with no way to know when the user is
+  // done — Hubtel's redirect back to our own returnUrl happened, but nothing
+  // told the app, so the balance never visibly updated even though the
+  // payment succeeded (the wallet only ever refreshed if the user manually
+  // pulled to refresh). openAuthSessionAsync watches for that same redirect
+  // and returns control to the app the moment it happens, so we can refetch
+  // immediately instead of leaving the user staring at a stale balance.
+  const openCheckout = async (checkoutUrl: string, returnUrl: string) => {
+    const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, returnUrl);
+    if (result.type === 'success') {
+      const cancelled = result.url.includes('topup=cancelled');
+      refreshWallet();
+      // The Hubtel webhook that actually credits the wallet can land a beat
+      // after the redirect does — one more refetch shortly after covers
+      // that race without the user having to do anything.
+      setTimeout(refreshWallet, 2500);
+      if (!cancelled) {
+        Alert.alert('Payment received', 'Your wallet top-up is being confirmed and will reflect shortly.');
+      }
+    }
   };
 
   const handleConfirmTopUp = () => {
@@ -90,7 +119,7 @@ export default function WalletScreen() {
           // presentation is in progress") — wait for the close animation
           // to finish first.
           setTimeout(() => {
-            void WebBrowser.openBrowserAsync(data.checkoutUrl);
+            void openCheckout(data.checkoutUrl, data.returnUrl);
           }, 500);
         }
       },
