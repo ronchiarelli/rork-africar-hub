@@ -412,6 +412,14 @@ export type Database = {
         Args: { p_user_id: string; p_enabled: boolean };
         Returns: void;
       };
+      admin_set_car_featured: {
+        Args: { p_car_id: string; p_featured: boolean };
+        Returns: void;
+      };
+      admin_set_car_home_featured: {
+        Args: { p_car_id: string; p_featured: boolean };
+        Returns: void;
+      };
       admin_set_sale_car_featured: {
         Args: { p_sale_car_id: string; p_featured: boolean };
         Returns: void;

@@ -57,6 +57,8 @@ import {
   useTopCars,
   useAdminAllCars,
   useAdminAllSaleCars,
+  useSetCarFeatured,
+  useSetCarHomeFeatured,
   useSetSaleCarFeatured,
   useSetSaleCarHomeFeatured,
 } from '@/lib/queries/admin';
@@ -127,6 +129,8 @@ export default function AdminDashboardScreen() {
   const setCarAvailability = useSetCarAvailability();
   const deleteCar = useDeleteCar();
   const deleteSaleCar = useDeleteSaleCar();
+  const setCarFeatured = useSetCarFeatured();
+  const setCarHomeFeatured = useSetCarHomeFeatured();
   const setSaleCarFeatured = useSetSaleCarFeatured();
   const setSaleCarHomeFeatured = useSetSaleCarHomeFeatured();
   const [inventoryQuery, setInventoryQuery] = useState('');
@@ -250,6 +254,20 @@ export default function AdminDashboardScreen() {
   const handleToggleCarAvailability = (carId: string, next: boolean) => {
     setCarAvailability.mutate(
       { carId, isAvailable: next },
+      { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
+    );
+  };
+
+  const handleToggleCarFeatured = (carId: string, next: boolean) => {
+    setCarFeatured.mutate(
+      { carId, featured: next },
+      { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
+    );
+  };
+
+  const handleToggleCarHomeFeatured = (carId: string, next: boolean) => {
+    setCarHomeFeatured.mutate(
+      { carId, featured: next },
       { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
     );
   };
@@ -558,9 +576,9 @@ export default function AdminDashboardScreen() {
               </View>
             ) : (
               filteredAdminCars.map((car) => (
-                <View key={car.id} style={styles.inventoryCard}>
+                <View key={car.id} style={styles.saleInventoryCard}>
                   <Pressable
-                    style={styles.inventoryCardMain}
+                    style={styles.saleInventoryCardMain}
                     onPress={() => router.push({ pathname: '/add-car', params: { id: car.id } })}
                     testID={`admin-edit-car-${car.id}`}
                   >
@@ -590,6 +608,28 @@ export default function AdminDashboardScreen() {
                     >
                       <Trash2 size={16} color={Colors.error} />
                     </Pressable>
+                  </View>
+                  <View style={styles.featuredRow}>
+                    <View style={styles.featuredToggleItem}>
+                      <Text style={styles.featuredToggleLabel}>Search{'\n'}GH₵300/mo</Text>
+                      <Switch
+                        value={car.isFeatured}
+                        onValueChange={(next) => handleToggleCarFeatured(car.id, next)}
+                        trackColor={{ false: Colors.gray[300], true: Colors.orange.primary + '80' }}
+                        thumbColor={car.isFeatured ? Colors.orange.primary : Colors.gray[100]}
+                        testID={`admin-car-featured-search-${car.id}`}
+                      />
+                    </View>
+                    <View style={styles.featuredToggleItem}>
+                      <Text style={styles.featuredToggleLabel}>Home{'\n'}GH₵250/mo</Text>
+                      <Switch
+                        value={car.isHomeFeatured}
+                        onValueChange={(next) => handleToggleCarHomeFeatured(car.id, next)}
+                        trackColor={{ false: Colors.gray[300], true: Colors.orange.primary + '80' }}
+                        thumbColor={car.isHomeFeatured ? Colors.orange.primary : Colors.gray[100]}
+                        testID={`admin-car-featured-home-${car.id}`}
+                      />
+                    </View>
                   </View>
                 </View>
               ))

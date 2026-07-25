@@ -313,6 +313,38 @@ export function useAdminAllSaleCars() {
   });
 }
 
+// Free, admin-manual featured toggles for rental cars — mirrors
+// useSetSaleCarFeatured/useSetSaleCarHomeFeatured exactly, for the same
+// reason (comps/promos/catalog cars with no real owner to charge),
+// independent of fleet owners' self-service paid flow.
+export function useSetCarFeatured() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ carId, featured }: { carId: string; featured: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_car_featured', { p_car_id: carId, p_featured: featured });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['cars'] });
+    },
+  });
+}
+
+export function useSetCarHomeFeatured() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ carId, featured }: { carId: string; featured: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_car_home_featured', { p_car_id: carId, p_featured: featured });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['cars'] });
+    },
+  });
+}
+
 // Paid placements, both admin-only (the dealer pays the admin directly,
 // off-platform, then the admin flips the toggle) — never self-service, so
 // these go through SECURITY DEFINER RPCs rather than a client-side update
