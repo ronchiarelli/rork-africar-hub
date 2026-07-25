@@ -23,6 +23,8 @@ export interface Car {
   ownerName: string;
   ownerPhone: string;
   views: number;
+  isFeatured: boolean;
+  isHomeFeatured: boolean;
 }
 
 export interface Brand {

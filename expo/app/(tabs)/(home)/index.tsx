@@ -294,7 +294,7 @@ export default function HomeScreen() {
   }, [router]);
 
   const featuredSaleCars = saleCars.filter(c => c.isHomeFeatured);
-  const trendingCars = cars.filter(c => c.isAvailable);
+  const trendingCars = cars.filter(c => c.isAvailable && c.isHomeFeatured);
   const trendingScroll = useAutoScrollCarousel(236, trendingCars.length);
   const saleScroll = useAutoScrollCarousel(214, featuredSaleCars.length);
   const nearYouRentals = cars.filter(c => c.isAvailable).slice(0, 3);

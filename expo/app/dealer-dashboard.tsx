@@ -9,18 +9,25 @@ import {
   Alert,
   TextInput,
   Switch,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone, Pencil, Search, Trash2 } from 'lucide-react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import * as WebBrowser from 'expo-web-browser';
+import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone, Pencil, Search, Trash2, Sparkles } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useMyDealerListings, useMyLeads, useSetListingSold, useDeleteSaleCar } from '@/lib/queries/dealer';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
+import { useInitiateFeaturedPayment } from '@/lib/queries/featured';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import TipBanner from '@/components/TipBanner';
 import type { Lead } from '@/types/car';
+
+// Marker URL for openAuthSessionAsync to watch for — see payment-bridge.tsx.
+const PAYMENT_RETURN_SCHEME_URL = 'gocarhub://payment-return';
 
 const LISTING_STATUS: Record<string, { bg: string; text: string }> = {
   active: { bg: Colors.success + '20', text: Colors.success },
@@ -43,6 +50,8 @@ export default function DealerDashboardScreen() {
   const getOrCreateConversation = useGetOrCreateConversation();
   const setListingSold = useSetListingSold();
   const deleteSaleCar = useDeleteSaleCar();
+  const initiateFeaturedPayment = useInitiateFeaturedPayment();
+  const queryClient = useQueryClient();
   const [inventoryQuery, setInventoryQuery] = useState('');
 
   const totalViews = listings.reduce((acc, l) => acc + l.views, 0);
@@ -82,6 +91,38 @@ export default function DealerDashboardScreen() {
       },
     ]);
   }, [deleteSaleCar]);
+
+  // openAuthSessionAsync watches for a redirect back to
+  // PAYMENT_RETURN_SCHEME_URL and resolves as soon as it happens — see
+  // payment-bridge.tsx for why that has to be our own gocarhub:// scheme
+  // rather than the https returnUrl the edge function told Hubtel to use.
+  const handleFeatureListing = useCallback((saleCarId: string, placement: 'marketplace' | 'home', label: string) => {
+    initiateFeaturedPayment.mutate(
+      { targetType: 'sale_car', targetId: saleCarId, placement },
+      {
+        onSuccess: async (data) => {
+          if (Platform.OS === 'web') {
+            window.open(data.checkoutUrl, '_blank');
+            return;
+          }
+          const result = await WebBrowser.openAuthSessionAsync(data.checkoutUrl, PAYMENT_RETURN_SCHEME_URL);
+          if (result.type === 'success') {
+            const cancelled = result.url.includes('featured=cancelled');
+            void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings'] });
+            void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
+            setTimeout(() => {
+              void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings'] });
+              void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
+            }, 2500);
+            if (!cancelled) {
+              Alert.alert('Payment Received', `${label} will be featured shortly.`);
+            }
+          }
+        },
+        onError: (err) => Alert.alert('Could not start payment', getErrorMessage(err, 'Please try again.')),
+      }
+    );
+  }, [initiateFeaturedPayment, queryClient]);
 
   const handleLeadMessage = useCallback((lead: Lead) => {
     if (!lead.customerId) return;
@@ -220,6 +261,38 @@ export default function DealerDashboardScreen() {
                     <Trash2 size={14} color={Colors.error} />
                     <Text style={styles.deleteVehicleText}>Delete</Text>
                   </Pressable>
+                </View>
+                <View style={styles.featureRow}>
+                  {listing.car.isFeatured ? (
+                    <View style={styles.featuredBadgeSmall}>
+                      <Sparkles size={11} color={Colors.orange.primary} />
+                      <Text style={styles.featuredBadgeSmallText}>Featured on Marketplace</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      style={styles.featureBtn}
+                      onPress={() => handleFeatureListing(listing.car.id, 'marketplace', `${listing.car.brand} ${listing.car.model}`)}
+                      testID={`feature-marketplace-${listing.car.id}`}
+                    >
+                      <Sparkles size={12} color={Colors.orange.primary} />
+                      <Text style={styles.featureBtnText}>Feature on Marketplace · GH₵300/mo</Text>
+                    </Pressable>
+                  )}
+                  {listing.car.isHomeFeatured ? (
+                    <View style={styles.featuredBadgeSmall}>
+                      <Sparkles size={11} color={Colors.orange.primary} />
+                      <Text style={styles.featuredBadgeSmallText}>Featured on Home</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      style={styles.featureBtn}
+                      onPress={() => handleFeatureListing(listing.car.id, 'home', `${listing.car.brand} ${listing.car.model}`)}
+                      testID={`feature-home-${listing.car.id}`}
+                    >
+                      <Sparkles size={12} color={Colors.orange.primary} />
+                      <Text style={styles.featureBtnText}>Feature on Home · GH₵250/mo</Text>
+                    </Pressable>
+                  )}
                 </View>
               </View>
             );
@@ -387,6 +460,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700' as const,
     color: Colors.error,
+  },
+  featureRow: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+  },
+  featureBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 5,
+    backgroundColor: Colors.orange.faint,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  featureBtnText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: Colors.orange.primary,
+  },
+  featuredBadgeSmall: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 5,
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  featuredBadgeSmallText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: Colors.white,
   },
   inventorySearchWrap: {
     flexDirection: 'row' as const,

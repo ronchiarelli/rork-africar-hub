@@ -29,6 +29,8 @@ export function mapCar(row: CarRow): Car {
     ownerName: row.owner_name ?? '',
     ownerPhone: row.owner_phone ?? '',
     views: row.views,
+    isFeatured: row.is_featured,
+    isHomeFeatured: row.is_home_featured,
   };
 }
 

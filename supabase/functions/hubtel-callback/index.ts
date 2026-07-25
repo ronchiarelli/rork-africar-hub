@@ -40,13 +40,16 @@ Deno.serve(async (req: Request) => {
 
     // References we generate are prefixed by which flow created them —
     // 'topup_' for wallet top-ups, 'sub_' for direct subscription payments,
-    // 'booking_' for in-app booking payments — so the same callback can
-    // route to the right table/RPC for any of them.
+    // 'booking_' for in-app booking payments, 'featured_' for self-service
+    // featured placements — so the same callback can route to the right
+    // table/RPC for any of them.
     const referenceStr = String(clientReference);
     const flow = referenceStr.startsWith('sub_')
       ? 'subscription'
       : referenceStr.startsWith('booking_')
       ? 'booking'
+      : referenceStr.startsWith('featured_')
+      ? 'featured'
       : 'topup';
 
     const adminClient = createClient(
@@ -60,6 +63,8 @@ Deno.serve(async (req: Request) => {
         await adminClient.rpc('fail_subscription_payment', { p_client_reference: clientReference });
       } else if (flow === 'booking') {
         await adminClient.rpc('fail_booking_payment', { p_client_reference: clientReference });
+      } else if (flow === 'featured') {
+        await adminClient.rpc('fail_featured_payment', { p_client_reference: clientReference });
       } else {
         await adminClient
           .from('wallet_transactions')
@@ -78,6 +83,12 @@ Deno.serve(async (req: Request) => {
       });
     } else if (flow === 'booking') {
       await adminClient.rpc('complete_booking_payment', {
+        p_client_reference: clientReference,
+        p_amount: amount,
+        p_hubtel_transaction_id: String(hubtelTransactionId ?? ''),
+      });
+    } else if (flow === 'featured') {
+      await adminClient.rpc('complete_featured_payment', {
         p_client_reference: clientReference,
         p_amount: amount,
         p_hubtel_transaction_id: String(hubtelTransactionId ?? ''),

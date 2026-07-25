@@ -77,6 +77,8 @@ export type CarRow = {
   owner_name: string | null;
   owner_phone: string | null;
   views: number;
+  is_featured: boolean;
+  is_home_featured: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -7,7 +7,7 @@ import {
   Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Heart, MapPin, Star } from 'lucide-react-native';
+import { Heart, MapPin, Star, Sparkles } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { Car } from '@/types/car';
@@ -102,6 +102,12 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
       <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut} testID={`car-card-${car.id}`}>
         <View style={styles.imageWrap}>
           <Image source={{ uri: thumbnailUrl(car.image, 220) }} style={styles.image} contentFit="cover" />
+          {car.isFeatured && (
+            <View style={styles.featuredBadge}>
+              <Sparkles size={10} color={Colors.white} />
+              <Text style={styles.featuredBadgeText}>Featured</Text>
+            </View>
+          )}
           <Pressable onPress={handleFavorite} style={styles.heartBtn} testID={`fav-btn-${car.id}`}>
             <Heart
               size={18}
@@ -172,6 +178,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
+  },
+  featuredBadge: {
+    position: 'absolute' as const,
+    top: 8,
+    left: 8,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+  featuredBadgeText: {
+    color: Colors.white,
+    fontSize: 10,
+    fontWeight: '700' as const,
   },
   ratingBadge: {
     position: 'absolute' as const,
