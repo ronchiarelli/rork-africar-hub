@@ -389,7 +389,28 @@ export default function HomeScreen() {
           />
         </View>
 
-        {banner && (
+        {banner && banner.layout === 'full_image' && (
+          <Animated.View style={[styles.promoBanner, { opacity: bannerRotation.opacity }]}>
+            <Pressable
+              style={styles.promoFullImageWrap}
+              onPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)}
+              testID="promo-full-image-banner"
+            >
+              <Image
+                source={{ uri: thumbnailUrl(banner.imageUrl, 400) }}
+                style={styles.promoFullImage}
+                contentFit="cover"
+                contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
+              />
+              <View style={styles.promoFullImageCtaWrap}>
+                <View style={styles.promoBtn}>
+                  <Text style={styles.promoBtnText}>{banner.ctaLabel}</Text>
+                </View>
+              </View>
+            </Pressable>
+          </Animated.View>
+        )}
+        {banner && banner.layout !== 'full_image' && (
           <Animated.View style={[styles.promoBanner, { opacity: bannerRotation.opacity }]}>
             <PromoBannerContent banner={banner} onCtaPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)} />
             <Image
@@ -851,6 +872,19 @@ const styles = StyleSheet.create({
   promoImage: {
     width: 140,
     height: '100%',
+  },
+  promoFullImageWrap: {
+    flex: 1,
+    position: 'relative' as const,
+  },
+  promoFullImage: {
+    width: '100%',
+    height: '100%',
+  },
+  promoFullImageCtaWrap: {
+    position: 'absolute' as const,
+    bottom: 14,
+    alignSelf: 'center' as const,
   },
   fab: {
     position: 'absolute' as const,

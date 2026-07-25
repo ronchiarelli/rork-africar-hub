@@ -11,19 +11,22 @@ import {
   Switch,
   Platform,
   PanResponder,
+  Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Camera, UploadCloud, Link2, Phone, Navigation, Move, RotateCcw } from 'lucide-react-native';
+import { Camera, UploadCloud, Link2, Phone, Navigation, Move, RotateCcw, LayoutTemplate, Image as ImageIcon } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import { useBanner, useCreateBanner, useUpdateBanner } from '@/lib/queries/banners';
 import { getErrorMessage } from '@/lib/errors';
 import { uploadImageAsync, extensionFromUri } from '@/lib/imageUpload';
 import IndeterminateProgressBar from '@/components/IndeterminateProgressBar';
-import type { BannerCtaTypeDb } from '@/types/database';
+import type { BannerCtaTypeDb, BannerLayoutDb } from '@/types/database';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const CTA_ROUTES = [
   { label: 'Search', route: '/search' },
@@ -37,10 +40,19 @@ const CTA_TYPES: { type: BannerCtaTypeDb; label: string; icon: typeof Navigation
   { type: 'phone', label: 'Phone Number', icon: Phone },
 ];
 
+const LAYOUT_OPTIONS: { type: BannerLayoutDb; label: string; description: string; icon: typeof LayoutTemplate }[] = [
+  { type: 'template', label: 'Template', description: 'Tag, title & subtitle overlaid next to your image', icon: LayoutTemplate },
+  { type: 'full_image', label: 'Fully Designed', description: 'Your image fills the entire banner — only the CTA button is added', icon: ImageIcon },
+];
+
 // Matches the actual banner display's image slot (140x150 in
 // app/(tabs)/(home)/index.tsx's promoImage style) so repositioning here is
 // a true preview of what will show on the home screen.
 const CROP_FRAME_ASPECT_RATIO = 140 / 150;
+// Full-image layout fills the whole banner box instead of just the side
+// slot — matches promoBanner's own dimensions (screen width minus its
+// 20px horizontal margins, minHeight 150) in home/index.tsx.
+const FULL_IMAGE_ASPECT_RATIO = (SCREEN_WIDTH - 40) / 150;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -59,6 +71,7 @@ interface ImageCropFrameProps {
   imageUri: string;
   focalX: number;
   focalY: number;
+  aspectRatio: number;
   onFocalChange: (x: number, y: number) => void;
 }
 
@@ -66,7 +79,7 @@ interface ImageCropFrameProps {
 // the focal point, mirroring expo-image's contentPosition percentage
 // semantics directly (0-100 on each axis) so the same value drives both
 // this preview and the real banner render on the home screen.
-function ImageCropFrame({ imageUri, focalX, focalY, onFocalChange }: ImageCropFrameProps) {
+function ImageCropFrame({ imageUri, focalX, focalY, aspectRatio, onFocalChange }: ImageCropFrameProps) {
   const frameSize = useRef({ width: 0, height: 0 });
   const startFocal = useRef({ x: focalX, y: focalY });
   const focalRef = useRef({ x: focalX, y: focalY });
@@ -94,7 +107,7 @@ function ImageCropFrame({ imageUri, focalX, focalY, onFocalChange }: ImageCropFr
 
   return (
     <View
-      style={styles.cropFrame}
+      style={[styles.cropFrame, { aspectRatio }]}
       onLayout={(e) => {
         frameSize.current = { width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height };
       }}
@@ -127,6 +140,7 @@ export default function AddBannerScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [layout, setLayout] = useState<BannerLayoutDb>('template');
   const [tag, setTag] = useState('');
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
@@ -142,6 +156,7 @@ export default function AddBannerScreen() {
   useEffect(() => {
     if (!existingBanner) return;
     setImageUri(existingBanner.imageUrl);
+    setLayout(existingBanner.layout);
     setTag(existingBanner.tag);
     setTitle(existingBanner.title);
     setSubtitle(existingBanner.subtitle);
@@ -217,8 +232,12 @@ export default function AddBannerScreen() {
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    if (!tag || !title || !subtitle || !ctaLabel || !imageUri || !ctaDestination) {
-      Alert.alert('Missing Info', 'Please fill in all fields, add an image, and set a call-to-action destination.');
+    if (layout === 'template' && (!tag || !title || !subtitle)) {
+      Alert.alert('Missing Info', 'Please fill in the tag, title, and subtitle, or switch to the Fully Designed layout.');
+      return;
+    }
+    if (!ctaLabel || !imageUri || !ctaDestination) {
+      Alert.alert('Missing Info', 'Add an image, a call-to-action label, and set a call-to-action destination.');
       return;
     }
     if (ctaType === 'url' && !/^https?:\/\/.+/i.test(ctaDestination)) {
@@ -239,13 +258,14 @@ export default function AddBannerScreen() {
       }
 
       const input = {
-        tag,
-        title,
-        subtitle,
+        tag: layout === 'full_image' ? '' : tag,
+        title: layout === 'full_image' ? '' : title,
+        subtitle: layout === 'full_image' ? '' : subtitle,
         imageUrl: finalImageUrl,
         ctaLabel,
         ctaRoute: ctaDestination,
         ctaType,
+        layout,
         focalX,
         focalY,
         isActive,
@@ -269,7 +289,7 @@ export default function AddBannerScreen() {
     } finally {
       setIsUploading(false);
     }
-  }, [tag, title, subtitle, imageUri, ctaLabel, ctaDestination, ctaType, focalX, focalY, isActive, displayOrder, isEditing, id, createBanner, updateBanner, router]);
+  }, [layout, tag, title, subtitle, imageUri, ctaLabel, ctaDestination, ctaType, focalX, focalY, isActive, displayOrder, isEditing, id, createBanner, updateBanner, router]);
 
   const isBusy = isUploading || createBanner.isPending || updateBanner.isPending;
 
@@ -283,6 +303,27 @@ export default function AddBannerScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
+      <Field label="Banner Layout">
+        <View style={styles.layoutOptionsWrap}>
+          {LAYOUT_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            const isActiveLayout = layout === opt.type;
+            return (
+              <Pressable
+                key={opt.type}
+                style={[styles.layoutOption, isActiveLayout && styles.layoutOptionActive]}
+                onPress={() => setLayout(opt.type)}
+                testID={`banner-layout-${opt.type}`}
+              >
+                <Icon size={18} color={isActiveLayout ? Colors.orange.primary : Colors.gray[500]} />
+                <Text style={[styles.layoutOptionLabel, isActiveLayout && styles.layoutOptionLabelActive]}>{opt.label}</Text>
+                <Text style={styles.layoutOptionDescription}>{opt.description}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Field>
+
       <View ref={dropZoneRef} style={styles.imagePicker}>
         {imageUri ? (
           <>
@@ -290,6 +331,7 @@ export default function AddBannerScreen() {
               imageUri={imageUri}
               focalX={focalX}
               focalY={focalY}
+              aspectRatio={layout === 'full_image' ? FULL_IMAGE_ASPECT_RATIO : CROP_FRAME_ASPECT_RATIO}
               onFocalChange={(x, y) => {
                 setFocalX(x);
                 setFocalY(y);
@@ -328,15 +370,23 @@ export default function AddBannerScreen() {
         )}
       </View>
 
-      <Field label="Tag (small label above the title)">
-        <TextInput style={styles.input} value={tag} onChangeText={setTag} placeholder="e.g. WEEKEND SPECIAL" placeholderTextColor={Colors.gray[400]} />
-      </Field>
-      <Field label="Title">
-        <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. 20% Off SUV Rentals" placeholderTextColor={Colors.gray[400]} />
-      </Field>
-      <Field label="Subtitle">
-        <TextInput style={styles.input} value={subtitle} onChangeText={setSubtitle} placeholder="e.g. Book any SUV this weekend & save big" placeholderTextColor={Colors.gray[400]} />
-      </Field>
+      {layout === 'template' ? (
+        <>
+          <Field label="Tag (small label above the title)">
+            <TextInput style={styles.input} value={tag} onChangeText={setTag} placeholder="e.g. WEEKEND SPECIAL" placeholderTextColor={Colors.gray[400]} />
+          </Field>
+          <Field label="Title">
+            <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. 20% Off SUV Rentals" placeholderTextColor={Colors.gray[400]} />
+          </Field>
+          <Field label="Subtitle">
+            <TextInput style={styles.input} value={subtitle} onChangeText={setSubtitle} placeholder="e.g. Book any SUV this weekend & save big" placeholderTextColor={Colors.gray[400]} />
+          </Field>
+        </>
+      ) : (
+        <Text style={styles.fullImageHint}>
+          Your image fills the entire banner — no tag, title, or subtitle is shown on top. The call-to-action button below is still required.
+        </Text>
+      )}
       <Field label="Call-to-Action Button Label">
         <TextInput style={styles.input} value={ctaLabel} onChangeText={setCtaLabel} placeholder="e.g. Book Now" placeholderTextColor={Colors.gray[400]} />
       </Field>
@@ -485,6 +535,32 @@ const styles = StyleSheet.create({
   imagePlaceholderTextActive: { color: Colors.orange.primary },
   field: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '700' as const, color: Colors.gray[700], marginBottom: 8 },
+  layoutOptionsWrap: { flexDirection: 'row' as const, gap: 10 },
+  layoutOption: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.gray[200],
+    borderRadius: 14,
+    padding: 12,
+    gap: 4,
+  },
+  layoutOptionActive: {
+    borderColor: Colors.orange.primary,
+    backgroundColor: Colors.orange.faint,
+  },
+  layoutOptionLabel: { fontSize: 13, fontWeight: '700' as const, color: Colors.gray[700], marginTop: 2 },
+  layoutOptionLabelActive: { color: Colors.orange.primary },
+  layoutOptionDescription: { fontSize: 11, color: Colors.gray[500], lineHeight: 15 },
+  fullImageHint: {
+    fontSize: 13,
+    color: Colors.gray[600],
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    lineHeight: 19,
+  },
   input: {
     backgroundColor: Colors.white,
     borderRadius: 12,

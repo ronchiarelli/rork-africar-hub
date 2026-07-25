@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { PromoBannerRow, BannerCtaTypeDb } from '@/types/database';
+import type { PromoBannerRow, BannerCtaTypeDb, BannerLayoutDb } from '@/types/database';
 
 export interface PromoBanner {
   id: string;
@@ -11,6 +11,7 @@ export interface PromoBanner {
   ctaLabel: string;
   ctaRoute: string;
   ctaType: BannerCtaTypeDb;
+  layout: BannerLayoutDb;
   focalX: number;
   focalY: number;
   isActive: boolean;
@@ -27,6 +28,7 @@ function mapBanner(row: PromoBannerRow): PromoBanner {
     ctaLabel: row.cta_label,
     ctaRoute: row.cta_route,
     ctaType: row.cta_type,
+    layout: row.layout,
     focalX: row.focal_x,
     focalY: row.focal_y,
     isActive: row.is_active,
@@ -92,6 +94,7 @@ export interface BannerInput {
   ctaLabel: string;
   ctaRoute: string;
   ctaType: BannerCtaTypeDb;
+  layout: BannerLayoutDb;
   focalX: number;
   focalY: number;
   isActive: boolean;
@@ -115,6 +118,7 @@ export function useCreateBanner() {
         cta_label: input.ctaLabel,
         cta_route: input.ctaRoute,
         cta_type: input.ctaType,
+        layout: input.layout,
         focal_x: input.focalX,
         focal_y: input.focalY,
         is_active: input.isActive,
@@ -140,6 +144,7 @@ export function useUpdateBanner() {
           cta_label: input.ctaLabel,
           cta_route: input.ctaRoute,
           cta_type: input.ctaType,
+          layout: input.layout,
           focal_x: input.focalX,
           focal_y: input.focalY,
           is_active: input.isActive,

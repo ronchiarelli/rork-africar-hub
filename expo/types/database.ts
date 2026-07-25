@@ -305,6 +305,7 @@ export type RoleApplicationRow = {
 }
 
 export type BannerCtaTypeDb = 'route' | 'url' | 'phone';
+export type BannerLayoutDb = 'template' | 'full_image';
 
 export type PromoBannerRow = {
   id: string;
@@ -315,6 +316,7 @@ export type PromoBannerRow = {
   cta_label: string;
   cta_route: string;
   cta_type: BannerCtaTypeDb;
+  layout: BannerLayoutDb;
   focal_x: number;
   focal_y: number;
   is_active: boolean;
