@@ -390,36 +390,42 @@ export default function HomeScreen() {
         </View>
 
         {banner && banner.layout === 'full_image' && (
-          <Animated.View style={[styles.promoBanner, { opacity: bannerRotation.opacity }]}>
-            <Pressable
-              style={styles.promoFullImageWrap}
-              onPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)}
-              testID="promo-full-image-banner"
-            >
-              <Image
-                source={{ uri: thumbnailUrl(banner.imageUrl, 400) }}
-                style={styles.promoFullImage}
-                contentFit="cover"
-                contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
-              />
-              <View style={styles.promoFullImageCtaWrap}>
-                <View style={styles.promoBtn}>
-                  <Text style={styles.promoBtnText}>{banner.ctaLabel}</Text>
+          <View style={styles.promoBanner}>
+            <Animated.View style={[styles.promoBannerInner, { opacity: bannerRotation.opacity }]}>
+              <Pressable
+                style={styles.promoFullImageWrap}
+                onPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)}
+                testID="promo-full-image-banner"
+              >
+                <Image
+                  source={{ uri: thumbnailUrl(banner.imageUrl, 400) }}
+                  style={styles.promoFullImage}
+                  contentFit="cover"
+                  contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
+                  transition={0}
+                />
+                <View style={styles.promoFullImageCtaWrap}>
+                  <View style={styles.promoBtn}>
+                    <Text style={styles.promoBtnText}>{banner.ctaLabel}</Text>
+                  </View>
                 </View>
-              </View>
-            </Pressable>
-          </Animated.View>
+              </Pressable>
+            </Animated.View>
+          </View>
         )}
         {banner && banner.layout !== 'full_image' && (
-          <Animated.View style={[styles.promoBanner, { opacity: bannerRotation.opacity }]}>
-            <PromoBannerContent banner={banner} onCtaPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)} />
-            <Image
-              source={{ uri: thumbnailUrl(banner.imageUrl, 140) }}
-              style={styles.promoImage}
-              contentFit="cover"
-              contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
-            />
-          </Animated.View>
+          <View style={styles.promoBanner}>
+            <Animated.View style={[styles.promoBannerInner, { opacity: bannerRotation.opacity }]}>
+              <PromoBannerContent banner={banner} onCtaPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)} />
+              <Image
+                source={{ uri: thumbnailUrl(banner.imageUrl, 140) }}
+                style={styles.promoImage}
+                contentFit="cover"
+                contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
+                transition={0}
+              />
+            </Animated.View>
+          </View>
         )}
 
         <View style={styles.section}>
@@ -828,8 +834,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.purple.deep,
     borderRadius: 20,
     overflow: 'hidden' as const,
-    flexDirection: 'row' as const,
     minHeight: 150,
+  },
+  // Opacity lives here, not on promoBanner itself — that keeps the solid
+  // background behind this always visible, so a rotation's fade-out never
+  // exposes the page background (which showed as a white flash) and instead
+  // just briefly reveals the purple box, matching the app's own color.
+  promoBannerInner: {
+    flex: 1,
+    flexDirection: 'row' as const,
   },
   promoContent: {
     flex: 1,
