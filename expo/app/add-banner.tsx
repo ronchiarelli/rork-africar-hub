@@ -20,7 +20,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Camera, UploadCloud, Link2, Phone, Navigation, Move, RotateCcw, LayoutTemplate, Image as ImageIcon } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
-import { useBanner, useCreateBanner, useUpdateBanner } from '@/lib/queries/banners';
+import { useBanner, useAllBanners, useCreateBanner, useUpdateBanner } from '@/lib/queries/banners';
 import { getErrorMessage } from '@/lib/errors';
 import { uploadImageAsync, extensionFromUri } from '@/lib/imageUpload';
 import IndeterminateProgressBar from '@/components/IndeterminateProgressBar';
@@ -134,6 +134,7 @@ export default function AddBannerScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEditing = !!id;
   const { data: existingBanner, isLoading: isLoadingBanner } = useBanner(id);
+  const { data: allBanners = [], isLoading: isLoadingAllBanners } = useAllBanners();
   const createBanner = useCreateBanner();
   const updateBanner = useUpdateBanner();
 
@@ -151,6 +152,7 @@ export default function AddBannerScreen() {
   const [focalY, setFocalY] = useState(50);
   const [isActive, setIsActive] = useState(true);
   const [displayOrder, setDisplayOrder] = useState('0');
+  const hasAutoSetOrder = useRef(false);
   const dropZoneRef = useRef<View>(null);
 
   useEffect(() => {
@@ -168,6 +170,17 @@ export default function AddBannerScreen() {
     setIsActive(existingBanner.isActive);
     setDisplayOrder(String(existingBanner.displayOrder));
   }, [existingBanner]);
+
+  // New banners default to the back of the queue instead of admin having
+  // to guess a number — lower display_order shows first, so one past the
+  // current highest keeps existing banners' order untouched. Still
+  // editable below in case the admin wants to reorder or bump it forward.
+  useEffect(() => {
+    if (isEditing || hasAutoSetOrder.current || isLoadingAllBanners) return;
+    const maxOrder = allBanners.length > 0 ? Math.max(...allBanners.map((b) => b.displayOrder)) : -1;
+    setDisplayOrder(String(maxOrder + 1));
+    hasAutoSetOrder.current = true;
+  }, [isEditing, allBanners, isLoadingAllBanners]);
 
   const handlePickImage = useCallback(async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -438,8 +451,8 @@ export default function AddBannerScreen() {
           />
         </Field>
       )}
-      <Field label="Display Order (lower shows first)">
-        <TextInput style={styles.input} value={displayOrder} onChangeText={setDisplayOrder} keyboardType="number-pad" placeholderTextColor={Colors.gray[400]} />
+      <Field label={isEditing ? 'Display Order (lower shows first)' : 'Display Order (auto-set to the back of the queue — edit to reorder)'}>
+        <TextInput style={styles.input} value={displayOrder} onChangeText={setDisplayOrder} keyboardType="number-pad" placeholderTextColor={Colors.gray[400]} testID="banner-display-order" />
       </Field>
       <View style={styles.activeRow}>
         <Text style={styles.fieldLabel}>Active</Text>
