@@ -12,6 +12,9 @@ import { useSubscriptionRate } from '@/lib/queries/admin';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import { getErrorMessage } from '@/lib/errors';
 
+// Marker URL for openAuthSessionAsync to watch for — see payment-bridge.tsx.
+const PAYMENT_RETURN_SCHEME_URL = 'gocarhub://payment-return';
+
 const PLAN_FEATURES = [
   'List unlimited cars for rent or sale',
   'Appear in customer search & marketplace',
@@ -33,10 +36,12 @@ export default function SubscriptionScreen() {
     void queryClient.invalidateQueries({ queryKey: ['subscription'] });
   }, [queryClient]);
 
-  // openAuthSessionAsync (unlike plain openBrowserAsync) detects Hubtel's
-  // redirect back to our returnUrl and resolves as soon as it happens, so
-  // the app finds out payment finished instead of leaving the subscription
-  // status stuck stale until the user happens to pull to refresh.
+  // openAuthSessionAsync watches for a redirect back to
+  // PAYMENT_RETURN_SCHEME_URL and resolves as soon as it happens, so the
+  // app finds out payment finished instead of leaving the subscription
+  // status stuck stale until the user happens to pull to refresh. See
+  // payment-bridge.tsx for why that has to be our own gocarhub:// scheme
+  // rather than the https returnUrl the edge function told Hubtel to use.
   const handleSubscribe = useCallback(() => {
     initiatePayment.mutate(undefined, {
       onSuccess: async (data) => {
@@ -44,7 +49,7 @@ export default function SubscriptionScreen() {
           window.open(data.checkoutUrl, '_blank');
           return;
         }
-        const result = await WebBrowser.openAuthSessionAsync(data.checkoutUrl, data.returnUrl);
+        const result = await WebBrowser.openAuthSessionAsync(data.checkoutUrl, PAYMENT_RETURN_SCHEME_URL);
         if (result.type === 'success') {
           const cancelled = result.url.includes('sub=cancelled');
           refreshSubscription();

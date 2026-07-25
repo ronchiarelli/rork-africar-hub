@@ -30,6 +30,9 @@ import { getNavBarClearance } from '@/components/BottomNavBar';
 import TipBanner from '@/components/TipBanner';
 import { WalletTransaction } from '@/types/car';
 
+// Marker URL for openAuthSessionAsync to watch for — see payment-bridge.tsx.
+const PAYMENT_RETURN_SCHEME_URL = 'gocarhub://payment-return';
+
 function TransactionRow({ tx }: { tx: WalletTransaction }) {
   const isCredit = tx.type === 'credit';
   return (
@@ -79,15 +82,16 @@ export default function WalletScreen() {
     void queryClient.invalidateQueries({ queryKey: ['wallet_transactions'] });
   };
 
-  // openBrowserAsync just opens a page with no way to know when the user is
-  // done — Hubtel's redirect back to our own returnUrl happened, but nothing
-  // told the app, so the balance never visibly updated even though the
-  // payment succeeded (the wallet only ever refreshed if the user manually
-  // pulled to refresh). openAuthSessionAsync watches for that same redirect
-  // and returns control to the app the moment it happens, so we can refetch
-  // immediately instead of leaving the user staring at a stale balance.
-  const openCheckout = async (checkoutUrl: string, returnUrl: string) => {
-    const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, returnUrl);
+  // openAuthSessionAsync watches for a redirect back to a URL matching
+  // PAYMENT_RETURN_SCHEME_URL and returns control to the app the moment it
+  // happens, so we can refetch immediately instead of leaving the user
+  // staring at a stale balance. That has to be our own gocarhub:// scheme,
+  // not the https returnUrl the edge function told Hubtel to use — iOS's
+  // https-callback matching needs an Associated Domains entitlement we
+  // don't have configured, so the edge function points Hubtel at
+  // /payment-bridge instead, which forwards here. See payment-bridge.tsx.
+  const openCheckout = async (checkoutUrl: string) => {
+    const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, PAYMENT_RETURN_SCHEME_URL);
     if (result.type === 'success') {
       const cancelled = result.url.includes('topup=cancelled');
       refreshWallet();
@@ -119,7 +123,7 @@ export default function WalletScreen() {
           // presentation is in progress") — wait for the close animation
           // to finish first.
           setTimeout(() => {
-            void openCheckout(data.checkoutUrl, data.returnUrl);
+            void openCheckout(data.checkoutUrl);
           }, 500);
         }
       },

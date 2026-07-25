@@ -46,6 +46,9 @@ import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import AnimatedApproveButton from '@/components/AnimatedApproveButton';
 
+// Marker URL for openAuthSessionAsync to watch for — see payment-bridge.tsx.
+const PAYMENT_RETURN_SCHEME_URL = 'gocarhub://payment-return';
+
 const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string; bg: string }> = {
   pending: { icon: <Clock3 size={18} color={Colors.warning} />, color: Colors.warning, label: 'Pending Approval', bg: Colors.warning + '15' },
   approved: { icon: <CheckCircle2 size={18} color={Colors.info} />, color: Colors.info, label: 'Approved', bg: Colors.info + '15' },
@@ -130,10 +133,12 @@ export default function BookingDetailScreen() {
     void Linking.openURL(`tel:${booking.car.ownerPhone}`);
   };
 
-  // openAuthSessionAsync (unlike plain openBrowserAsync) detects Hubtel's
-  // redirect back to our returnUrl and resolves as soon as it happens, so
-  // the booking's payment status refreshes automatically instead of
-  // staying stuck on "unpaid" until the customer manually reopens the screen.
+  // openAuthSessionAsync watches for a redirect back to
+  // PAYMENT_RETURN_SCHEME_URL and resolves as soon as it happens, so the
+  // booking's payment status refreshes automatically instead of staying
+  // stuck on "unpaid" until the customer manually reopens the screen. See
+  // payment-bridge.tsx for why that has to be our own gocarhub:// scheme
+  // rather than the https returnUrl the edge function told Hubtel to use.
   const refreshBooking = () => {
     void queryClient.invalidateQueries({ queryKey: ['bookings'] });
   };
@@ -146,7 +151,7 @@ export default function BookingDetailScreen() {
           window.open(data.checkoutUrl, '_blank');
           return;
         }
-        const result = await WebBrowser.openAuthSessionAsync(data.checkoutUrl, data.returnUrl);
+        const result = await WebBrowser.openAuthSessionAsync(data.checkoutUrl, PAYMENT_RETURN_SCHEME_URL);
         if (result.type === 'success') {
           const cancelled = result.url.includes('payment=cancelled');
           refreshBooking();

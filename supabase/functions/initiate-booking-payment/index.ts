@@ -119,9 +119,13 @@ Deno.serve(async (req: Request) => {
       .filter(Boolean);
     const webOrigin = req.headers.get('origin');
     const isAllowedOrigin = !!webOrigin && allowedWebOrigins.includes(webOrigin);
+    // Real web browser callers get redirected straight back into the SPA
+    // screen they came from; native callers (no recognized web Origin) go
+    // through /payment-bridge first, which forwards to the app's
+    // gocarhub:// scheme — see payment-bridge.tsx for why that hop exists.
     const returnBase = isAllowedOrigin
       ? `${webOrigin}/booking-detail`
-      : `${PRODUCTION_WEB_URL}/booking-detail`;
+      : `${PRODUCTION_WEB_URL}/payment-bridge`;
 
     const hubtelResponse = await fetch('https://payproxyapi.hubtel.com/items/initiate', {
       method: 'POST',
