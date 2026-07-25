@@ -265,8 +265,8 @@ export default function DealerDashboardScreen() {
                 <View style={styles.featureRow}>
                   {listing.car.isFeatured ? (
                     <View style={styles.featuredBadgeSmall}>
-                      <Sparkles size={11} color={Colors.orange.primary} />
-                      <Text style={styles.featuredBadgeSmallText}>Featured on Marketplace</Text>
+                      <CheckCircle2 size={11} color={Colors.white} />
+                      <Text style={styles.featuredBadgeSmallText}>Featured Carousel</Text>
                     </View>
                   ) : (
                     <Pressable
@@ -275,13 +275,13 @@ export default function DealerDashboardScreen() {
                       testID={`feature-marketplace-${listing.car.id}`}
                     >
                       <Sparkles size={12} color={Colors.orange.primary} />
-                      <Text style={styles.featureBtnText}>Feature on Marketplace · GH₵300/mo</Text>
+                      <Text style={styles.featureBtnText}>Boost Views · Featured Carousel · GH₵300/mo</Text>
                     </Pressable>
                   )}
                   {listing.car.isHomeFeatured ? (
                     <View style={styles.featuredBadgeSmall}>
-                      <Sparkles size={11} color={Colors.orange.primary} />
-                      <Text style={styles.featuredBadgeSmallText}>Featured on Home</Text>
+                      <CheckCircle2 size={11} color={Colors.white} />
+                      <Text style={styles.featuredBadgeSmallText}>Marketplace Carousel</Text>
                     </View>
                   ) : (
                     <Pressable
@@ -290,7 +290,7 @@ export default function DealerDashboardScreen() {
                       testID={`feature-home-${listing.car.id}`}
                     >
                       <Sparkles size={12} color={Colors.orange.primary} />
-                      <Text style={styles.featureBtnText}>Feature on Home · GH₵250/mo</Text>
+                      <Text style={styles.featureBtnText}>Boost Views · Marketplace Carousel · GH₵250/mo</Text>
                     </Pressable>
                   )}
                 </View>

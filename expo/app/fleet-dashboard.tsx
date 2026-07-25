@@ -359,8 +359,8 @@ export default function FleetDashboardScreen() {
                 <View style={styles.featureRow}>
                   {vehicle.car.isFeatured ? (
                     <View style={styles.featuredBadgeSmall}>
-                      <Sparkles size={11} color={Colors.orange.primary} />
-                      <Text style={styles.featuredBadgeSmallText}>Featured in Search</Text>
+                      <Check size={11} color={Colors.white} />
+                      <Text style={styles.featuredBadgeSmallText}>Featured Carousel</Text>
                     </View>
                   ) : (
                     <Pressable
@@ -369,13 +369,13 @@ export default function FleetDashboardScreen() {
                       testID={`feature-search-${vehicle.carId}`}
                     >
                       <Sparkles size={12} color={Colors.orange.primary} />
-                      <Text style={styles.featureBtnText}>Feature in Search · GH₵300/mo</Text>
+                      <Text style={styles.featureBtnText}>Boost Views · Featured Carousel · GH₵300/mo</Text>
                     </Pressable>
                   )}
                   {vehicle.car.isHomeFeatured ? (
                     <View style={styles.featuredBadgeSmall}>
-                      <Sparkles size={11} color={Colors.orange.primary} />
-                      <Text style={styles.featuredBadgeSmallText}>Featured on Home</Text>
+                      <Check size={11} color={Colors.white} />
+                      <Text style={styles.featuredBadgeSmallText}>Marketplace Carousel</Text>
                     </View>
                   ) : (
                     <Pressable
@@ -384,7 +384,7 @@ export default function FleetDashboardScreen() {
                       testID={`feature-home-${vehicle.carId}`}
                     >
                       <Sparkles size={12} color={Colors.orange.primary} />
-                      <Text style={styles.featureBtnText}>Feature on Home · GH₵250/mo</Text>
+                      <Text style={styles.featureBtnText}>Boost Views · Marketplace Carousel · GH₵250/mo</Text>
                     </Pressable>
                   )}
                 </View>
