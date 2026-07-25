@@ -15,7 +15,7 @@ import { PanGestureHandler, PinchGestureHandler, State } from 'react-native-gest
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { useCarDetails } from '@/lib/queries/cars';
+import { useCarDetails, useSaleCarDetails } from '@/lib/queries/cars';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MIN_SCALE = 1;
@@ -164,9 +164,11 @@ function ZoomableImage({ uri, onZoomChange }: ZoomableImageProps) {
 
 export default function ImageGalleryScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ carId: string; index?: string }>();
-  const { data: car } = useCarDetails(params.carId);
-  const images = car?.images ?? [];
+  const params = useLocalSearchParams<{ carId: string; index?: string; type?: 'car' | 'sale_car' }>();
+  const isSaleCar = params.type === 'sale_car';
+  const { data: car } = useCarDetails(isSaleCar ? undefined : params.carId);
+  const { data: saleCar } = useSaleCarDetails(isSaleCar ? params.carId : undefined);
+  const images = (isSaleCar ? saleCar?.images : car?.images) ?? [];
   const initialIndex = clamp(Number(params.index ?? 0) || 0, 0, Math.max(0, images.length - 1));
 
   const [currentIndex, setCurrentIndex] = useState(initialIndex);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   FlatList,
   Linking,
   Alert,
+  Dimensions,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,12 +28,31 @@ import { SaleCar } from '@/types/car';
 
 const CONDITIONS = ['All', 'New', 'Foreign Used', 'Locally Used'];
 const BRANDS = ['All', 'Toyota', 'Mercedes', 'BMW', 'Honda', 'Hyundai', 'Range Rover'];
+// listContent has 20px padding on each side and listingCard has no
+// horizontal margin, so this is the card's actual on-screen width before
+// the real onLayout measurement comes in — avoids a 0-width flash of the
+// first image carousel frame.
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DEFAULT_CARD_IMAGE_WIDTH = SCREEN_WIDTH - 40;
+const LISTING_IMAGE_HEIGHT = 200;
 
 function SaleListingCard({ car }: { car: SaleCar }) {
   const router = useRouter();
   const { currentUser } = useAuth();
   const createLead = useCreateLead();
   const getOrCreateConversation = useGetOrCreateConversation();
+  const images = car.images.length > 0 ? car.images : [car.image];
+  const [imageIndex, setImageIndex] = useState(0);
+  const [imageWidth, setImageWidth] = useState(DEFAULT_CARD_IMAGE_WIDTH);
+  const imageScrollRef = useRef<ScrollView>(null);
+
+  const openGallery = useCallback((index: number) => {
+    router.push({ pathname: '/image-gallery', params: { carId: car.id, index: String(index), type: 'sale_car' } });
+  }, [car.id, router]);
+
+  const handleImageScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setImageIndex(Math.round(e.nativeEvent.contentOffset.x / imageWidth));
+  }, [imageWidth]);
 
   const recordLead = useCallback((message: string) => {
     if (!currentUser) return;
@@ -68,8 +90,26 @@ function SaleListingCard({ car }: { car: SaleCar }) {
 
   return (
     <View style={styles.listingCard}>
-      <View style={styles.listingImageWrap}>
-        <Image source={{ uri: car.image }} style={styles.listingImage} contentFit="cover" />
+      <View style={styles.listingImageWrap} onLayout={(e) => setImageWidth(e.nativeEvent.layout.width)}>
+        <ScrollView
+          ref={imageScrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleImageScrollEnd}
+          style={styles.listingImageScroll}
+        >
+          {images.map((img, idx) => (
+            <Pressable
+              key={idx}
+              onPress={() => openGallery(idx)}
+              testID={`sale-car-image-${car.id}-${idx}`}
+              style={{ width: imageWidth, height: LISTING_IMAGE_HEIGHT }}
+            >
+              <Image source={{ uri: img }} style={styles.listingImage} contentFit="cover" />
+            </Pressable>
+          ))}
+        </ScrollView>
         {car.isFeatured && (
           <View style={styles.featuredBadge}>
             <Sparkles size={10} color={Colors.white} />
@@ -79,6 +119,13 @@ function SaleListingCard({ car }: { car: SaleCar }) {
         <View style={styles.conditionBadge}>
           <Text style={styles.conditionText}>{car.condition}</Text>
         </View>
+        {images.length > 1 && (
+          <View style={styles.imageDotsRow}>
+            {images.map((_, idx) => (
+              <View key={idx} style={[styles.imageDot, idx === imageIndex && styles.imageDotActive]} />
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={styles.listingInfo}>
@@ -323,12 +370,32 @@ const styles = StyleSheet.create({
   },
   listingImageWrap: {
     width: '100%',
-    height: 200,
+    height: LISTING_IMAGE_HEIGHT,
     position: 'relative' as const,
+  },
+  listingImageScroll: {
+    height: LISTING_IMAGE_HEIGHT,
   },
   listingImage: {
     width: '100%',
     height: '100%',
+  },
+  imageDotsRow: {
+    position: 'absolute' as const,
+    bottom: 10,
+    alignSelf: 'center' as const,
+    flexDirection: 'row' as const,
+    gap: 5,
+  },
+  imageDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  imageDotActive: {
+    backgroundColor: Colors.white,
+    width: 14,
   },
   featuredBadge: {
     position: 'absolute' as const,
