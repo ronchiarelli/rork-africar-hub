@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
-import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone, Pencil, Search, Trash2, Sparkles } from 'lucide-react-native';
+import { Eye, Users, TrendingUp, Tag, MessageCircle, CheckCircle2, Clock, XCircle, Plus, Car, Phone, Pencil, Search, Trash2, Sparkles, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useMyDealerListings, useMyLeads, useSetListingSold, useDeleteSaleCar } from '@/lib/queries/dealer';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
@@ -265,32 +265,54 @@ export default function DealerDashboardScreen() {
                 <View style={styles.featureRow}>
                   {listing.car.isFeatured ? (
                     <View style={styles.featuredBadgeSmall}>
-                      <CheckCircle2 size={11} color={Colors.white} />
-                      <Text style={styles.featuredBadgeSmallText}>Featured Carousel</Text>
+                      <View style={styles.featuredBadgeIconWrap}>
+                        <CheckCircle2 size={15} color={Colors.white} />
+                      </View>
+                      <View style={styles.featureTextWrap}>
+                        <Text style={styles.featuredBadgeTitle}>Featured Carousel</Text>
+                        <Text style={styles.featuredBadgeSubtitle}>Active placement</Text>
+                      </View>
                     </View>
                   ) : (
                     <Pressable
-                      style={styles.featureBtn}
+                      style={({ pressed }) => [styles.featureBtn, pressed && styles.featureBtnPressed]}
                       onPress={() => handleFeatureListing(listing.car.id, 'marketplace', `${listing.car.brand} ${listing.car.model}`)}
                       testID={`feature-marketplace-${listing.car.id}`}
                     >
-                      <Sparkles size={12} color={Colors.orange.primary} />
-                      <Text style={styles.featureBtnText}>Boost Views · Featured Carousel · GH₵300/mo</Text>
+                      <View style={styles.featureBtnIconWrap}>
+                        <Sparkles size={15} color={Colors.white} />
+                      </View>
+                      <View style={styles.featureTextWrap}>
+                        <Text style={styles.featureBtnTitle}>Boost Views</Text>
+                        <Text style={styles.featureBtnSubtitle}>Featured Carousel · GH₵300/mo</Text>
+                      </View>
+                      <ChevronRight size={18} color={Colors.gray[300]} />
                     </Pressable>
                   )}
                   {listing.car.isHomeFeatured ? (
                     <View style={styles.featuredBadgeSmall}>
-                      <CheckCircle2 size={11} color={Colors.white} />
-                      <Text style={styles.featuredBadgeSmallText}>Marketplace Carousel</Text>
+                      <View style={styles.featuredBadgeIconWrap}>
+                        <CheckCircle2 size={15} color={Colors.white} />
+                      </View>
+                      <View style={styles.featureTextWrap}>
+                        <Text style={styles.featuredBadgeTitle}>Marketplace Carousel</Text>
+                        <Text style={styles.featuredBadgeSubtitle}>Active placement</Text>
+                      </View>
                     </View>
                   ) : (
                     <Pressable
-                      style={styles.featureBtn}
+                      style={({ pressed }) => [styles.featureBtn, pressed && styles.featureBtnPressed]}
                       onPress={() => handleFeatureListing(listing.car.id, 'home', `${listing.car.brand} ${listing.car.model}`)}
                       testID={`feature-home-${listing.car.id}`}
                     >
-                      <Sparkles size={12} color={Colors.orange.primary} />
-                      <Text style={styles.featureBtnText}>Boost Views · Marketplace Carousel · GH₵250/mo</Text>
+                      <View style={styles.featureBtnIconWrap}>
+                        <Sparkles size={15} color={Colors.white} />
+                      </View>
+                      <View style={styles.featureTextWrap}>
+                        <Text style={styles.featureBtnTitle}>Boost Views</Text>
+                        <Text style={styles.featureBtnSubtitle}>Marketplace Carousel · GH₵250/mo</Text>
+                      </View>
+                      <ChevronRight size={18} color={Colors.gray[300]} />
                     </Pressable>
                   )}
                 </View>
@@ -462,39 +484,82 @@ const styles = StyleSheet.create({
     color: Colors.error,
   },
   featureRow: {
-    flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
+    flexDirection: 'column' as const,
     gap: 8,
     paddingHorizontal: 14,
-    paddingBottom: 10,
+    paddingBottom: 12,
   },
   featureBtn: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: 5,
-    backgroundColor: Colors.orange.faint,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    gap: 10,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.orange.primary + '30',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  featureBtnText: {
+  featureBtnPressed: {
+    backgroundColor: Colors.orange.faint,
+    borderColor: Colors.orange.primary,
+  },
+  featureBtnIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: Colors.orange.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  featureTextWrap: {
+    flex: 1,
+  },
+  featureBtnTitle: {
+    fontSize: 13,
+    fontWeight: '800' as const,
+    color: Colors.gray[900],
+  },
+  featureBtnSubtitle: {
     fontSize: 11,
-    fontWeight: '700' as const,
-    color: Colors.orange.primary,
+    fontWeight: '600' as const,
+    color: Colors.gray[500],
+    marginTop: 1,
   },
   featuredBadgeSmall: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: 5,
-    backgroundColor: Colors.orange.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    gap: 10,
+    backgroundColor: Colors.success + '0D',
+    borderWidth: 1.5,
+    borderColor: Colors.success + '40',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
-  featuredBadgeSmallText: {
+  featuredBadgeIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: Colors.success,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  featuredBadgeTitle: {
+    fontSize: 13,
+    fontWeight: '800' as const,
+    color: Colors.gray[900],
+  },
+  featuredBadgeSubtitle: {
     fontSize: 11,
-    fontWeight: '700' as const,
-    color: Colors.white,
+    fontWeight: '600' as const,
+    color: Colors.success,
+    marginTop: 1,
   },
   inventorySearchWrap: {
     flexDirection: 'row' as const,
