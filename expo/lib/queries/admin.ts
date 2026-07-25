@@ -312,3 +312,35 @@ export function useAdminAllSaleCars() {
     },
   });
 }
+
+// Paid placements, both admin-only (the dealer pays the admin directly,
+// off-platform, then the admin flips the toggle) — never self-service, so
+// these go through SECURITY DEFINER RPCs rather than a client-side update
+// the owner's own RLS grant on sale_cars could otherwise permit.
+export function useSetSaleCarFeatured() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ saleCarId, featured }: { saleCarId: string; featured: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_sale_car_featured', { p_sale_car_id: saleCarId, p_featured: featured });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-sale-cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
+    },
+  });
+}
+
+export function useSetSaleCarHomeFeatured() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ saleCarId, featured }: { saleCarId: string; featured: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_sale_car_home_featured', { p_sale_car_id: saleCarId, p_featured: featured });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-sale-cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
+    },
+  });
+}

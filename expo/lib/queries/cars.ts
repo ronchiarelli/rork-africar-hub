@@ -52,6 +52,7 @@ export function mapSaleCar(row: SaleCarRow): SaleCar {
     dealerPhone: row.dealer_phone ?? '',
     dealerAvatar: row.dealer_avatar ?? '',
     isFeatured: row.is_featured,
+    isHomeFeatured: row.is_home_featured,
     views: row.views,
     description: row.description ?? '',
     features: row.features,

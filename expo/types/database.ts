@@ -100,6 +100,7 @@ export type SaleCarRow = {
   dealer_phone: string | null;
   dealer_avatar: string | null;
   is_featured: boolean;
+  is_home_featured: boolean;
   views: number;
   description: string | null;
   features: string[];
@@ -407,6 +408,14 @@ export type Database = {
       };
       admin_set_inapp_payment_enabled: {
         Args: { p_user_id: string; p_enabled: boolean };
+        Returns: void;
+      };
+      admin_set_sale_car_featured: {
+        Args: { p_sale_car_id: string; p_featured: boolean };
+        Returns: void;
+      };
+      admin_set_sale_car_home_featured: {
+        Args: { p_sale_car_id: string; p_featured: boolean };
         Returns: void;
       };
       owner_accepts_inapp_payment: {

@@ -57,6 +57,8 @@ import {
   useTopCars,
   useAdminAllCars,
   useAdminAllSaleCars,
+  useSetSaleCarFeatured,
+  useSetSaleCarHomeFeatured,
 } from '@/lib/queries/admin';
 import { useSetCarAvailability, useDeleteCar } from '@/lib/queries/fleet';
 import { useDeleteSaleCar } from '@/lib/queries/dealer';
@@ -125,6 +127,8 @@ export default function AdminDashboardScreen() {
   const setCarAvailability = useSetCarAvailability();
   const deleteCar = useDeleteCar();
   const deleteSaleCar = useDeleteSaleCar();
+  const setSaleCarFeatured = useSetSaleCarFeatured();
+  const setSaleCarHomeFeatured = useSetSaleCarHomeFeatured();
   const [inventoryQuery, setInventoryQuery] = useState('');
   const { data: banners = [] } = useAllBanners();
   const setBannerActive = useSetBannerActive();
@@ -278,6 +282,20 @@ export default function AdminDashboardScreen() {
         },
       },
     ]);
+  };
+
+  const handleToggleSaleCarFeatured = (saleCarId: string, next: boolean) => {
+    setSaleCarFeatured.mutate(
+      { saleCarId, featured: next },
+      { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
+    );
+  };
+
+  const handleToggleSaleCarHomeFeatured = (saleCarId: string, next: boolean) => {
+    setSaleCarHomeFeatured.mutate(
+      { saleCarId, featured: next },
+      { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
+    );
   };
 
   return (
@@ -585,9 +603,9 @@ export default function AdminDashboardScreen() {
               </View>
             ) : (
               filteredAdminSaleCars.map((car) => (
-                <View key={car.id} style={styles.inventoryCard}>
+                <View key={car.id} style={styles.saleInventoryCard}>
                   <Pressable
-                    style={styles.inventoryCardMain}
+                    style={styles.saleInventoryCardMain}
                     onPress={() => router.push({ pathname: '/add-sale-car', params: { id: car.id } })}
                     testID={`admin-edit-sale-car-${car.id}`}
                   >
@@ -602,7 +620,27 @@ export default function AdminDashboardScreen() {
                     </View>
                     <Pencil size={14} color={Colors.gray[400]} />
                   </Pressable>
-                  <View style={styles.inventoryActions}>
+                  <View style={styles.featuredRow}>
+                    <View style={styles.featuredToggleItem}>
+                      <Text style={styles.featuredToggleLabel}>Marketplace{'\n'}GH₵300/mo</Text>
+                      <Switch
+                        value={car.isFeatured}
+                        onValueChange={(next) => handleToggleSaleCarFeatured(car.id, next)}
+                        trackColor={{ false: Colors.gray[300], true: Colors.orange.primary + '80' }}
+                        thumbColor={car.isFeatured ? Colors.orange.primary : Colors.gray[100]}
+                        testID={`admin-featured-marketplace-${car.id}`}
+                      />
+                    </View>
+                    <View style={styles.featuredToggleItem}>
+                      <Text style={styles.featuredToggleLabel}>Home{'\n'}GH₵250/mo</Text>
+                      <Switch
+                        value={car.isHomeFeatured}
+                        onValueChange={(next) => handleToggleSaleCarHomeFeatured(car.id, next)}
+                        trackColor={{ false: Colors.gray[300], true: Colors.orange.primary + '80' }}
+                        thumbColor={car.isHomeFeatured ? Colors.orange.primary : Colors.gray[100]}
+                        testID={`admin-featured-home-${car.id}`}
+                      />
+                    </View>
                     <Pressable
                       style={styles.inventoryDeleteBtn}
                       onPress={() => handleDeleteInventorySaleCar(car.id, `${car.brand} ${car.model}`)}
@@ -626,6 +664,7 @@ export default function AdminDashboardScreen() {
                 <Text style={styles.addBannerBtnText}>New Banner</Text>
               </Pressable>
             </View>
+            <Text style={styles.bannerPricingNote}>GH₵1,500/month per banner placement — collect payment before activating.</Text>
             {banners.map((banner) => (
               <View key={banner.id} style={styles.bannerCard}>
                 <Image source={{ uri: banner.imageUrl }} style={styles.bannerThumb} contentFit="cover" />
@@ -1193,6 +1232,42 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
+  saleInventoryCard: {
+    flexDirection: 'column' as const,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  saleInventoryCardMain: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  featuredRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingTop: 10,
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray[100],
+  },
+  featuredToggleItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  featuredToggleLabel: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+    color: Colors.gray[600],
+    lineHeight: 13,
+  },
   roleBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -1331,6 +1406,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
     marginBottom: 14,
+  },
+  bannerPricingNote: {
+    fontSize: 12,
+    color: Colors.gray[500],
+    marginBottom: 14,
+    marginTop: -6,
   },
   addBannerBtn: {
     flexDirection: 'row' as const,

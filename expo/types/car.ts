@@ -180,6 +180,7 @@ export interface SaleCar {
   dealerPhone: string;
   dealerAvatar: string;
   isFeatured: boolean;
+  isHomeFeatured: boolean;
   views: number;
   description: string;
   features: string[];

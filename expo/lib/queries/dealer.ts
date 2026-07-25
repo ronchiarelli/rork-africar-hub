@@ -1,34 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
+import { mapSaleCar } from '@/lib/queries/cars';
 import type { SaleCarRow, DealerListingRow, LeadRow } from '@/types/database';
 import type { SaleCar, DealerListing, Lead } from '@/types/car';
-
-function mapSaleCar(row: SaleCarRow): SaleCar {
-  return {
-    id: row.id,
-    brand: row.brand,
-    model: row.model,
-    year: row.year,
-    category: row.category,
-    image: row.image,
-    images: row.images,
-    salePrice: row.sale_price,
-    mileage: row.mileage,
-    location: row.location,
-    fuelType: row.fuel_type,
-    transmission: row.transmission,
-    condition: row.condition,
-    dealerId: row.dealer_id,
-    dealerName: row.dealer_name ?? '',
-    dealerPhone: row.dealer_phone ?? '',
-    dealerAvatar: row.dealer_avatar ?? '',
-    isFeatured: row.is_featured,
-    views: row.views,
-    description: row.description ?? '',
-    features: row.features,
-  };
-}
 
 type DealerListingWithCar = DealerListingRow & { sale_car: SaleCarRow };
 
@@ -174,6 +149,7 @@ export function useCreateSaleCar() {
         dealer_phone: input.dealerPhone,
         dealer_avatar: input.dealerAvatar,
         is_featured: false,
+        is_home_featured: false,
         description: input.description,
         features: input.features,
       });
