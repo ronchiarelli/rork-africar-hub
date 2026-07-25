@@ -180,19 +180,29 @@ function useAutoScrollCarousel(itemWidth: number, itemCount: number) {
 function usePromoBannerRotation(count: number) {
   const [index, setIndex] = useState(0);
   const opacity = useRef(new Animated.Value(1)).current;
+  const countRef = useRef(count);
 
   useEffect(() => {
+    countRef.current = count;
+    opacity.stopAnimation();
     setIndex(0);
     opacity.setValue(1);
-    if (count <= 1) return;
+  }, [count, opacity]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
-        setIndex((prev) => (prev + 1) % count);
+      if (countRef.current <= 1) return;
+      Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(({ finished }) => {
+        if (!finished) return;
+        setIndex((prev) => (prev + 1) % countRef.current);
         Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
       });
     }, 5000);
-    return () => clearInterval(interval);
-  }, [count, opacity]);
+    return () => {
+      clearInterval(interval);
+      opacity.stopAnimation();
+    };
+  }, [opacity]);
 
   return { index, opacity };
 }
@@ -389,41 +399,40 @@ export default function HomeScreen() {
           />
         </View>
 
-        {banner && banner.layout === 'full_image' && (
+        {banner && (
           <View style={styles.promoBanner}>
             <Animated.View style={[styles.promoBannerInner, { opacity: bannerRotation.opacity }]}>
-              <Pressable
-                style={styles.promoFullImageWrap}
-                onPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)}
-                testID="promo-full-image-banner"
-              >
-                <Image
-                  source={{ uri: thumbnailUrl(banner.imageUrl, 400) }}
-                  style={styles.promoFullImage}
-                  contentFit="cover"
-                  contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
-                  transition={0}
-                />
-                <View style={styles.promoFullImageCtaWrap}>
-                  <View style={styles.promoBtn}>
-                    <Text style={styles.promoBtnText}>{banner.ctaLabel}</Text>
+              {banner.layout === 'full_image' ? (
+                <Pressable
+                  style={styles.promoFullImageWrap}
+                  onPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)}
+                  testID="promo-full-image-banner"
+                >
+                  <Image
+                    source={{ uri: thumbnailUrl(banner.imageUrl, 400) }}
+                    style={styles.promoFullImage}
+                    contentFit="cover"
+                    contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
+                    transition={0}
+                  />
+                  <View style={styles.promoFullImageCtaWrap}>
+                    <View style={styles.promoBtn}>
+                      <Text style={styles.promoBtnText}>{banner.ctaLabel}</Text>
+                    </View>
                   </View>
-                </View>
-              </Pressable>
-            </Animated.View>
-          </View>
-        )}
-        {banner && banner.layout !== 'full_image' && (
-          <View style={styles.promoBanner}>
-            <Animated.View style={[styles.promoBannerInner, { opacity: bannerRotation.opacity }]}>
-              <PromoBannerContent banner={banner} onCtaPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)} />
-              <Image
-                source={{ uri: thumbnailUrl(banner.imageUrl, 140) }}
-                style={styles.promoImage}
-                contentFit="cover"
-                contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
-                transition={0}
-              />
+                </Pressable>
+              ) : (
+                <>
+                  <PromoBannerContent banner={banner} onCtaPress={() => handleBannerPress(banner.ctaType, banner.ctaRoute)} />
+                  <Image
+                    source={{ uri: thumbnailUrl(banner.imageUrl, 140) }}
+                    style={styles.promoImage}
+                    contentFit="cover"
+                    contentPosition={{ left: `${banner.focalX}%`, top: `${banner.focalY}%` }}
+                    transition={0}
+                  />
+                </>
+              )}
             </Animated.View>
           </View>
         )}

@@ -12,9 +12,11 @@ import {
   Platform,
   PanResponder,
   Dimensions,
+  Image as RNImage,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Camera, UploadCloud, Link2, Phone, Navigation, Move, RotateCcw, LayoutTemplate, Image as ImageIcon } from 'lucide-react-native';
@@ -27,6 +29,29 @@ import IndeterminateProgressBar from '@/components/IndeterminateProgressBar';
 import type { BannerCtaTypeDb, BannerLayoutDb } from '@/types/database';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// The banner placeholder never displays wider than the screen itself, so
+// anything beyond ~2x that (for retina-ish sharpness) is wasted upload/
+// download weight with zero visible benefit — downscale before upload
+// instead of shipping the phone camera's full-resolution original.
+const MAX_BANNER_WIDTH = 1200;
+
+async function resizeForBannerUpload(uri: string): Promise<string> {
+  const originalWidth = await new Promise<number>((resolve) => {
+    RNImage.getSize(
+      uri,
+      (width) => resolve(width),
+      () => resolve(0),
+    );
+  });
+  if (!originalWidth || originalWidth <= MAX_BANNER_WIDTH) return uri;
+  const result = await manipulateAsync(
+    uri,
+    [{ resize: { width: MAX_BANNER_WIDTH } }],
+    { compress: 0.85, format: SaveFormat.JPEG },
+  );
+  return result.uri;
+}
 
 const CTA_ROUTES = [
   { label: 'Search', route: '/search' },
@@ -193,7 +218,8 @@ export default function AddBannerScreen() {
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+      const resizedUri = await resizeForBannerUpload(result.assets[0].uri);
+      setImageUri(resizedUri);
       setFocalX(50);
       setFocalY(50);
     }
@@ -228,9 +254,11 @@ export default function AddBannerScreen() {
       setIsDragActive(false);
       const file = e.dataTransfer?.files?.[0];
       if (file && file.type.startsWith('image/')) {
-        setImageUri(URL.createObjectURL(file));
-        setFocalX(50);
-        setFocalY(50);
+        void resizeForBannerUpload(URL.createObjectURL(file)).then((resizedUri) => {
+          setImageUri(resizedUri);
+          setFocalX(50);
+          setFocalY(50);
+        });
       }
     };
 
