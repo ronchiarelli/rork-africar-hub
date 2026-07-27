@@ -9,6 +9,9 @@ export interface Car {
   pricePerDay: number;
   pricePerWeek: number;
   location: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   seats: number;
   transmission: 'Automatic' | 'Manual';
   fuelType: 'Petrol' | 'Diesel' | 'Hybrid' | 'Electric';
@@ -174,6 +177,9 @@ export interface SaleCar {
   salePrice: number;
   mileage: number;
   location: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   fuelType: 'Petrol' | 'Diesel' | 'Hybrid' | 'Electric';
   transmission: 'Automatic' | 'Manual';
   condition: 'New' | 'Foreign Used' | 'Locally Used';

@@ -154,7 +154,7 @@ function SaleListingCard({ car }: { car: SaleCar }) {
 
         <View style={styles.locationRow}>
           <MapPin size={12} color={Colors.gray[500]} />
-          <Text style={styles.locationText}>{car.location}</Text>
+          <Text style={styles.locationText} numberOfLines={1}>{car.address || car.location}</Text>
         </View>
 
         <View style={styles.listingBottom}>

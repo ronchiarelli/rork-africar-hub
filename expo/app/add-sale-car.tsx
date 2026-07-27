@@ -20,6 +20,7 @@ import { useCreateSaleCar, useUpdateSaleCar } from '@/lib/queries/dealer';
 import { useSaleCarDetails } from '@/lib/queries/cars';
 import { getErrorMessage } from '@/lib/errors';
 import MultiImagePicker from '@/components/MultiImagePicker';
+import LocationAutocomplete from '@/components/LocationAutocomplete';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import type { SaleCar } from '@/types/car';
@@ -86,6 +87,9 @@ export default function AddSaleCarScreen() {
   const [salePrice, setSalePrice] = useState('');
   const [mileage, setMileage] = useState('');
   const [location, setLocation] = useState(LOCATIONS[0]);
+  const [address, setAddress] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [transmission, setTransmission] = useState<SaleCar['transmission']>('Automatic');
   const [fuelType, setFuelType] = useState<SaleCar['fuelType']>('Petrol');
   const [condition, setCondition] = useState<SaleCar['condition']>('Foreign Used');
@@ -102,6 +106,9 @@ export default function AddSaleCarScreen() {
     setSalePrice(String(existingSaleCar.salePrice));
     setMileage(String(existingSaleCar.mileage));
     setLocation(existingSaleCar.location);
+    setAddress(existingSaleCar.address ?? '');
+    setLatitude(existingSaleCar.latitude);
+    setLongitude(existingSaleCar.longitude);
     setTransmission(existingSaleCar.transmission);
     setFuelType(existingSaleCar.fuelType);
     setCondition(existingSaleCar.condition);
@@ -156,6 +163,9 @@ export default function AddSaleCarScreen() {
         salePrice: Number(salePrice) || 0,
         mileage: Number(mileage) || 0,
         location,
+        address: address.trim() || null,
+        latitude,
+        longitude,
         fuelType,
         transmission,
         condition,
@@ -184,7 +194,7 @@ export default function AddSaleCarScreen() {
       setIsUploading(false);
       setUploadProgress({ done: 0, total: 0 });
     }
-  }, [currentUser, brand, model, year, category, images, salePrice, mileage, location, fuelType, transmission, condition, features, description, isEditing, id, createSaleCar, updateSaleCar, router]);
+  }, [currentUser, brand, model, year, category, images, salePrice, mileage, location, address, latitude, longitude, fuelType, transmission, condition, features, description, isEditing, id, createSaleCar, updateSaleCar, router]);
 
   const isBusy = isUploading || createSaleCar.isPending || updateSaleCar.isPending;
 
@@ -227,6 +237,19 @@ export default function AddSaleCarScreen() {
       </Field>
       <Field label="Location">
         <ChipRow options={LOCATIONS} value={location} onChange={setLocation} />
+      </Field>
+      <Field label="Exact Viewing Address (optional)">
+        <LocationAutocomplete
+          value={address}
+          onChangeValue={setAddress}
+          onSelect={(result) => {
+            setAddress(result.address);
+            setLatitude(result.latitude);
+            setLongitude(result.longitude);
+          }}
+          placeholder="Search for the viewing address..."
+          testID="add-sale-car-address"
+        />
       </Field>
       <Field label="Transmission">
         <ChipRow options={TRANSMISSIONS} value={transmission} onChange={setTransmission} />

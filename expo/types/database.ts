@@ -64,6 +64,9 @@ export type CarRow = {
   price_per_day: number;
   price_per_week: number;
   location: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   seats: number;
   transmission: TransmissionDb;
   fuel_type: FuelTypeDb;
@@ -95,6 +98,9 @@ export type SaleCarRow = {
   sale_price: number;
   mileage: number;
   location: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   fuel_type: FuelTypeDb;
   transmission: TransmissionDb;
   condition: SaleConditionDb;

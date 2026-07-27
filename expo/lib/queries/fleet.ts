@@ -140,6 +140,9 @@ export interface NewCarInput {
   pricePerDay: number;
   pricePerWeek: number;
   location: string;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   seats: number;
   transmission: Car['transmission'];
   fuelType: Car['fuelType'];
@@ -173,6 +176,9 @@ export function useCreateCar() {
         price_per_day: input.pricePerDay,
         price_per_week: input.pricePerWeek,
         location: input.location,
+        address: input.address ?? null,
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
         seats: input.seats,
         transmission: input.transmission,
         fuel_type: input.fuelType,
@@ -213,6 +219,9 @@ export function useUpdateCar() {
           price_per_day: input.pricePerDay,
           price_per_week: input.pricePerWeek,
           location: input.location,
+          address: input.address ?? null,
+          latitude: input.latitude ?? null,
+          longitude: input.longitude ?? null,
           seats: input.seats,
           transmission: input.transmission,
           fuel_type: input.fuelType,

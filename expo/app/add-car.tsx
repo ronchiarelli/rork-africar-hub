@@ -21,6 +21,7 @@ import { useCreateCar, useUpdateCar } from '@/lib/queries/fleet';
 import { useCarDetails } from '@/lib/queries/cars';
 import { getErrorMessage } from '@/lib/errors';
 import MultiImagePicker from '@/components/MultiImagePicker';
+import LocationAutocomplete from '@/components/LocationAutocomplete';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import type { Car } from '@/types/car';
@@ -86,6 +87,9 @@ export default function AddCarScreen() {
   const [pricePerDay, setPricePerDay] = useState('');
   const [pricePerWeek, setPricePerWeek] = useState('');
   const [location, setLocation] = useState(LOCATIONS[0]);
+  const [address, setAddress] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [seats, setSeats] = useState('5');
   const [transmission, setTransmission] = useState<Car['transmission']>('Automatic');
   const [fuelType, setFuelType] = useState<Car['fuelType']>('Petrol');
@@ -104,6 +108,9 @@ export default function AddCarScreen() {
     setPricePerDay(String(existingCar.pricePerDay));
     setPricePerWeek(String(existingCar.pricePerWeek));
     setLocation(existingCar.location);
+    setAddress(existingCar.address ?? '');
+    setLatitude(existingCar.latitude);
+    setLongitude(existingCar.longitude);
     setSeats(String(existingCar.seats));
     setTransmission(existingCar.transmission);
     setFuelType(existingCar.fuelType);
@@ -160,6 +167,9 @@ export default function AddCarScreen() {
         pricePerDay: Number(pricePerDay) || 0,
         pricePerWeek: Number(pricePerWeek) || (Number(pricePerDay) || 0) * 6,
         location,
+        address: address.trim() || null,
+        latitude,
+        longitude,
         seats: Number(seats) || 5,
         transmission,
         fuelType,
@@ -189,7 +199,7 @@ export default function AddCarScreen() {
       setIsUploading(false);
       setUploadProgress({ done: 0, total: 0 });
     }
-  }, [currentUser, brand, model, year, category, images, pricePerDay, pricePerWeek, location, seats, transmission, fuelType, horsepower, hasAC, features, description, isEditing, id, createCar, updateCar, router]);
+  }, [currentUser, brand, model, year, category, images, pricePerDay, pricePerWeek, location, address, latitude, longitude, seats, transmission, fuelType, horsepower, hasAC, features, description, isEditing, id, createCar, updateCar, router]);
 
   const isBusy = isUploading || createCar.isPending || updateCar.isPending;
 
@@ -229,6 +239,19 @@ export default function AddCarScreen() {
       </Field>
       <Field label="Location">
         <ChipRow options={LOCATIONS} value={location} onChange={setLocation} />
+      </Field>
+      <Field label="Exact Pickup Address (optional)">
+        <LocationAutocomplete
+          value={address}
+          onChangeValue={setAddress}
+          onSelect={(result) => {
+            setAddress(result.address);
+            setLatitude(result.latitude);
+            setLongitude(result.longitude);
+          }}
+          placeholder="Search for the pickup address..."
+          testID="add-car-address"
+        />
       </Field>
       <Field label="Seats">
         <TextInput style={styles.input} value={seats} onChangeText={setSeats} keyboardType="number-pad" placeholderTextColor={Colors.gray[400]} />

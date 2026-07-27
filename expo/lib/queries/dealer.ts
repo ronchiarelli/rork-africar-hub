@@ -111,6 +111,9 @@ export interface NewSaleCarInput {
   salePrice: number;
   mileage: number;
   location: string;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   fuelType: SaleCar['fuelType'];
   transmission: SaleCar['transmission'];
   condition: SaleCar['condition'];
@@ -142,6 +145,9 @@ export function useCreateSaleCar() {
         sale_price: input.salePrice,
         mileage: input.mileage,
         location: input.location,
+        address: input.address ?? null,
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
         fuel_type: input.fuelType,
         transmission: input.transmission,
         condition: input.condition,
@@ -182,6 +188,9 @@ export function useUpdateSaleCar() {
           sale_price: input.salePrice,
           mileage: input.mileage,
           location: input.location,
+          address: input.address ?? null,
+          latitude: input.latitude ?? null,
+          longitude: input.longitude ?? null,
           fuel_type: input.fuelType,
           transmission: input.transmission,
           condition: input.condition,

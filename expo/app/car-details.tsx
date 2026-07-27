@@ -219,7 +219,7 @@ export default function CarDetailsScreen() {
             </View>
             <View style={styles.locationWrap}>
               <MapPin size={14} color={Colors.gray[500]} />
-              <Text style={styles.locationText}>{car.location}</Text>
+              <Text style={styles.locationText}>{car.address || car.location}</Text>
             </View>
           </View>
 
