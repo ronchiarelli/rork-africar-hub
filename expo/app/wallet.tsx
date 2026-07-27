@@ -157,7 +157,7 @@ export default function WalletScreen() {
           {subscription?.row && (
             <Text style={styles.balanceSub}>
               {subscription.isActive
-                ? `Covers ${Math.floor((wallet?.balance ?? 0) / subscription.row.amount)} more month${Math.floor((wallet?.balance ?? 0) / subscription.row.amount) === 1 ? '' : 's'} at GH₵${subscription.row.amount}/mo`
+                ? `Covers ${Math.floor((wallet?.balance ?? 0) / subscription.row.amount)} more month${Math.floor((wallet?.balance ?? 0) / subscription.row.amount) === 1 ? '' : 's'} at GH₵${subscription.row.amount.toLocaleString()}/mo`
                 : 'Top up to reactivate your subscription'}
             </Text>
           )}

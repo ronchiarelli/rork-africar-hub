@@ -82,7 +82,7 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
             <View style={styles.horizontalBottomRow}>
               <View style={styles.priceRow}>
                 <Text style={styles.currency}>GH₵</Text>
-                <Text style={styles.price}>{car.pricePerDay}</Text>
+                <Text style={styles.price}>{car.pricePerDay.toLocaleString()}</Text>
                 <Text style={styles.perDay}>/day</Text>
               </View>
               {ctaLabel && (
@@ -131,7 +131,7 @@ export default React.memo(function CarCard({ car, variant = 'vertical', isBooked
           <View style={styles.cardBottom}>
             <View style={styles.priceRow}>
               <Text style={styles.currency}>GH₵</Text>
-              <Text style={styles.price}>{car.pricePerDay}</Text>
+              <Text style={styles.price}>{car.pricePerDay.toLocaleString()}</Text>
               <Text style={styles.perDay}>/day</Text>
             </View>
             <View style={styles.arrowBtn}>

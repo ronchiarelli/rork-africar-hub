@@ -74,7 +74,7 @@ export default function SubscriptionScreen() {
           <Text style={styles.headerLabel}>{roleLabel} Plan</Text>
           <View style={styles.priceRow}>
             <Text style={styles.currency}>GH₵</Text>
-            <Text style={styles.price}>{displayRate}</Text>
+            <Text style={styles.price}>{displayRate.toLocaleString()}</Text>
             <Text style={styles.perMonth}>/month</Text>
           </View>
 

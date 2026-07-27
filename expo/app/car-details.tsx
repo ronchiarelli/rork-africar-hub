@@ -94,7 +94,7 @@ export default function CarDetailsScreen() {
   const handleShare = useCallback(() => {
     if (!car) return;
     void Share.share({
-      message: `Check out this ${car.brand} ${car.model} on GoCar Hub — GH₵${car.pricePerDay}/day. ${PRODUCTION_WEB_URL}/car-details?id=${car.id}`,
+      message: `Check out this ${car.brand} ${car.model} on GoCar Hub — GH₵${car.pricePerDay.toLocaleString()}/day. ${PRODUCTION_WEB_URL}/car-details?id=${car.id}`,
       url: `${PRODUCTION_WEB_URL}/car-details?id=${car.id}`,
     }).catch(() => {
       Alert.alert('Could Not Share', 'Please try again.');
@@ -302,7 +302,7 @@ export default function CarDetailsScreen() {
           <Text style={styles.priceLabel}>Price</Text>
           <View style={styles.priceRow}>
             <Text style={styles.currency}>GH₵</Text>
-            <Text style={styles.priceValue}>{car.pricePerDay}</Text>
+            <Text style={styles.priceValue}>{car.pricePerDay.toLocaleString()}</Text>
             <Text style={styles.perDay}>/day</Text>
           </View>
         </View>

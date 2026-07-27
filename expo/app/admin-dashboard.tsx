@@ -187,7 +187,7 @@ export default function AdminDashboardScreen() {
       Alert.alert('Invalid Rate', 'Please enter a positive number.');
       return;
     }
-    Alert.alert('Update Subscription Rate', `Set the monthly rate to GH₵${rate} for all fleet owner and dealership accounts?`, [
+    Alert.alert('Update Subscription Rate', `Set the monthly rate to GH₵${rate.toLocaleString()} for all fleet owner and dealership accounts?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Confirm',
@@ -589,7 +589,7 @@ export default function AdminDashboardScreen() {
                       <Text style={styles.inventoryOwner} numberOfLines={1}>
                         {car.ownerName || 'No owner (catalog)'}
                       </Text>
-                      <Text style={styles.inventoryPrice}>GH₵{car.pricePerDay}/day</Text>
+                      <Text style={styles.inventoryPrice}>GH₵{car.pricePerDay.toLocaleString()}/day</Text>
                     </View>
                     <Pencil size={14} color={Colors.gray[400]} />
                   </Pressable>
@@ -767,7 +767,7 @@ export default function AdminDashboardScreen() {
                     />
                   </View>
                 ) : (
-                  <Text style={styles.rateValue}>GH₵{subscriptionRate ?? '—'}<Text style={styles.ratePerMonth}>/month</Text></Text>
+                  <Text style={styles.rateValue}>GH₵{subscriptionRate?.toLocaleString() ?? '—'}<Text style={styles.ratePerMonth}>/month</Text></Text>
                 )}
               </View>
               {isEditingRate ? (

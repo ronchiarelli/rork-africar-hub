@@ -347,7 +347,7 @@ export default function HomeScreen() {
             </Pressable>
           )}
           <Text style={styles.greeting}>Hello, {currentUser?.name?.split(' ')[0] ?? 'Guest'}</Text>
-          <Text style={styles.subtitle}>Find your perfect ride today</Text>
+          <Text style={styles.subtitle}>Rent, buy & sell cars — all in one app</Text>
 
           <View style={styles.searchBar}>
             <Search size={18} color={Colors.gray[400]} />

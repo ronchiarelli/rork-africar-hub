@@ -148,7 +148,7 @@ export default function BookingScreen() {
             <Text style={styles.carModel}>{car.model}</Text>
             <View style={styles.priceRow}>
               <Text style={styles.currency}>GH₵</Text>
-              <Text style={styles.price}>{car.pricePerDay}</Text>
+              <Text style={styles.price}>{car.pricePerDay.toLocaleString()}</Text>
               <Text style={styles.perDay}>/day</Text>
             </View>
           </View>
@@ -215,7 +215,7 @@ export default function BookingScreen() {
           <Text style={styles.sectionTitle}>Price Breakdown</Text>
           <View style={styles.priceBreakdown}>
             <View style={styles.priceLineItem}>
-              <Text style={styles.priceLineLabel}>GH₵{car.pricePerDay} × {totalDays} days</Text>
+              <Text style={styles.priceLineLabel}>GH₵{car.pricePerDay.toLocaleString()} × {totalDays} days</Text>
               <Text style={styles.priceLineValue}>GH₵{pricing.subtotal.toLocaleString()}</Text>
             </View>
             <View style={styles.priceLineItem}>

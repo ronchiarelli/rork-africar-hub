@@ -25,8 +25,8 @@ const PRICE_RANGES = [
   { label: 'Any', min: 0, max: 99999 },
   { label: 'Under GH₵500', min: 0, max: 500 },
   { label: 'GH₵500–800', min: 500, max: 800 },
-  { label: 'GH₵800–1200', min: 800, max: 1200 },
-  { label: 'GH₵1200+', min: 1200, max: 99999 },
+  { label: 'GH₵800–1,200', min: 800, max: 1200 },
+  { label: 'GH₵1,200+', min: 1200, max: 99999 },
 ];
 
 export default function SearchScreen() {
