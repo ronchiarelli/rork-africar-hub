@@ -47,6 +47,13 @@
         {
           "cameraPermission": "GoCar Hub uses your camera to take a selfie photo for identity verification."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "GoCar Hub accesses your photo library so you can choose pictures to upload — for example, adding photos when listing a car for rent or sale, setting your profile picture, or attaching an image to a support issue report.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {
