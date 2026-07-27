@@ -28,6 +28,7 @@ import { useUnreadConversationsCount, useGetOrCreateConversation } from '@/lib/q
 import { useCreateLead } from '@/lib/queries/dealer';
 import { useNotifications } from '@/lib/queries/notifications';
 import NotificationBadge from '@/components/NotificationBadge';
+import AppLogo from '@/components/AppLogo';
 import { useAuth } from '@/providers/AuthProvider';
 import CarCard from '@/components/CarCard';
 import BrandCard from '@/components/BrandCard';
@@ -346,8 +347,13 @@ export default function HomeScreen() {
               <Text style={styles.guestGetStartedText}>Get Started</Text>
             </Pressable>
           )}
-          <Text style={styles.greeting}>Hello, {currentUser?.name?.split(' ')[0] ?? 'Guest'}</Text>
-          <Text style={styles.subtitle}>Rent, buy & sell cars — all in one app</Text>
+          <View style={styles.greetingRow}>
+            <AppLogo size={38} />
+            <View style={styles.greetingTextWrap}>
+              <Text style={styles.greeting}>Hello, {currentUser?.name?.split(' ')[0] ?? 'Guest'}</Text>
+              <Text style={styles.subtitle}>Rent, buy & sell cars — all in one app</Text>
+            </View>
+          </View>
 
           <View style={styles.searchBar}>
             <Search size={18} color={Colors.gray[400]} />
@@ -773,6 +779,14 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 13,
     fontWeight: '700' as const,
+  },
+  greetingRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+  },
+  greetingTextWrap: {
+    flex: 1,
   },
   greeting: {
     color: Colors.white,
