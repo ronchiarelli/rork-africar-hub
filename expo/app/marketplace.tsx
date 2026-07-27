@@ -34,7 +34,9 @@ const BRANDS = ['All', 'Toyota', 'Mercedes', 'BMW', 'Honda', 'Hyundai', 'Range R
 // first image carousel frame.
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DEFAULT_CARD_IMAGE_WIDTH = SCREEN_WIDTH - 40;
-const LISTING_IMAGE_HEIGHT = 200;
+// Taller than a flat 200px so a cover-cropped photo still shows most of
+// the car (roofline to wheels) instead of just a close-up of the front end.
+const LISTING_IMAGE_HEIGHT = Math.round(DEFAULT_CARD_IMAGE_WIDTH * 0.72);
 
 function SaleListingCard({ car }: { car: SaleCar }) {
   const router = useRouter();
