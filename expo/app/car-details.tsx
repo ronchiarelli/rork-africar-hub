@@ -293,7 +293,7 @@ export default function CarDetailsScreen() {
             </View>
           </View>
 
-          <View style={{ height: 120 }} />
+          <View style={{ height: getNavBarClearance(insets.bottom) + 90 }} />
         </View>
       </ScrollView>
 
