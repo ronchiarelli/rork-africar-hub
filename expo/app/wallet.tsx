@@ -90,8 +90,16 @@ export default function WalletScreen() {
   // https-callback matching needs an Associated Domains entitlement we
   // don't have configured, so the edge function points Hubtel at
   // /payment-bridge instead, which forwards here. See payment-bridge.tsx.
+  //
+  // preferEphemeralSession stops iOS showing its "<app> Wants to Use
+  // <domain> to Sign In" consent sheet before the checkout page — that
+  // prompt only exists because ASWebAuthenticationSession can share Safari
+  // cookies, which a payment checkout has no need for, and it reads as a
+  // scary permissions gate to users mid-payment.
   const openCheckout = async (checkoutUrl: string) => {
-    const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, PAYMENT_RETURN_SCHEME_URL);
+    const result = await WebBrowser.openAuthSessionAsync(checkoutUrl, PAYMENT_RETURN_SCHEME_URL, {
+      preferEphemeralSession: true,
+    });
     if (result.type === 'success') {
       const cancelled = result.url.includes('topup=cancelled');
       refreshWallet();

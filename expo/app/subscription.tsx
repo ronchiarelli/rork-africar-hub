@@ -49,7 +49,9 @@ export default function SubscriptionScreen() {
           window.open(data.checkoutUrl, '_blank');
           return;
         }
-        const result = await WebBrowser.openAuthSessionAsync(data.checkoutUrl, PAYMENT_RETURN_SCHEME_URL);
+        const result = await WebBrowser.openAuthSessionAsync(data.checkoutUrl, PAYMENT_RETURN_SCHEME_URL, {
+          preferEphemeralSession: true,
+        });
         if (result.type === 'success') {
           const cancelled = result.url.includes('sub=cancelled');
           refreshSubscription();
