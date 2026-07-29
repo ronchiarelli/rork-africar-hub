@@ -20,6 +20,7 @@ import { useCarDetails } from '@/lib/queries/cars';
 import { useCreateBooking } from '@/lib/queries/bookings';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
+import { isKycCleared } from '@/lib/kyc';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import TipBanner from '@/components/TipBanner';
 
@@ -80,28 +81,27 @@ export default function BookingScreen() {
 
   const handleConfirm = useCallback(() => {
     if (!car) return;
+    // KYC is required to book — nothing is gated at sign-up, the check
+    // happens here at the point the user actually tries to transact.
+    if (!isKycCleared(currentUser)) {
+      Alert.alert(
+        'Verification Required',
+        'Verify your identity before requesting a booking. You’ll need one ID document (National ID, Passport, or Driver’s License) and a selfie.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Verify Now', onPress: () => router.push('/kyc-verification') },
+        ]
+      );
+      return;
+    }
     createBooking.mutate(
       { carId: car.id, pickupDate, returnDate, pickupLocation },
       {
         onSuccess: (booking) => {
-          const needsKyc = currentUser?.verificationStatus !== 'approved' && currentUser?.verificationStatus !== 'restricted';
           Alert.alert(
             'Booking Requested',
-            needsKyc
-              ? "Your request has been sent to the owner. Complete KYC verification so it can be approved once it's reviewed."
-              : "Your request has been sent to the owner. They'll confirm availability and share payment details directly with you.",
-            needsKyc
-              ? [
-                  { text: 'Later', style: 'cancel', onPress: () => router.replace({ pathname: '/booking-detail', params: { id: booking.id } }) },
-                  {
-                    text: 'Verify Now',
-                    onPress: () => {
-                      router.replace({ pathname: '/booking-detail', params: { id: booking.id } });
-                      router.push('/kyc-verification');
-                    },
-                  },
-                ]
-              : [{ text: 'OK', onPress: () => router.replace({ pathname: '/booking-detail', params: { id: booking.id } }) }]
+            "Your request has been sent to the owner. They'll confirm availability and share payment details directly with you.",
+            [{ text: 'OK', onPress: () => router.replace({ pathname: '/booking-detail', params: { id: booking.id } }) }]
           );
         },
         onError: (err) => {
@@ -109,7 +109,7 @@ export default function BookingScreen() {
         },
       }
     );
-  }, [car, pickupDate, returnDate, pickupLocation, createBooking, router, currentUser?.verificationStatus]);
+  }, [car, pickupDate, returnDate, pickupLocation, createBooking, router, currentUser]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);

@@ -13,6 +13,7 @@ function mapProfile(row: ProfileRow): UserProfile {
     avatar: row.avatar ?? '',
     isVerified: row.is_verified,
     verificationStatus: row.verification_status,
+    kycExempt: row.kyc_exempt,
     isSuspended: row.is_suspended,
     totalBookings: row.total_bookings,
     memberSince: row.member_since,

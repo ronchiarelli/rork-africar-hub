@@ -77,6 +77,7 @@ export interface UserProfile {
   avatar: string;
   isVerified: boolean;
   verificationStatus: 'none' | 'pending' | 'restricted' | 'approved' | 'rejected';
+  kycExempt: boolean;
   isSuspended: boolean;
   totalBookings: number;
   memberSince: string;

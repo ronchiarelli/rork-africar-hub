@@ -20,6 +20,7 @@ import { uploadImageAsync, extensionFromUri } from '@/lib/imageUpload';
 import { useCreateCar, useUpdateCar } from '@/lib/queries/fleet';
 import { useCarDetails } from '@/lib/queries/cars';
 import { getErrorMessage } from '@/lib/errors';
+import { isKycCleared } from '@/lib/kyc';
 import MultiImagePicker from '@/components/MultiImagePicker';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
@@ -126,12 +127,15 @@ export default function AddCarScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (!currentUser) return;
-    const isAdmin = currentUser.role === 'admin';
-    if (!isAdmin && currentUser.verificationStatus !== 'pending' && currentUser.verificationStatus !== 'restricted' && currentUser.verificationStatus !== 'approved') {
-      Alert.alert('Verification Required', 'Please complete KYC verification before listing a car.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Verify Now', onPress: () => router.push('/kyc-verification') },
-      ]);
+    if (!isKycCleared(currentUser)) {
+      Alert.alert(
+        'Verification Required',
+        'Verify your identity before listing a car. You’ll need one ID document (National ID, Passport, or Driver’s License) and a selfie.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Verify Now', onPress: () => router.push('/kyc-verification') },
+        ]
+      );
       return;
     }
     if (!brand || !model || !pricePerDay || images.length === 0) {
