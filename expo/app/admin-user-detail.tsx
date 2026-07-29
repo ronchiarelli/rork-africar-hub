@@ -13,6 +13,7 @@ import {
   useSetUserSuspended,
   useRevokeRole,
   useSetInAppPaymentEnabled,
+  useSetKycExempt,
 } from '@/lib/queries/admin';
 import { useUserKycDocuments, useReviewKycDocument } from '@/lib/queries/kyc';
 import { getErrorMessage } from '@/lib/errors';
@@ -41,6 +42,7 @@ export default function AdminUserDetailScreen() {
   const setSuspended = useSetUserSuspended();
   const revokeRole = useRevokeRole();
   const setInAppPaymentEnabled = useSetInAppPaymentEnabled();
+  const setKycExempt = useSetKycExempt();
   const [preview, setPreview] = useState<{ uri: string; label: string } | null>(null);
 
   const handleReview = (docId: string, decision: 'verified' | 'rejected') => {
@@ -120,6 +122,29 @@ export default function AdminUserDetailScreen() {
     );
   };
 
+  const handleToggleKycExempt = () => {
+    if (!user) return;
+    Alert.alert(
+      user.kycExempt ? 'Require KYC' : 'Waive KYC Requirement',
+      user.kycExempt
+        ? 'This user will need a verified ID document and selfie before they can book or list vehicles again.'
+        : 'This user will be able to book and list vehicles without uploading any KYC documents. Only do this for accounts you have verified another way.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: user.kycExempt ? 'Require KYC' : 'Waive KYC',
+          style: user.kycExempt ? 'destructive' : 'default',
+          onPress: () => {
+            setKycExempt.mutate(
+              { userId: user.id, exempt: !user.kycExempt },
+              { onError: (err) => Alert.alert('Error', getErrorMessage(err, 'Could not update this account.')) }
+            );
+          },
+        },
+      ]
+    );
+  };
+
   if (isLoading || !user) {
     return (
       <View style={styles.loadingWrap}>
@@ -163,6 +188,11 @@ export default function AdminUserDetailScreen() {
               <Text style={[styles.roleBadgeText, { color: Colors.error }]}>Suspended</Text>
             </View>
           )}
+          {user.kycExempt && (
+            <View style={[styles.roleBadge, { backgroundColor: Colors.info + '20' }]} testID="user-detail-kyc-waived-badge">
+              <Text style={[styles.roleBadgeText, { color: Colors.info }]}>KYC waived</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -194,7 +224,23 @@ export default function AdminUserDetailScreen() {
         </View>
       )}
 
+      <View style={styles.actionsRow}>
+        <Pressable
+          style={[styles.actionBtn, user.kycExempt ? styles.revokeRoleBtn : styles.reactivateBtn]}
+          onPress={handleToggleKycExempt}
+          testID="user-detail-toggle-kyc-exempt"
+        >
+          <ShieldCheck size={16} color={Colors.white} />
+          <Text style={styles.actionBtnText}>{user.kycExempt ? 'Require KYC' : 'Allow Without KYC'}</Text>
+        </Pressable>
+      </View>
+
       <Text style={styles.sectionTitle}>KYC Documents</Text>
+      <Text style={styles.sectionSubtitle}>
+        {user.kycExempt
+          ? 'KYC is waived for this account — they can book and list without documents.'
+          : 'Full verification needs one ID document (National ID, Passport, or Driver’s License) plus a selfie.'}
+      </Text>
       {docs.map((doc) => {
         const config = DOC_STATUS_CONFIG[doc.status];
         return (
@@ -295,6 +341,7 @@ const styles = StyleSheet.create({
   revokeRoleBtn: { backgroundColor: Colors.gray[700] },
   actionBtnText: { color: Colors.white, fontSize: 13, fontWeight: '700' as const },
   sectionTitle: { fontSize: 16, fontWeight: '700' as const, color: Colors.gray[900], marginBottom: 12 },
+  sectionSubtitle: { fontSize: 12, color: Colors.gray[500], marginTop: -6, marginBottom: 12, lineHeight: 17 },
   docCard: {
     flexDirection: 'row' as const,
     backgroundColor: Colors.white,

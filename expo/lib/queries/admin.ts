@@ -76,6 +76,7 @@ export interface AdminUserDetail extends AdminUserRow {
   whatsapp: string;
   totalBookings: number;
   acceptsInAppPayment: boolean;
+  kycExempt: boolean;
 }
 
 export function useAdminUserDetail(userId: string | undefined) {
@@ -102,6 +103,7 @@ export function useAdminUserDetail(userId: string | undefined) {
         memberSince: row.member_since,
         totalBookings: row.total_bookings,
         acceptsInAppPayment: row.accepts_inapp_payment,
+        kycExempt: row.kyc_exempt,
       };
     },
     enabled: !!userId,
@@ -132,6 +134,23 @@ export function useSetInAppPaymentEnabled() {
     onSuccess: (_data, { userId }) => {
       void queryClient.invalidateQueries({ queryKey: ['admin-all-users'] });
       void queryClient.invalidateQueries({ queryKey: ['admin-user-detail', userId] });
+    },
+  });
+}
+
+// Admin waiver letting a user transact without uploading KYC documents —
+// for accounts verified out-of-band (staff, walk-in partners).
+export function useSetKycExempt() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, exempt }: { userId: string; exempt: boolean }) => {
+      const { error } = await supabase.rpc('admin_set_kyc_exempt', { p_user_id: userId, p_exempt: exempt });
+      if (error) throw error;
+    },
+    onSuccess: (_data, { userId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-users'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-user-detail', userId] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-kyc-documents'] });
     },
   });
 }

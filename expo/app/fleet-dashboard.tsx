@@ -44,6 +44,9 @@ const KYC_STATUS_CONFIG: Record<string, { bg: string; text: string; label: strin
   restricted: { bg: Colors.info + '20', text: Colors.info, label: 'ID Verified (Restricted)' },
   approved: { bg: Colors.success + '20', text: Colors.success, label: 'KYC Verified' },
   rejected: { bg: Colors.error + '20', text: Colors.error, label: 'KYC Rejected' },
+  // Admin waived the document requirement for this customer — they're
+  // approvable even though no documents were ever uploaded.
+  exempt: { bg: Colors.success + '20', text: Colors.success, label: 'Verified by Admin' },
 };
 
 export default function FleetDashboardScreen() {
@@ -210,7 +213,9 @@ export default function FleetDashboardScreen() {
           <>
             <Text style={styles.sectionTitle}>Booking Requests</Text>
             {pendingBookings.map((booking) => {
-              const kycConfig = KYC_STATUS_CONFIG[booking.customerVerificationStatus] ?? KYC_STATUS_CONFIG.none;
+              const kycConfig = booking.customerKycExempt
+                ? KYC_STATUS_CONFIG.exempt
+                : KYC_STATUS_CONFIG[booking.customerVerificationStatus] ?? KYC_STATUS_CONFIG.none;
               return (
               <View key={booking.id} style={styles.requestCard}>
                 <Image source={{ uri: booking.car.image }} style={styles.requestImage} contentFit="cover" />

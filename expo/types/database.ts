@@ -34,6 +34,7 @@ export type ProfileRow = {
   verification_status: VerificationStatusDb;
   is_suspended: boolean;
   accepts_inapp_payment: boolean;
+  kyc_exempt: boolean;
   momo_provider: MomoProviderDb | null;
   momo_number: string | null;
   bank_name: string | null;
@@ -438,6 +439,14 @@ export type Database = {
       };
       owner_accepts_inapp_payment: {
         Args: { p_owner_id: string };
+        Returns: boolean;
+      };
+      admin_set_kyc_exempt: {
+        Args: { p_user_id: string; p_exempt: boolean };
+        Returns: void;
+      };
+      kyc_cleared: {
+        Args: { p_user_id: string };
         Returns: boolean;
       };
       owner_payment_details: {

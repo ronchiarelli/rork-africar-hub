@@ -134,11 +134,21 @@ export default function KYCVerificationScreen() {
     return worstStatus(licenseFront.status, licenseBack.status);
   }, [licenseFront, licenseBack]);
 
-  // Any ONE of National ID, Passport, or Driver's License verified is
-  // enough to fully verify a user — they don't all need to clear together.
-  const isVerified = identityStatus === 'verified' || licenseStatus === 'verified';
+  // Any ONE of National ID, Passport, or Driver's License is enough for the
+  // identity half — but a verified selfie is always required on top of it,
+  // so the document is tied to the person holding the account.
+  const hasIdentity = identityStatus === 'verified' || licenseStatus === 'verified';
+  const hasSelfie = selfie?.status === 'verified';
+  const isVerified = hasIdentity && hasSelfie;
   const hasAnyUpload = documents.some((d) => d.status !== 'not_uploaded');
-  const progress = isVerified ? 100 : hasAnyUpload ? 35 : 0;
+  const progress = isVerified ? 100 : hasIdentity || hasSelfie ? 65 : hasAnyUpload ? 35 : 0;
+  const progressText = isVerified
+    ? 'Verified — you can now book or list vehicles'
+    : hasIdentity
+      ? 'ID verified — add a selfie to finish verification'
+      : hasSelfie
+        ? 'Selfie verified — add your National ID, Passport, or Driver’s License'
+        : 'Verify one ID document (National ID, Passport, or Driver’s License) and a selfie';
 
   return (
     <View style={styles.container}>
@@ -157,13 +167,11 @@ export default function KYCVerificationScreen() {
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
-          <Text style={styles.progressText}>
-            {isVerified ? 'Verified — you can now book or list vehicles' : 'Verify your National ID, Passport, or Driver’s License — any one is enough'}
-          </Text>
+          <Text style={styles.progressText}>{progressText}</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Identity Document</Text>
-        <Text style={styles.sectionSubtitle}>Provide both sides of your National ID, or your Passport</Text>
+        <Text style={styles.sectionTitle}>Step 1 — Identity Document</Text>
+        <Text style={styles.sectionSubtitle}>Any one of these is enough: both sides of your National ID, your Passport, or both sides of your Driver’s License</Text>
         {ghanaCardFront && <DocCard doc={ghanaCardFront} onUpload={handleUpload} onPreview={handlePreview} />}
         {ghanaCardBack && <DocCard doc={ghanaCardBack} onUpload={handleUpload} onPreview={handlePreview} />}
         <View style={styles.orDivider}>
@@ -173,12 +181,16 @@ export default function KYCVerificationScreen() {
         </View>
         {passport && <DocCard doc={passport} onUpload={handleUpload} onPreview={handlePreview} />}
 
-        <Text style={styles.sectionTitle}>Driver&apos;s License</Text>
-        <Text style={styles.sectionSubtitle}>Both sides are required</Text>
+        <View style={styles.orDivider}>
+          <View style={styles.orLine} />
+          <Text style={styles.orText}>OR</Text>
+          <View style={styles.orLine} />
+        </View>
         {licenseFront && <DocCard doc={licenseFront} onUpload={handleUpload} onPreview={handlePreview} />}
         {licenseBack && <DocCard doc={licenseBack} onUpload={handleUpload} onPreview={handlePreview} />}
 
-        <Text style={styles.sectionTitle}>Selfie Verification</Text>
+        <Text style={styles.sectionTitle}>Step 2 — Selfie</Text>
+        <Text style={styles.sectionSubtitle}>Required — this confirms the ID above belongs to you</Text>
         {selfie && (
           <DocCard
             doc={selfie}

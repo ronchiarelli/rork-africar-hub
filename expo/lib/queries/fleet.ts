@@ -10,6 +10,7 @@ export interface PendingBooking extends Booking {
   customerName: string;
   customerPhone: string;
   customerVerificationStatus: VerificationStatusDb;
+  customerKycExempt: boolean;
 }
 
 function mapFleetVehicle(row: FleetVehicleRow & { car: CarRow }): FleetVehicle {
@@ -50,12 +51,12 @@ export function usePendingOwnerBookings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*, car:cars!inner(*), customer:profiles!customer_id(name, phone, verification_status)')
+        .select('*, car:cars!inner(*), customer:profiles!customer_id(name, phone, verification_status, kyc_exempt)')
         .eq('status', 'pending')
         .eq('car.owner_id', ownerId as string)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data as unknown as (BookingRow & { car: CarRow; customer: { name: string; phone: string | null; verification_status: VerificationStatusDb } | null })[]).map(
+      return (data as unknown as (BookingRow & { car: CarRow; customer: { name: string; phone: string | null; verification_status: VerificationStatusDb; kyc_exempt: boolean } | null })[]).map(
         (row): PendingBooking => ({
           id: row.id,
           carId: row.car_id,
@@ -72,6 +73,7 @@ export function usePendingOwnerBookings() {
           customerName: row.customer?.name ?? 'Customer',
           customerPhone: row.customer?.phone ?? '',
           customerVerificationStatus: row.customer?.verification_status ?? 'none',
+          customerKycExempt: row.customer?.kyc_exempt ?? false,
         })
       );
     },
