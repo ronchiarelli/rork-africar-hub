@@ -24,6 +24,7 @@ import { isKycCleared, listingResultMessage } from '@/lib/kyc';
 import MultiImagePicker from '@/components/MultiImagePicker';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import SuggestInput from '@/components/SuggestInput';
+import FeaturePicker from '@/components/FeaturePicker';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import type { SaleCar } from '@/types/car';
@@ -52,18 +53,6 @@ function ChipRow<T extends string>({ options, value, onChange }: { options: T[];
       {options.map((opt) => (
         <Pressable key={opt} style={[styles.chip, value === opt && styles.chipActive]} onPress={() => onChange(opt)}>
           <Text style={[styles.chipText, value === opt && styles.chipTextActive]}>{opt}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-function MultiChipRow({ options, selected, onToggle }: { options: string[]; selected: string[]; onToggle: (v: string) => void }) {
-  return (
-    <View style={styles.chipRow}>
-      {options.map((opt) => (
-        <Pressable key={opt} style={[styles.chip, selected.includes(opt) && styles.chipActive]} onPress={() => onToggle(opt)}>
-          <Text style={[styles.chipText, selected.includes(opt) && styles.chipTextActive]}>{opt}</Text>
         </Pressable>
       ))}
     </View>
@@ -125,10 +114,6 @@ export default function AddSaleCarScreen() {
     const key = Object.keys(MODELS_BY_BRAND).find((b) => b.toLowerCase() === brand.trim().toLowerCase());
     return key ? MODELS_BY_BRAND[key] : [];
   }, [brand]);
-
-  const toggleFeature = useCallback((feature: string) => {
-    setFeatures((prev) => (prev.includes(feature) ? prev.filter((f) => f !== feature) : [...prev, feature]));
-  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!currentUser) return;
@@ -275,7 +260,7 @@ export default function AddSaleCarScreen() {
         <ChipRow options={FUEL_TYPES} value={fuelType} onChange={setFuelType} />
       </Field>
       <Field label="Features">
-        <MultiChipRow options={FEATURE_OPTIONS} selected={features} onToggle={toggleFeature} />
+        <FeaturePicker options={FEATURE_OPTIONS} selected={features} onChange={setFeatures} testID="features" />
       </Field>
       <Field label="Description">
         <TextInput
