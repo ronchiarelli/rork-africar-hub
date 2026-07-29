@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/colors';
 import { LOCATIONS } from '@/constants/locations';
 import { VEHICLE_CATEGORIES } from '@/constants/vehicleCategories';
+import { VEHICLE_BRANDS, MODELS_BY_BRAND } from '@/constants/vehicleBrands';
 import { useAuth } from '@/providers/AuthProvider';
 import { uploadImageAsync, extensionFromUri } from '@/lib/imageUpload';
 import { useCreateCar, useUpdateCar } from '@/lib/queries/fleet';
@@ -23,6 +24,7 @@ import { getErrorMessage } from '@/lib/errors';
 import { isKycCleared, listingResultMessage } from '@/lib/kyc';
 import MultiImagePicker from '@/components/MultiImagePicker';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
+import SuggestInput from '@/components/SuggestInput';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import type { Car } from '@/types/car';
@@ -121,6 +123,13 @@ export default function AddCarScreen() {
     setDescription(existingCar.description);
   }, [existingCar]);
 
+  // Match the brand case-insensitively so a typed "toyota" still gets its
+  // model list; unknown brands simply get no suggestions.
+  const modelSuggestions = useMemo(() => {
+    const key = Object.keys(MODELS_BY_BRAND).find((b) => b.toLowerCase() === brand.trim().toLowerCase());
+    return key ? MODELS_BY_BRAND[key] : [];
+  }, [brand]);
+
   const toggleFeature = useCallback((feature: string) => {
     setFeatures((prev) => (prev.includes(feature) ? prev.filter((f) => f !== feature) : [...prev, feature]));
   }, []);
@@ -216,10 +225,22 @@ export default function AddCarScreen() {
       </Field>
 
       <Field label="Brand">
-        <TextInput style={styles.input} value={brand} onChangeText={setBrand} placeholder="e.g. Toyota" placeholderTextColor={Colors.gray[400]} />
+        <SuggestInput
+          value={brand}
+          onChangeText={setBrand}
+          suggestions={VEHICLE_BRANDS}
+          placeholder="e.g. Toyota — or type your own"
+          testID="listing-brand"
+        />
       </Field>
       <Field label="Model">
-        <TextInput style={styles.input} value={model} onChangeText={setModel} placeholder="e.g. Land Cruiser V8" placeholderTextColor={Colors.gray[400]} />
+        <SuggestInput
+          value={model}
+          onChangeText={setModel}
+          suggestions={modelSuggestions}
+          placeholder="e.g. Land Cruiser V8 — or type your own"
+          testID="listing-model"
+        />
       </Field>
       <Field label="Year">
         <TextInput style={styles.input} value={year} onChangeText={setYear} keyboardType="number-pad" placeholderTextColor={Colors.gray[400]} />
