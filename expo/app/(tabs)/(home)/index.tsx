@@ -17,7 +17,7 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles, X, MessageCircle } from 'lucide-react-native';
+import { MapPin, Bell, Heart, MessageSquare, Search, ChevronRight, Sparkles, X, MessageCircle, Plus } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import { LOCATIONS } from '@/constants/locations';
@@ -295,6 +295,19 @@ export default function HomeScreen() {
     router.push({ pathname: '/search', params: { location: loc } });
   }, [router]);
 
+  // Both owner roles can now post either kind of vehicle, so the shortcut
+  // has to ask which rather than inferring it from the role.
+  const canListCars =
+    currentUser?.role === 'fleet_owner' || currentUser?.role === 'dealership' || currentUser?.role === 'admin';
+
+  const handleListCar = useCallback(() => {
+    Alert.alert('List a Car', 'What are you listing this car for?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'For Rent', onPress: () => router.push('/add-car') },
+      { text: 'For Sale', onPress: () => router.push('/add-sale-car') },
+    ]);
+  }, [router]);
+
   const handleBannerPress = useCallback((ctaType: BannerCtaTypeDb, destination: string) => {
     if (ctaType === 'url') {
       void Linking.openURL(destination);
@@ -354,6 +367,12 @@ export default function HomeScreen() {
               <Text style={styles.greeting}>Hello, {currentUser?.name?.split(' ')[0] ?? 'Guest'}</Text>
               <Text style={styles.subtitle}>Rent, buy & sell cars — all in one app</Text>
             </View>
+            {canListCars && (
+              <Pressable style={styles.listCarBtn} onPress={handleListCar} testID="home-list-car-btn">
+                <Plus size={15} color={Colors.white} strokeWidth={2.6} />
+                <Text style={styles.listCarBtnText}>List Car</Text>
+              </Pressable>
+            )}
           </View>
 
           <View style={styles.searchBar}>
@@ -790,6 +809,20 @@ const styles = StyleSheet.create({
   },
   greetingTextWrap: {
     flex: 1,
+  },
+  listCarBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 5,
+    backgroundColor: Colors.orange.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 20,
+  },
+  listCarBtnText: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: '800' as const,
   },
   greeting: {
     color: Colors.white,

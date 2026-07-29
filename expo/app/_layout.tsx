@@ -21,9 +21,11 @@ const PUBLIC_STACK_ROUTES = ['car-details', 'marketplace', 'image-gallery', 'ter
 const PUBLIC_TAB_SEGMENTS = ['(home)', 'search'];
 const ROLE_GUARDED: Record<string, UserRole[]> = {
   'fleet-dashboard': ['fleet_owner'],
-  'add-car': ['fleet_owner', 'admin'],
+  // Either owner role may post either kind of vehicle — matches the
+  // cars/sale_cars insert policies, which no longer pin a table to a role.
+  'add-car': ['fleet_owner', 'dealership', 'admin'],
   'dealer-dashboard': ['dealership'],
-  'add-sale-car': ['dealership', 'admin'],
+  'add-sale-car': ['fleet_owner', 'dealership', 'admin'],
   'admin-dashboard': ['admin'],
   'add-banner': ['admin'],
   'admin-user-detail': ['admin'],
