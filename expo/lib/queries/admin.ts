@@ -155,6 +155,41 @@ export function useSetKycExempt() {
   });
 }
 
+// Admin moderation of a listing before it can go live. Works for both
+// rental cars and marketplace listings.
+export function useReviewListing() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      targetType,
+      targetId,
+      decision,
+      reason,
+    }: {
+      targetType: 'car' | 'sale_car';
+      targetId: string;
+      decision: 'approved' | 'rejected';
+      reason?: string;
+    }) => {
+      const { error } = await supabase.rpc('admin_review_listing', {
+        p_target_type: targetType,
+        p_target_id: targetId,
+        p_decision: decision,
+        p_reason: reason ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin-all-sale-cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['sale_cars'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-fleet-vehicles'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-dealer-listings'] });
+    },
+  });
+}
+
 export function useRevokeRole() {
   const queryClient = useQueryClient();
   return useMutation({

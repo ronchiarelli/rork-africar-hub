@@ -1,3 +1,5 @@
+export type ListingApproval = 'pending' | 'approved' | 'rejected';
+
 export interface Car {
   id: string;
   brand: string;
@@ -28,6 +30,8 @@ export interface Car {
   views: number;
   isFeatured: boolean;
   isHomeFeatured: boolean;
+  approvalStatus: ListingApproval;
+  rejectionReason: string | null;
 }
 
 export interface Brand {
@@ -193,6 +197,8 @@ export interface SaleCar {
   views: number;
   description: string;
   features: string[];
+  approvalStatus: ListingApproval;
+  rejectionReason: string | null;
 }
 
 export interface PaymentMethod {

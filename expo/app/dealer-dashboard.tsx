@@ -24,6 +24,7 @@ import { useInitiateFeaturedPayment } from '@/lib/queries/featured';
 import { getErrorMessage } from '@/lib/errors';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import TipBanner from '@/components/TipBanner';
+import KycReminderBanner from '@/components/KycReminderBanner';
 import type { Lead } from '@/types/car';
 
 // Marker URL for openAuthSessionAsync to watch for — see payment-bridge.tsx.
@@ -144,6 +145,7 @@ export default function DealerDashboardScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
+        <KycReminderBanner />
         <TipBanner
           id="dealer-dashboard-howto"
           text="List a car for sale to start getting leads. When a buyer reaches out, use Message or Call to follow up directly."

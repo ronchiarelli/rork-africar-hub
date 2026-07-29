@@ -36,6 +36,7 @@ import {
   MessageSquare,
   Car,
   X,
+  Check,
   Eye,
   Search,
   LayoutGrid,
@@ -59,6 +60,7 @@ import {
   useAdminAllSaleCars,
   useSetCarFeatured,
   useSetCarHomeFeatured,
+  useReviewListing,
   useSetSaleCarFeatured,
   useSetSaleCarHomeFeatured,
 } from '@/lib/queries/admin';
@@ -106,6 +108,15 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }>
   restricted_kyc: { bg: Colors.info + '20', text: Colors.info, label: 'Restricted KYC' },
 };
 
+// Listing moderation state. A listing only reaches the public catalogue
+// once it's approved AND its owner is KYC-cleared, so "Approved" here does
+// not on its own mean "live" — the owner column shows the other half.
+const APPROVAL_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+  pending: { bg: Colors.warning + '20', text: Colors.warning, label: 'Pending Review' },
+  approved: { bg: Colors.success + '20', text: Colors.success, label: 'Approved' },
+  rejected: { bg: Colors.error + '20', text: Colors.error, label: 'Rejected' },
+};
+
 export default function AdminDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -131,6 +142,7 @@ export default function AdminDashboardScreen() {
   const deleteSaleCar = useDeleteSaleCar();
   const setCarFeatured = useSetCarFeatured();
   const setCarHomeFeatured = useSetCarHomeFeatured();
+  const reviewListing = useReviewListing();
   const setSaleCarFeatured = useSetSaleCarFeatured();
   const setSaleCarHomeFeatured = useSetSaleCarHomeFeatured();
   const [inventoryQuery, setInventoryQuery] = useState('');
@@ -256,6 +268,27 @@ export default function AdminDashboardScreen() {
       { carId, isAvailable: next },
       { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
     );
+  };
+
+  const handleReviewListing = (
+    targetType: 'car' | 'sale_car',
+    targetId: string,
+    decision: 'approved' | 'rejected',
+    label: string
+  ) => {
+    const act = () =>
+      reviewListing.mutate(
+        { targetType, targetId, decision },
+        { onError: (err) => Alert.alert('Could not update', getErrorMessage(err, 'Please try again.')) }
+      );
+    if (decision === 'approved') {
+      act();
+      return;
+    }
+    Alert.alert('Reject Listing', `Send ${label} back to the owner for changes?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Reject', style: 'destructive', onPress: act },
+    ]);
   };
 
   const handleToggleCarFeatured = (carId: string, next: boolean) => {
@@ -609,6 +642,33 @@ export default function AdminDashboardScreen() {
                       <Trash2 size={16} color={Colors.error} />
                     </Pressable>
                   </View>
+                  <View style={styles.approvalRow}>
+                    <View style={[styles.approvalBadge, { backgroundColor: APPROVAL_CONFIG[car.approvalStatus].bg }]}>
+                      <Text style={[styles.approvalBadgeText, { color: APPROVAL_CONFIG[car.approvalStatus].text }]}>
+                        {APPROVAL_CONFIG[car.approvalStatus].label}
+                      </Text>
+                    </View>
+                    {car.approvalStatus !== 'approved' && (
+                      <Pressable
+                        style={[styles.approvalBtn, styles.approvalApproveBtn]}
+                        onPress={() => handleReviewListing('car', car.id, 'approved', `${car.brand} ${car.model}`)}
+                        testID={`admin-approve-car-${car.id}`}
+                      >
+                        <Check size={13} color={Colors.white} />
+                        <Text style={styles.approvalBtnText}>Approve</Text>
+                      </Pressable>
+                    )}
+                    {car.approvalStatus !== 'rejected' && (
+                      <Pressable
+                        style={[styles.approvalBtn, styles.approvalRejectBtn]}
+                        onPress={() => handleReviewListing('car', car.id, 'rejected', `${car.brand} ${car.model}`)}
+                        testID={`admin-reject-car-${car.id}`}
+                      >
+                        <X size={13} color={Colors.white} />
+                        <Text style={styles.approvalBtnText}>Reject</Text>
+                      </Pressable>
+                    )}
+                  </View>
                   <View style={styles.featuredRow}>
                     <View style={styles.featuredToggleItem}>
                       <Text style={styles.featuredToggleLabel}>Search{'\n'}GH₵300/mo</Text>
@@ -660,6 +720,33 @@ export default function AdminDashboardScreen() {
                     </View>
                     <Pencil size={14} color={Colors.gray[400]} />
                   </Pressable>
+                  <View style={styles.approvalRow}>
+                    <View style={[styles.approvalBadge, { backgroundColor: APPROVAL_CONFIG[car.approvalStatus].bg }]}>
+                      <Text style={[styles.approvalBadgeText, { color: APPROVAL_CONFIG[car.approvalStatus].text }]}>
+                        {APPROVAL_CONFIG[car.approvalStatus].label}
+                      </Text>
+                    </View>
+                    {car.approvalStatus !== 'approved' && (
+                      <Pressable
+                        style={[styles.approvalBtn, styles.approvalApproveBtn]}
+                        onPress={() => handleReviewListing('sale_car', car.id, 'approved', `${car.brand} ${car.model}`)}
+                        testID={`admin-approve-sale_car-${car.id}`}
+                      >
+                        <Check size={13} color={Colors.white} />
+                        <Text style={styles.approvalBtnText}>Approve</Text>
+                      </Pressable>
+                    )}
+                    {car.approvalStatus !== 'rejected' && (
+                      <Pressable
+                        style={[styles.approvalBtn, styles.approvalRejectBtn]}
+                        onPress={() => handleReviewListing('sale_car', car.id, 'rejected', `${car.brand} ${car.model}`)}
+                        testID={`admin-reject-sale_car-${car.id}`}
+                      >
+                        <X size={13} color={Colors.white} />
+                        <Text style={styles.approvalBtnText}>Reject</Text>
+                      </Pressable>
+                    )}
+                  </View>
                   <View style={styles.featuredRow}>
                     <View style={styles.featuredToggleItem}>
                       <Text style={styles.featuredToggleLabel}>Marketplace{'\n'}GH₵300/mo</Text>
@@ -1288,6 +1375,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
   },
+  approvalRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+  },
+  approvalBadge: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  approvalBadgeText: { fontSize: 11, fontWeight: '800' as const },
+  approvalBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  approvalApproveBtn: { backgroundColor: Colors.success },
+  approvalRejectBtn: { backgroundColor: Colors.error },
+  approvalBtnText: { fontSize: 11, fontWeight: '800' as const, color: Colors.white },
   featuredRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,

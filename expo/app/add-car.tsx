@@ -20,7 +20,7 @@ import { uploadImageAsync, extensionFromUri } from '@/lib/imageUpload';
 import { useCreateCar, useUpdateCar } from '@/lib/queries/fleet';
 import { useCarDetails } from '@/lib/queries/cars';
 import { getErrorMessage } from '@/lib/errors';
-import { isKycCleared } from '@/lib/kyc';
+import { isKycCleared, listingResultMessage } from '@/lib/kyc';
 import MultiImagePicker from '@/components/MultiImagePicker';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import { ProgressBar } from '@/components/IndeterminateProgressBar';
@@ -127,17 +127,6 @@ export default function AddCarScreen() {
 
   const handleSubmit = useCallback(async () => {
     if (!currentUser) return;
-    if (!isKycCleared(currentUser)) {
-      Alert.alert(
-        'Verification Required',
-        'Verify your identity before listing a car. You’ll need one ID document (National ID, Passport, or Driver’s License) and a selfie.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Verify Now', onPress: () => router.push('/kyc-verification') },
-        ]
-      );
-      return;
-    }
     if (!brand || !model || !pricePerDay || images.length === 0) {
       Alert.alert('Missing Info', 'Please fill in brand, model, daily price, and add at least one photo.');
       return;
@@ -194,7 +183,10 @@ export default function AddCarScreen() {
           });
 
       await mutation;
-      Alert.alert(isEditing ? 'Listing Updated' : 'Car Listed', isEditing ? 'Your changes are live.' : 'Your car is now live and bookable.', [
+      Alert.alert(
+        isEditing ? 'Listing Updated' : 'Car Submitted',
+        listingResultMessage(isKycCleared(currentUser), isEditing),
+        [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err) {

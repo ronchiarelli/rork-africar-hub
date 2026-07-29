@@ -22,6 +22,7 @@ import AnimatedApproveButton from '@/components/AnimatedApproveButton';
 import TrendLineChart from '@/components/TrendLineChart';
 import { getNavBarClearance } from '@/components/BottomNavBar';
 import TipBanner from '@/components/TipBanner';
+import KycReminderBanner from '@/components/KycReminderBanner';
 import { useMyFleetVehicles, usePendingOwnerBookings, useFleetMonthlyTrends, useFleetTopCars, useSetCarAvailability, useDeleteCar, type PendingBooking } from '@/lib/queries/fleet';
 import { useReviewBooking } from '@/lib/queries/bookings';
 import { useGetOrCreateConversation } from '@/lib/queries/chat';
@@ -175,6 +176,7 @@ export default function FleetDashboardScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: getNavBarClearance(insets.bottom) }]}>
+        <KycReminderBanner />
         <TipBanner
           id="fleet-dashboard-howto"
           text="Review a renter's KYC status before approving a booking request. Tap 'Add Car' to list a new vehicle for rent."
@@ -330,6 +332,16 @@ export default function FleetDashboardScreen() {
                       <Text style={styles.vehicleDot}>·</Text>
                       <Text style={styles.vehicleStat}>GH₵{vehicle.totalEarnings.toLocaleString()}</Text>
                     </View>
+                    {vehicle.car.approvalStatus !== 'approved' && (
+                      <View style={styles.listingReviewNote}>
+                        <AlertTriangle size={12} color={vehicle.car.approvalStatus === 'rejected' ? Colors.error : Colors.warning} />
+                        <Text style={[styles.listingReviewText, vehicle.car.approvalStatus === 'rejected' && { color: Colors.error }]}>
+                          {vehicle.car.approvalStatus === 'rejected'
+                            ? vehicle.car.rejectionReason || 'Rejected — edit and resubmit'
+                            : 'Awaiting admin review — not visible to customers yet'}
+                        </Text>
+                      </View>
+                    )}
                     {vehicle.status === 'maintenance' && vehicle.nextMaintenance ? (
                       <View style={styles.maintenanceAlert}>
                         <AlertTriangle size={12} color={Colors.warning} />
@@ -872,6 +884,13 @@ const styles = StyleSheet.create({
   vehicleDot: {
     color: Colors.gray[400],
   },
+  listingReviewNote: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 5,
+    marginTop: 6,
+  },
+  listingReviewText: { fontSize: 11, fontWeight: '600' as const, color: Colors.warning, flex: 1 },
   maintenanceAlert: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,

@@ -34,6 +34,8 @@ export function mapCar(row: CarRow): Car {
     views: row.views,
     isFeatured: row.is_featured,
     isHomeFeatured: row.is_home_featured,
+    approvalStatus: row.approval_status,
+    rejectionReason: row.rejection_reason,
   };
 }
 
@@ -64,6 +66,8 @@ export function mapSaleCar(row: SaleCarRow): SaleCar {
     views: row.views,
     description: row.description ?? '',
     features: row.features,
+    approvalStatus: row.approval_status,
+    rejectionReason: row.rejection_reason,
   };
 }
 

@@ -36,6 +36,7 @@ import { Brand, SaleCar } from '@/types/car';
 import { thumbnailUrl } from '@/lib/imageResize';
 import { getErrorMessage } from '@/lib/errors';
 import WelcomeFeaturesModal from '@/components/WelcomeFeaturesModal';
+import KycReminderBanner from '@/components/KycReminderBanner';
 
 function SaleCarCard({ car }: { car: SaleCar }) {
   const router = useRouter();
@@ -367,6 +368,8 @@ export default function HomeScreen() {
             />
           </View>
         </View>
+
+        <KycReminderBanner />
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

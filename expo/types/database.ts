@@ -53,6 +53,8 @@ export type BrandRow = {
   car_count: number;
 }
 
+export type ListingApprovalDb = 'pending' | 'approved' | 'rejected';
+
 export type CarRow = {
   id: string;
   owner_id: string | null;
@@ -83,6 +85,8 @@ export type CarRow = {
   views: number;
   is_featured: boolean;
   is_home_featured: boolean;
+  approval_status: ListingApprovalDb;
+  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -113,6 +117,8 @@ export type SaleCarRow = {
   views: number;
   description: string | null;
   features: string[];
+  approval_status: ListingApprovalDb;
+  rejection_reason: string | null;
   created_at: string;
 }
 
@@ -443,6 +449,10 @@ export type Database = {
       };
       admin_set_kyc_exempt: {
         Args: { p_user_id: string; p_exempt: boolean };
+        Returns: void;
+      };
+      admin_review_listing: {
+        Args: { p_target_type: string; p_target_id: string; p_decision: string; p_reason?: string | null };
         Returns: void;
       };
       kyc_cleared: {
