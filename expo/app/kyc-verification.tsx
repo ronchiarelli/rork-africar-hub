@@ -35,10 +35,6 @@ function worstStatus(...statuses: string[]): string {
   return statuses.reduce((worst, s) => (STATUS_RANK[s] < STATUS_RANK[worst] ? s : worst));
 }
 
-function bestStatus(...statuses: string[]): string {
-  return statuses.reduce((best, s) => (STATUS_RANK[s] > STATUS_RANK[best] ? s : best));
-}
-
 function DocCard({
   doc,
   onUpload,
@@ -116,27 +112,21 @@ export default function KYCVerificationScreen() {
     }
   }, [router]);
 
-  const ghanaCardFront = documents.find((d) => d.type === 'ghana_card' && d.side === 'front');
-  const ghanaCardBack = documents.find((d) => d.type === 'ghana_card' && d.side === 'back');
   const passport = documents.find((d) => d.type === 'passport');
   const licenseFront = documents.find((d) => d.type === 'drivers_license' && d.side === 'front');
   const licenseBack = documents.find((d) => d.type === 'drivers_license' && d.side === 'back');
   const selfie = documents.find((d) => d.type === 'selfie');
 
-  const identityStatus = useMemo(() => {
-    if (!ghanaCardFront || !ghanaCardBack || !passport) return 'not_uploaded';
-    const ghanaCardStatus = worstStatus(ghanaCardFront.status, ghanaCardBack.status);
-    return bestStatus(ghanaCardStatus, passport.status);
-  }, [ghanaCardFront, ghanaCardBack, passport]);
+  const identityStatus = passport?.status ?? 'not_uploaded';
 
   const licenseStatus = useMemo(() => {
     if (!licenseFront || !licenseBack) return 'not_uploaded';
     return worstStatus(licenseFront.status, licenseBack.status);
   }, [licenseFront, licenseBack]);
 
-  // Any ONE of National ID, Passport, or Driver's License is enough for the
-  // identity half — but a verified selfie is always required on top of it,
-  // so the document is tied to the person holding the account.
+  // Either a Passport or a Driver's License satisfies the identity half —
+  // but a verified selfie is always required on top of it, so the document
+  // is tied to the person holding the account.
   const hasIdentity = identityStatus === 'verified' || licenseStatus === 'verified';
   const hasSelfie = selfie?.status === 'verified';
   const isVerified = hasIdentity && hasSelfie;
@@ -147,8 +137,8 @@ export default function KYCVerificationScreen() {
     : hasIdentity
       ? 'ID verified — add a selfie to finish verification'
       : hasSelfie
-        ? 'Selfie verified — add your National ID, Passport, or Driver’s License'
-        : 'Verify one ID document (National ID, Passport, or Driver’s License) and a selfie';
+        ? 'Selfie verified — add your Passport or Driver’s License'
+        : 'Verify one ID document (Passport or Driver’s License) and a selfie';
 
   return (
     <View style={styles.container}>
@@ -171,14 +161,7 @@ export default function KYCVerificationScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Step 1 — Identity Document</Text>
-        <Text style={styles.sectionSubtitle}>Any one of these is enough: both sides of your National ID, your Passport, or both sides of your Driver’s License</Text>
-        {ghanaCardFront && <DocCard doc={ghanaCardFront} onUpload={handleUpload} onPreview={handlePreview} />}
-        {ghanaCardBack && <DocCard doc={ghanaCardBack} onUpload={handleUpload} onPreview={handlePreview} />}
-        <View style={styles.orDivider}>
-          <View style={styles.orLine} />
-          <Text style={styles.orText}>OR</Text>
-          <View style={styles.orLine} />
-        </View>
+        <Text style={styles.sectionSubtitle}>Either one is enough: your Passport, or both sides of your Driver’s License</Text>
         {passport && <DocCard doc={passport} onUpload={handleUpload} onPreview={handlePreview} />}
 
         <View style={styles.orDivider}>

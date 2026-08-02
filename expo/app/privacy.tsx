@@ -23,7 +23,7 @@ const SECTIONS: Section[] = [
     heading: '2. Information We Collect',
     body: [
       'Account information: your name, email address, phone number, and profile photo when you register.',
-      'Identity verification (KYC) documents: a government-issued ID (Ghana Card or Passport), driver’s license, and a selfie photo, submitted to verify your identity before you can book or list a vehicle.',
+      'Identity verification (KYC) documents: a government-issued Passport or driver’s license, and a selfie photo, submitted to verify your identity before you can book or list a vehicle.',
       'Listing and booking information: details you provide about vehicles you list for rent or sale, and booking requests you make or receive, including pickup/return dates and locations.',
       'Communications: messages, reviews, and support requests you submit through the app.',
       'Usage and device information: how you interact with the app, your device type and operating system, and general location (e.g. city) used to show relevant listings.',

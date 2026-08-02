@@ -42,7 +42,7 @@ const FAQS: FAQItem[] = [
   {
     id: '2',
     question: 'What documents do I need?',
-    answer: 'You need a valid driver\'s license and a government-issued ID (Ghana Card or Passport). Upload these in the KYC Verification section of your Profile to get verified.',
+    answer: 'You need either a valid Passport or a driver\'s license, plus a selfie. Upload these in the KYC Verification section of your Profile to get verified.',
   },
   {
     id: '3',

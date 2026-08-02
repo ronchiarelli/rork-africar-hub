@@ -5,9 +5,11 @@ import { useAuth } from '@/providers/AuthProvider';
 import type { KycDocumentRow, KycDocTypeDb, KycDocSideDb, KycStatusDb } from '@/types/database';
 import type { KYCDocument } from '@/types/car';
 
+// National ID (Ghana Card) was retired as an accepted document — Passport
+// or Driver's License only. The 'ghana_card' enum value stays in the schema
+// because historical kyc_documents rows still reference it; it's simply no
+// longer offered or counted towards verification.
 const REQUIRED_DOCS: { type: KycDocTypeDb; side: KycDocSideDb; label: string }[] = [
-  { type: 'ghana_card', side: 'front', label: 'National ID (Ghana Card) — Front' },
-  { type: 'ghana_card', side: 'back', label: 'National ID (Ghana Card) — Back' },
   { type: 'passport', side: 'single', label: 'Passport' },
   { type: 'drivers_license', side: 'front', label: "Driver's License — Front" },
   { type: 'drivers_license', side: 'back', label: "Driver's License — Back" },
