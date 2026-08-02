@@ -37,6 +37,7 @@ grant update (
   location, address, latitude, longitude,
   fuel_type, transmission, condition,
   description, features,
-  dealer_name, dealer_phone, dealer_avatar,
-  is_sold
+  dealer_name, dealer_phone, dealer_avatar
 ) on public.sale_cars to authenticated;
+-- NB: sale_cars has no is_sold column — the sold state lives on
+-- dealer_listings.status, which has its own grant.
