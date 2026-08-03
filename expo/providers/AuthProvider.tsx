@@ -62,10 +62,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     if (sessionError) throw sessionError;
   }, []);
 
-  const registerWithPin = useCallback(async (name: string, phone: string, pin: string) => {
+  const registerWithPin = useCallback(async (
+    name: string,
+    phone: string,
+    pin: string,
+    requestedRole?: 'fleet_owner' | 'dealership',
+  ) => {
     const { data, error } = await supabase.functions.invoke<{ access_token: string; refresh_token: string; error?: string }>(
       'phone-pin-auth',
-      { body: { action: 'register', phone, pin, name } }
+      { body: { action: 'register', phone, pin, name, requestedRole } }
     );
     if (error) throw new Error(await readFunctionError(error, 'Could not create your account.'));
     if (!data?.access_token) throw new Error(data?.error ?? 'Could not create your account.');

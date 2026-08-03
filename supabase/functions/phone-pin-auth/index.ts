@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    const { action, phone, pin, name } = await req.json().catch(() => ({}));
+    const { action, phone, pin, name, requestedRole } = await req.json().catch(() => ({}));
 
     if (!PHONE_RE.test(phone ?? '')) {
       return json({ error: 'Enter a valid Ghana phone number.' }, 400);
@@ -57,11 +57,22 @@ Deno.serve(async (req: Request) => {
       }
 
       // email_confirm so the synthetic address never needs a real inbox.
+      // handle_new_user() reads requested_role out of user_metadata to
+      // open a role_application — omit it and a fleet/dealer signup would
+      // silently land as a plain customer with nothing for admin to review.
+      // Constrained here too so a client can't request 'admin'.
+      const safeRole =
+        requestedRole === 'fleet_owner' || requestedRole === 'dealership' ? requestedRole : undefined;
+
       const { data: created, error: createError } = await admin.auth.admin.createUser({
         email: authEmail(phone),
         password: pin,
         email_confirm: true,
-        user_metadata: { name: name ?? '', phone: `+${phone}` },
+        user_metadata: {
+          name: name ?? '',
+          phone: `+${phone}`,
+          ...(safeRole ? { requested_role: safeRole } : {}),
+        },
       });
       if (createError || !created.user) {
         return json({ error: createError?.message ?? 'Could not create the account.' }, 400);

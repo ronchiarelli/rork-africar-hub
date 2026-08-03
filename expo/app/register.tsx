@@ -18,6 +18,7 @@ import Colors from '@/constants/colors';
 import { useAuth } from '@/providers/AuthProvider';
 import AppLogo from '@/components/AppLogo';
 import { getErrorMessage } from '@/lib/errors';
+import { normalizePhone, pinWeakness } from '@/lib/phone';
 
 type AccountType = 'customer' | 'fleet_owner' | 'dealership';
 
@@ -30,16 +31,59 @@ const ACCOUNT_TYPES: { value: AccountType; label: string; icon: React.ReactNode 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { register, login, markJustRegistered } = useAuth();
+  const { register, registerWithPin, login, markJustRegistered } = useAuth();
+  // Phone + PIN is the signup path going forward; email is kept only so
+  // existing-style accounts can still be created while it's phased out.
+  const [mode, setMode] = useState<'phone' | 'email'>('phone');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>('customer');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRegister = useCallback(async () => {
+    if (mode === 'phone') {
+      if (!name.trim()) {
+        Alert.alert('Error', 'Please enter your full name.');
+        return;
+      }
+      const canonical = normalizePhone(phone);
+      if (!canonical) {
+        Alert.alert('Check Your Number', 'Enter a valid Ghana phone number, e.g. 024 123 4567.');
+        return;
+      }
+      const weak = pinWeakness(pin);
+      if (weak) {
+        Alert.alert('Choose a Different PIN', weak);
+        return;
+      }
+      if (pin !== confirmPin) {
+        Alert.alert('PINs Do Not Match', 'Please re-enter the same 6-digit PIN.');
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        await registerWithPin(
+          name.trim(),
+          canonical,
+          pin,
+          accountType !== 'customer' ? accountType : undefined,
+        );
+        markJustRegistered(accountType);
+        router.dismissAll();
+      } catch (e) {
+        Alert.alert('Registration Failed', getErrorMessage(e, 'Please try again.'));
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     if (!name || !email || !password) {
       Alert.alert('Error', 'Please fill in your name, email, and password');
       return;
@@ -75,7 +119,7 @@ export default function RegisterScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [name, email, phone, password, accountType, register, login, markJustRegistered, router]);
+  }, [mode, name, email, phone, pin, confirmPin, password, accountType, register, registerWithPin, login, markJustRegistered, router]);
 
   return (
     <View style={styles.container}>
@@ -129,48 +173,113 @@ export default function RegisterScreen() {
               />
             </View>
 
-            <View style={styles.inputWrap}>
-              <Mail size={18} color={Colors.gray[400]} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                placeholderTextColor={Colors.gray[400]}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                testID="register-email"
-              />
-            </View>
+            {mode === 'phone' ? (
+              <>
+                <View style={styles.inputWrap}>
+                  <Phone size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Phone number"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    autoCapitalize="none"
+                    testID="register-phone"
+                  />
+                </View>
 
-            <View style={styles.inputWrap}>
-              <Phone size={18} color={Colors.gray[400]} />
-              <TextInput
-                style={styles.input}
-                placeholder="Phone (optional)"
-                placeholderTextColor={Colors.gray[400]}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                testID="register-phone"
-              />
-            </View>
+                <View style={styles.inputWrap}>
+                  <Lock size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Create a 6-digit PIN"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={pin}
+                    onChangeText={(t) => setPin(t.replace(/\D/g, '').slice(0, 6))}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    secureTextEntry={!showPin}
+                    testID="register-pin"
+                  />
+                  <Pressable onPress={() => setShowPin(!showPin)}>
+                    {showPin ? <EyeOff size={18} color={Colors.gray[400]} /> : <Eye size={18} color={Colors.gray[400]} />}
+                  </Pressable>
+                </View>
 
-            <View style={styles.inputWrap}>
-              <Lock size={18} color={Colors.gray[400]} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor={Colors.gray[400]}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                testID="register-password"
-              />
-              <Pressable onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff size={18} color={Colors.gray[400]} /> : <Eye size={18} color={Colors.gray[400]} />}
-              </Pressable>
-            </View>
+                <View style={styles.inputWrap}>
+                  <Lock size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm your PIN"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={confirmPin}
+                    onChangeText={(t) => setConfirmPin(t.replace(/\D/g, '').slice(0, 6))}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    secureTextEntry={!showPin}
+                    testID="register-confirm-pin"
+                  />
+                </View>
+
+                <Text style={styles.pinHint}>
+                  You&apos;ll use this PIN to sign in. Keep it private — anyone with your number and PIN can access your account.
+                </Text>
+
+                <Pressable style={styles.modeSwitch} onPress={() => setMode('email')} testID="register-use-email">
+                  <Text style={styles.modeSwitchText}>Sign up with email instead</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <View style={styles.inputWrap}>
+                  <Mail size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email address"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    testID="register-email"
+                  />
+                </View>
+
+                <View style={styles.inputWrap}>
+                  <Phone size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Phone (optional)"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    testID="register-phone"
+                  />
+                </View>
+
+                <View style={styles.inputWrap}>
+                  <Lock size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    testID="register-password"
+                  />
+                  <Pressable onPress={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff size={18} color={Colors.gray[400]} /> : <Eye size={18} color={Colors.gray[400]} />}
+                  </Pressable>
+                </View>
+
+                <Pressable style={styles.modeSwitch} onPress={() => setMode('phone')} testID="register-use-phone">
+                  <Text style={styles.modeSwitchText}>Sign up with phone + PIN instead</Text>
+                </Pressable>
+              </>
+            )}
 
             <Pressable
               style={({ pressed }) => [styles.registerBtn, (pressed || isSubmitting) && styles.registerBtnPressed]}
@@ -282,6 +391,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 16,
     lineHeight: 17,
+  },
+  pinHint: {
+    fontSize: 12,
+    color: Colors.gray[400],
+    lineHeight: 17,
+    marginBottom: 14,
+    marginTop: -4,
+  },
+  modeSwitch: {
+    alignItems: 'center' as const,
+    marginBottom: 16,
+  },
+  modeSwitchText: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: Colors.orange.primary,
   },
   inputWrap: {
     flexDirection: 'row' as const,
