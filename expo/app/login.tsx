@@ -12,29 +12,49 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Phone } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import AppLogo from '@/components/AppLogo';
 import { useAuth } from '@/providers/AuthProvider';
 import { getErrorMessage } from '@/lib/errors';
+import { normalizePhone, isValidPin } from '@/lib/phone';
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loginWithPin } = useAuth();
+  // Phone + PIN is the primary path; email is kept for accounts created
+  // before phone login existed, and is being phased out.
+  const [mode, setMode] = useState<'phone' | 'email'>('phone');
+  const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = useCallback(async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
     setIsSubmitting(true);
     try {
-      await login(email, password);
+      if (mode === 'phone') {
+        const canonical = normalizePhone(phone);
+        if (!canonical) {
+          Alert.alert('Check Your Number', 'Enter a valid Ghana phone number, e.g. 024 123 4567.');
+          return;
+        }
+        if (!isValidPin(pin)) {
+          Alert.alert('Check Your PIN', 'Your PIN must be exactly 6 digits.');
+          return;
+        }
+        await loginWithPin(canonical, pin);
+      } else {
+        if (!email || !password) {
+          Alert.alert('Error', 'Please fill in all fields');
+          return;
+        }
+        await login(email, password);
+      }
       router.dismissAll();
       router.replace('/(tabs)/(home)');
     } catch (e) {
@@ -42,7 +62,7 @@ export default function LoginScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [email, password, login, router]);
+  }, [mode, phone, pin, email, password, login, loginWithPin, router]);
 
   return (
     <View style={styles.container}>
@@ -74,39 +94,86 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>Sign in to continue your journey</Text>
 
           <View style={styles.form}>
-            <View style={styles.inputWrap}>
-              <Mail size={18} color={Colors.gray[400]} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                placeholderTextColor={Colors.gray[400]}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                testID="login-email"
-              />
-            </View>
+            {mode === 'phone' ? (
+              <>
+                <View style={styles.inputWrap}>
+                  <Phone size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Phone number"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    autoCapitalize="none"
+                    testID="login-phone"
+                  />
+                </View>
 
-            <View style={styles.inputWrap}>
-              <Lock size={18} color={Colors.gray[400]} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor={Colors.gray[400]}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                testID="login-password"
-              />
-              <Pressable onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff size={18} color={Colors.gray[400]} /> : <Eye size={18} color={Colors.gray[400]} />}
-              </Pressable>
-            </View>
+                <View style={styles.inputWrap}>
+                  <Lock size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="6-digit PIN"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={pin}
+                    onChangeText={(t) => setPin(t.replace(/\D/g, '').slice(0, 6))}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    secureTextEntry={!showPin}
+                    testID="login-pin"
+                  />
+                  <Pressable onPress={() => setShowPin(!showPin)}>
+                    {showPin ? <EyeOff size={18} color={Colors.gray[400]} /> : <Eye size={18} color={Colors.gray[400]} />}
+                  </Pressable>
+                </View>
 
-            <Pressable style={styles.forgotBtn} onPress={() => router.push('/forgot-password')} testID="login-forgot-password">
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-            </Pressable>
+                <Pressable style={styles.forgotBtn} onPress={() => setMode('email')} testID="login-use-email">
+                  <Text style={styles.forgotText}>Use email instead</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <View style={styles.inputWrap}>
+                  <Mail size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email address"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    testID="login-email"
+                  />
+                </View>
+
+                <View style={styles.inputWrap}>
+                  <Lock size={18} color={Colors.gray[400]} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor={Colors.gray[400]}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    testID="login-password"
+                  />
+                  <Pressable onPress={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff size={18} color={Colors.gray[400]} /> : <Eye size={18} color={Colors.gray[400]} />}
+                  </Pressable>
+                </View>
+
+                <View style={styles.altRow}>
+                  <Pressable onPress={() => router.push('/forgot-password')} testID="login-forgot-password">
+                    <Text style={styles.forgotText}>Forgot Password?</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setMode('phone')} testID="login-use-phone">
+                    <Text style={styles.forgotText}>Use phone + PIN</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
 
             <Pressable
               style={({ pressed }) => [styles.loginBtn, (pressed || isSubmitting) && styles.loginBtnPressed]}
@@ -198,6 +265,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: Colors.white,
+  },
+  altRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 20,
   },
   forgotBtn: {
     alignSelf: 'flex-end' as const,
