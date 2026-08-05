@@ -93,8 +93,48 @@ Deno.serve(async (req: Request) => {
       // Fall through to sign in so registration returns a live session.
     }
 
+    // Migration path for accounts created before phone login existed: an
+    // already-signed-in user attaches a phone number and sets a PIN. Their
+    // auth email is left alone, so email+password keeps working — the PIN
+    // simply becomes the password, giving them one credential either way.
+    if (action === 'set-pin') {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) return json({ error: 'Not signed in.' }, 401);
+
+      const asUser = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: me, error: meError } = await asUser.auth.getUser();
+      if (meError || !me.user) return json({ error: 'Not signed in.' }, 401);
+
+      const { data: taken } = await admin
+        .from('profiles')
+        .select('id')
+        .eq('phone_login', phone)
+        .maybeSingle();
+      if (taken && taken.id !== me.user.id) {
+        return json({ error: 'That phone number is already linked to another account.' }, 409);
+      }
+
+      const { error: pwError } = await admin.auth.admin.updateUserById(me.user.id, {
+        password: pin,
+      });
+      if (pwError) return json({ error: pwError.message }, 400);
+
+      const { error: linkErr } = await admin
+        .from('profiles')
+        .update({ phone_login: phone, phone: `+${phone}` })
+        .eq('id', me.user.id);
+      if (linkErr) return json({ error: 'Could not link that phone number.' }, 400);
+
+      // Any lockout against this number is stale now the PIN has changed.
+      await admin.from('pin_login_attempts').delete().eq('phone', phone);
+
+      return json({ linked: true });
+    }
+
     if (action !== 'register' && action !== 'login') {
-      return json({ error: 'action must be login or register' }, 400);
+      return json({ error: 'action must be login, register or set-pin' }, 400);
     }
 
     // --- lockout check (login and post-register sign-in alike) ---
@@ -115,9 +155,24 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Resolve the account's ACTUAL auth email rather than deriving it.
+    // Phone-first accounts use the synthetic address, but an existing
+    // email+password user who later claims a phone still has their real
+    // email on auth.users — deriving would fail to find them.
+    let loginEmail = authEmail(phone);
+    const { data: linked } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('phone_login', phone)
+      .maybeSingle();
+    if (linked) {
+      const { data: authUser } = await admin.auth.admin.getUserById(linked.id);
+      if (authUser?.user?.email) loginEmail = authUser.user.email;
+    }
+
     const userClient = createClient(supabaseUrl, anonKey);
     const { data: signIn, error: signInError } = await userClient.auth.signInWithPassword({
-      email: authEmail(phone),
+      email: loginEmail,
       password: pin,
     });
 

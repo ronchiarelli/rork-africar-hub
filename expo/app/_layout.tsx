@@ -17,7 +17,7 @@ const queryClient = new QueryClient();
 
 const AUTH_GROUP = ['welcome', 'login', 'register'];
 const FULLSCREEN_MODAL_ROUTES = ['selfie-camera', 'crop-image', 'image-gallery'];
-const PUBLIC_STACK_ROUTES = ['car-details', 'marketplace', 'image-gallery', 'terms', 'privacy', 'forgot-password', 'reset-password', 'help-support', 'payment-bridge'];
+const PUBLIC_STACK_ROUTES = ['car-details', 'marketplace', 'image-gallery', 'terms', 'privacy', 'forgot-password', 'forgot-pin', 'reset-password', 'help-support', 'payment-bridge'];
 const PUBLIC_TAB_SEGMENTS = ['(home)', 'search'];
 const ROLE_GUARDED: Record<string, UserRole[]> = {
   'fleet-dashboard': ['fleet_owner'],
@@ -119,6 +119,8 @@ function RootLayoutNav() {
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+          <Stack.Screen name="forgot-pin" options={{ headerShown: false }} />
+          <Stack.Screen name="set-pin" options={{ headerShown: false }} />
           <Stack.Screen name="reset-password" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
           <Stack.Screen name="settings" options={{ title: "Settings", headerStyle: { backgroundColor: '#1A0A2E' }, headerTintColor: '#fff' }} />

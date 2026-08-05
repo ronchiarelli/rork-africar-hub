@@ -128,9 +128,14 @@ export default function LoginScreen() {
                   </Pressable>
                 </View>
 
-                <Pressable style={styles.forgotBtn} onPress={() => setMode('email')} testID="login-use-email">
-                  <Text style={styles.forgotText}>Use email instead</Text>
-                </Pressable>
+                <View style={styles.altRow}>
+                  <Pressable onPress={() => router.push('/forgot-pin')} testID="login-forgot-pin">
+                    <Text style={styles.forgotText}>Forgot PIN?</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setMode('email')} testID="login-use-email">
+                    <Text style={styles.forgotText}>Use email instead</Text>
+                  </Pressable>
+                </View>
               </>
             ) : (
               <>
