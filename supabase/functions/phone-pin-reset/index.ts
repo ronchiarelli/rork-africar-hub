@@ -5,7 +5,7 @@
 //   confirm — verify the code and set the new PIN
 //
 // Hubtel SMS contract (help.hubtel.com):
-//   POST https://api.hubtel.com/v1/messages/send
+//   POST https://sms.hubtel.com/v1/messages/send
 //   Authorization: Basic base64(clientId:clientSecret)
 //   { From, To, Content, RegisteredDelivery }
 // Deliberately POST + Basic Auth rather than the GET "Quick Send" variant,
@@ -122,7 +122,7 @@ Deno.serve(async (req: Request) => {
       const clientSecret =
         Deno.env.get('HUBTEL_SMS_CLIENT_SECRET') ?? Deno.env.get('HUBTEL_CLIENT_SECRET')!;
 
-      const smsRes = await fetch('https://api.hubtel.com/v1/messages/send', {
+      const smsRes = await fetch('https://sms.hubtel.com/v1/messages/send', {
         method: 'POST',
         headers: {
           Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
