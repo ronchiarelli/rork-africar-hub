@@ -14,6 +14,7 @@ function mapProfile(row: ProfileRow): UserProfile {
     isVerified: row.is_verified,
     verificationStatus: row.verification_status,
     kycExempt: row.kyc_exempt,
+    phoneLogin: row.phone_login,
     isSuspended: row.is_suspended,
     totalBookings: row.total_bookings,
     memberSince: row.member_since,

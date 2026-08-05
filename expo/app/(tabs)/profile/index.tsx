@@ -21,6 +21,7 @@ import {
   ChevronRight,
   LogOut,
   Settings,
+  KeyRound,
   HelpCircle,
   ShieldCheck,
   Users,
@@ -118,6 +119,11 @@ export default function ProfileScreen() {
     [
       ...(currentRole === 'customer' ? [{
         icon: <Users size={20} color={Colors.gray[600]} />, label: 'Request Account Upgrade', onPress: handleRequestRoleUpgrade,
+      }] : []),
+      // Only for accounts still on email+password — once phoneLogin is set
+      // they already sign in with a PIN and this would be a dead end.
+      ...(currentUser && !currentUser.phoneLogin ? [{
+        icon: <KeyRound size={20} color={Colors.orange.primary} />, label: 'Set Up Phone + PIN Sign In', route: '/set-pin' as const,
       }] : []),
       { icon: <Settings size={20} color={Colors.gray[600]} />, label: 'Settings', route: '/settings' },
       { icon: <HelpCircle size={20} color={Colors.gray[600]} />, label: 'Help & Support', route: '/help-support' },

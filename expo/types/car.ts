@@ -82,6 +82,9 @@ export interface UserProfile {
   isVerified: boolean;
   verificationStatus: 'none' | 'pending' | 'restricted' | 'approved' | 'rejected';
   kycExempt: boolean;
+  // Canonical phone used as a login identifier; null until the user has
+  // migrated from email+password to phone+PIN.
+  phoneLogin: string | null;
   isSuspended: boolean;
   totalBookings: number;
   memberSince: string;

@@ -35,6 +35,7 @@ export type ProfileRow = {
   is_suspended: boolean;
   accepts_inapp_payment: boolean;
   kyc_exempt: boolean;
+  phone_login: string | null;
   momo_provider: MomoProviderDb | null;
   momo_number: string | null;
   bank_name: string | null;
